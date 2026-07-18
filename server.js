@@ -207,6 +207,13 @@ app.get('/api/orders/:id', requireStaff, async (req, res) => {
   }
 });
 
+app.get('/vendor/confetti.browser.min.js', (_req, res) => {
+  res.type('application/javascript');
+  res.sendFile(
+    path.join(__dirname, 'node_modules', 'canvas-confetti', 'dist', 'confetti.browser.js')
+  );
+});
+
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 app.get('/bar', (_req, res) => {

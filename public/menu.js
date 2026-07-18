@@ -172,22 +172,55 @@
     setTimeout(() => el.remove(), 1600);
   }
 
+  const ROCHUS_CONFETTI_COLORS = ['#f0d9a8', '#d4af70', '#c9a96e', '#e8b4a0', '#f7f1e8', '#9ed0e0'];
+
+  function fireConfetti(opts) {
+    if (prefersReducedMotion || typeof window.confetti !== 'function') return;
+    window.confetti(opts);
+  }
+
   function burstConfetti() {
-    const layer = document.getElementById('chaos-layer');
-    if (!layer) return;
-    const bits = ['✨', '🍊', '🥂', '💥', '🍋', '💅', '🥳', '🍟'];
-    for (let i = 0; i < 14; i++) {
-      const bit = document.createElement('span');
-      bit.className = 'chaos-confetti';
-      bit.textContent = pick(bits);
-      bit.style.left = `${20 + Math.random() * 60}vw`;
-      bit.style.setProperty('--drift', `${(Math.random() - 0.5) * 120}px`);
-      bit.style.animationDelay = `${Math.random() * 0.2}s`;
-      bit.style.fontSize = `${0.9 + Math.random() * 0.8}rem`;
-      layer.appendChild(bit);
-      bit.addEventListener('animationend', () => bit.remove(), { once: true });
-      setTimeout(() => bit.remove(), 2000);
-    }
+    fireConfetti({
+      particleCount: 60,
+      spread: 70,
+      origin: { y: 0.7 },
+      colors: ROCHUS_CONFETTI_COLORS,
+    });
+  }
+
+  /** Celebration when an order is successfully sent to the bar. */
+  function celebrateOrderSuccess() {
+    if (prefersReducedMotion || typeof window.confetti !== 'function') return;
+
+    const end = Date.now() + 1800;
+
+    // Dual side cannons
+    (function frame() {
+      fireConfetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.65 },
+        colors: ROCHUS_CONFETTI_COLORS,
+      });
+      fireConfetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.65 },
+        colors: ROCHUS_CONFETTI_COLORS,
+      });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    })();
+
+    // Center burst
+    fireConfetti({
+      particleCount: 120,
+      spread: 100,
+      startVelocity: 45,
+      origin: { y: 0.6 },
+      colors: ROCHUS_CONFETTI_COLORS,
+    });
   }
 
   /**
@@ -559,7 +592,7 @@
       closeConfirm();
       closeDrawer();
       showToast(pick(SENT_TOASTS).replace('{n}', String(tableNumber)), false, 4200);
-      if (!prefersReducedMotion) burstConfetti();
+      celebrateOrderSuccess();
     } catch (err) {
       showToast(err.message || 'Bestelling mislukt', true, 4200);
       confirmSend.disabled = false;
@@ -836,14 +869,55 @@
     });
   });
 
-  /* Sticky nav shadow */
+  /* Sticky nav shadow + table chip show/hide on scroll direction */
+  let lastChipScrollY = window.scrollY;
+  let chipScrollTicking = false;
+
+  function updateTableChipOnScroll() {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+
+    if (!tableChip || tableChip.hidden) {
+      chipScrollTicking = false;
+      return;
+    }
+
+    const y = window.scrollY;
+    const delta = y - lastChipScrollY;
+    const navRect = nav.getBoundingClientRect();
+    const pastHero = y > 72;
+
+    if (pastHero) {
+      tableChip.classList.add('table-chip--docked');
+      // Sit just under the sticky category bar — never overlays filters
+      const top = Math.round(Math.max(navRect.bottom + 8, 56));
+      tableChip.style.setProperty('--chip-top', `${top}px`);
+    } else {
+      tableChip.classList.remove('table-chip--docked');
+      tableChip.style.removeProperty('--chip-top');
+    }
+
+    if (y < 40) {
+      tableChip.classList.remove('table-chip--away');
+    } else if (delta > 8) {
+      tableChip.classList.add('table-chip--away');
+    } else if (delta < -8) {
+      tableChip.classList.remove('table-chip--away');
+    }
+
+    lastChipScrollY = y;
+    chipScrollTicking = false;
+  }
+
   window.addEventListener(
     'scroll',
     () => {
-      nav.classList.toggle('scrolled', window.scrollY > 40);
+      if (chipScrollTicking) return;
+      chipScrollTicking = true;
+      requestAnimationFrame(updateTableChipOnScroll);
     },
     { passive: true }
   );
+  updateTableChipOnScroll();
 
   /* Scroll spy when filter is "all" */
   if ('IntersectionObserver' in window) {

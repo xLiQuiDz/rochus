@@ -1256,22 +1256,43 @@ h1, h2, h3, h4 {
   box-shadow: none;
 }
 
-/* Table chip */
+/* Table chip — floats clear of sticky nav; hides on scroll down */
 .table-chip {
+  --chip-top: max(14px, env(safe-area-inset-top, 0px));
   position: fixed;
-  top: 14px;
+  top: var(--chip-top);
   left: 14px;
-  z-index: 150;
+  z-index: 110;
   display: inline-flex;
   align-items: baseline;
   gap: 8px;
   padding: 8px 14px;
-  background: rgba(10, 9, 8, 0.72);
+  background: rgba(10, 9, 8, 0.82);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-amber);
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-glow);
+  transition:
+    transform 0.35s var(--ease-out-expo),
+    opacity 0.3s var(--ease-out-expo),
+    top 0.25s var(--ease-out-expo);
+  will-change: transform, opacity;
+}
+
+.table-chip[hidden] {
+  display: none !important;
+}
+
+.table-chip--docked {
+  /* sits just under the sticky category bar */
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45), var(--shadow-glow);
+}
+
+.table-chip--away {
+  transform: translateY(calc(-100% - 16px));
+  opacity: 0;
+  pointer-events: none;
 }
 
 .table-chip__label {
@@ -1425,14 +1446,6 @@ h1, h2, h3, h4 {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
 }
 
-.chaos-confetti {
-  position: fixed;
-  top: -10vh;
-  z-index: 452;
-  animation: confetti-fall 1.6s var(--ease-out-expo) forwards;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
-}
-
 #brand-title {
   cursor: pointer;
   user-select: none;
@@ -1491,20 +1504,6 @@ h1, h2, h3, h4 {
   100% {
     opacity: 0;
     transform: translateY(-48px) scale(1.05) rotate(8deg);
-  }
-}
-
-@keyframes confetti-fall {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) rotate(0deg);
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--drift, 40px), 85vh) rotate(320deg);
   }
 }
 
@@ -2037,8 +2036,7 @@ h1, h2, h3, h4 {
   .menu-card.shimmer::after,
   .daily-special::after,
   .cart-spark,
-  .chaos-sticker,
-  .chaos-confetti {
+  .chaos-sticker {
     display: none !important;
     animation: none !important;
   }
@@ -2057,7 +2055,8 @@ h1, h2, h3, h4 {
     filter: none !important;
   }
 
-  .menu-card--fleeing {
+  .menu-card--fleeing,
+  .table-chip {
     transition: none !important;
   }
 

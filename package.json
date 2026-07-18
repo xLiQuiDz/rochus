@@ -12,6 +12,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "canvas-confetti": "^1.9.4",
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
     "pg": "^8.14.1"
