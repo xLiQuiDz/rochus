@@ -43,10 +43,11 @@
   ];
 
   const NO_RESULT_LINES = [
-    { emoji: '🫠', text: 'Geen resultaten — die cocktail bestaat alleen in je dromen' },
-    { emoji: '🕵️', text: 'Niet gevonden. Misschien te niche. Misschien te drunk-typed.' },
-    { emoji: '🌵', text: 'Droog als de Sahara hier. Probeer “spritz”.' },
-    { emoji: '🧠', text: 'Onze AI (een intern) kent dit niet. Typ iets normalers.' },
+    'Niets gevonden. Mischien te niche of misschien al te dronken?',
+    'Geen resultaten — die cocktail bestaat alleen in je dromen',
+    'Niet gevonden. Misschien te niche. Misschien te drunk-typed.',
+    'Droog als de Sahara hier. Probeer “spritz”.',
+    'Onze AI (een intern) kent dit niet. Typ iets normalers.',
   ];
 
   const CONFIRM_TITLES = [
@@ -917,11 +918,8 @@
     const showNone = Boolean(q && !anyVisible);
     noResults.classList.toggle('show', showNone);
     if (showNone) {
-      const line = pick(NO_RESULT_LINES);
-      const emoji = document.getElementById('no-results-emoji');
       const text = document.getElementById('no-results-text');
-      if (emoji) emoji.textContent = line.emoji;
-      if (text) text.textContent = line.text;
+      if (text) text.textContent = pick(NO_RESULT_LINES);
     }
   }
 
