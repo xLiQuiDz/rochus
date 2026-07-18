@@ -45,9 +45,7 @@
   const NO_RESULT_LINES = [
     'Niets gevonden. Mischien te niche of misschien al te dronken?',
     'Geen resultaten — die cocktail bestaat alleen in je dromen',
-    'Niet gevonden. Misschien te niche. Misschien te drunk-typed.',
     'Droog als de Sahara hier. Probeer “spritz”.',
-    'Onze AI (een intern) kent dit niet. Typ iets normalers.',
   ];
 
   const CONFIRM_TITLES = [
@@ -718,15 +716,6 @@
       return;
     }
 
-    // Tap anywhere on a simple (non-wine, non-water) card to add
-    const card = e.target.closest('.menu-card:not(.menu-card--wine):not([data-water-dodge])');
-    if (card) {
-      const btn = card.querySelector('.menu-card__add-btn[data-add]');
-      if (btn) {
-        e.preventDefault();
-        btn.click();
-      }
-    }
   });
 
   // Water also flees when you hover / get close (desktop chaos)
@@ -904,16 +893,6 @@
       section.style.display = sectionHasMatch || !q ? '' : 'none';
       if (sectionHasMatch) anyVisible = true;
     });
-
-    // Daily special visibility
-    const special = document.querySelector('.daily-special');
-    if (special) {
-      const specialMatch =
-        !q || "tripel karmeliet van 't vat signature".includes(q);
-      const categoryOk = activeFilter === 'all' || activeFilter === 'bieren';
-      special.hidden = !(specialMatch && categoryOk);
-      if (!special.hidden && specialMatch) anyVisible = true;
-    }
 
     const showNone = Boolean(q && !anyVisible);
     noResults.classList.toggle('show', showNone);
