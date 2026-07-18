@@ -1366,9 +1366,39 @@ h1, h2, h3, h4 {
   color: #b8e4f0;
 }
 
+/* Blank canvas while chasing water — menu stays laid out (scrollable) but invisible */
+body.water-chase .hero,
+body.water-chase .nav-filter,
+body.water-chase .search-bar,
+body.water-chase .menu-content,
+body.water-chase .site-footer,
+body.water-chase .order-fab,
+body.water-chase .table-chip,
+body.water-chase .order-overlay,
+body.water-chase .order-drawer {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body.water-chase {
+  cursor: crosshair;
+}
+
+body.water-chase #water-card {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.water-placeholder {
+  min-height: 72px;
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(140, 200, 220, 0.15);
+  background: transparent;
+}
+
 .menu-card--fleeing {
   position: fixed;
-  z-index: 180;
+  z-index: 500;
   width: min(300px, calc(100vw - 32px));
   margin: 0;
   transition:

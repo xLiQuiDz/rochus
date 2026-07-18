@@ -122,6 +122,7 @@
   let waterEscapes = 0;
   let waterCooldown = false;
   let waterAllowOrder = false;
+  let waterPlaceholder = null;
   const WATER_CATCH_AFTER = 10;
 
   function pickItemGag(name, category) {
@@ -223,6 +224,75 @@
     });
   }
 
+  function isWaterChase() {
+    return document.body.classList.contains('water-chase');
+  }
+
+  /** Blank the menu so water can run on an empty canvas. */
+  function enterWaterChase(card) {
+    if (isWaterChase() || !card) return;
+
+    const rect = card.getBoundingClientRect();
+    if (!waterPlaceholder) {
+      waterPlaceholder = document.createElement('div');
+      waterPlaceholder.className = 'water-placeholder';
+      waterPlaceholder.setAttribute('aria-hidden', 'true');
+    }
+    waterPlaceholder.style.height = `${Math.round(rect.height)}px`;
+    if (card.parentNode && card.parentNode !== document.body) {
+      card.parentNode.insertBefore(waterPlaceholder, card);
+    }
+    card.style.width = `${Math.min(rect.width, window.innerWidth - 32)}px`;
+    document.body.appendChild(card);
+    document.body.classList.add('water-chase');
+    card.classList.add('menu-card--fleeing');
+  }
+
+  function restoreWaterToSlot(card) {
+    document.body.classList.remove('water-chase');
+    card.classList.remove('menu-card--fleeing', 'water-vanish', 'water-zip');
+    card.style.left = '';
+    card.style.top = '';
+    card.style.width = '';
+    if (waterPlaceholder && waterPlaceholder.parentNode) {
+      waterPlaceholder.parentNode.insertBefore(card, waterPlaceholder);
+      waterPlaceholder.remove();
+    } else if (!card.parentNode || card.parentNode === document.body) {
+      const grid = document.querySelector('#fris .menu-grid');
+      if (grid) grid.appendChild(card);
+    }
+  }
+
+  /** Restore menu and put water back in its slot. */
+  function endWaterChase(card, { toast = true, instant = false } = {}) {
+    if (!card) card = document.getElementById('water-card');
+    if (!card) return;
+
+    const wasChasing = isWaterChase() || card.classList.contains('menu-card--fleeing');
+    if (!wasChasing && !waterPlaceholder) return;
+    if (card.classList.contains('water-vanish')) return;
+
+    waterCooldown = true;
+    if (toast && wasChasing) {
+      showToast(pick(['Water is weggezwommen 💧', 'Splash — water gone', 'Te laat, water scrollde weg']), false, 1400);
+    }
+
+    if (instant) {
+      restoreWaterToSlot(card);
+      waterCooldown = false;
+      return;
+    }
+
+    card.classList.remove('water-zip');
+    card.classList.add('water-vanish');
+    setTimeout(() => {
+      restoreWaterToSlot(card);
+      setTimeout(() => {
+        waterCooldown = false;
+      }, 400);
+    }, 260);
+  }
+
   /**
    * Teleport the water card somewhere else on screen.
    * @returns {boolean} true if it fled (block add), false if client finally caught it
@@ -235,10 +305,7 @@
     if (waterEscapes >= WATER_CATCH_AFTER) {
       waterEscapes = 0;
       waterAllowOrder = true;
-      card.classList.remove('menu-card--fleeing', 'water-zip');
-      card.style.left = '';
-      card.style.top = '';
-      card.style.width = '';
+      endWaterChase(card, { toast: false, instant: true });
       showToast('Oké oké… je hebt water verdiend 💧', false, 2400);
       return false;
     }
@@ -248,30 +315,25 @@
       waterCooldown = false;
     }, 380);
 
+    enterWaterChase(card);
     showToast(pick(WATER_ESCAPE_TOASTS), false, 1500);
 
     const rect = card.getBoundingClientRect();
-    if (!card.classList.contains('menu-card--fleeing')) {
-      card.style.width = `${Math.min(rect.width, window.innerWidth - 32)}px`;
-      card.classList.add('menu-card--fleeing');
-    }
-
-    const pad = 12;
+    const pad = 16;
     const w = card.offsetWidth || 280;
     const h = card.offsetHeight || 72;
     const maxX = Math.max(pad, window.innerWidth - w - pad);
-    const maxY = Math.max(pad + 70, window.innerHeight - h - pad - 90);
+    const maxY = Math.max(pad + 24, window.innerHeight - h - pad - 24);
 
-    let x = pad + Math.random() * (maxX - pad);
-    let y = 70 + Math.random() * Math.max(40, maxY - 70);
+    let x = pad + Math.random() * Math.max(1, maxX - pad);
+    let y = pad + Math.random() * Math.max(1, maxY - pad);
 
-    // Don't land too close to current spot
     const cx = rect.left;
     const cy = rect.top;
     let tries = 0;
-    while (tries < 8 && Math.hypot(x - cx, y - cy) < 120) {
-      x = pad + Math.random() * (maxX - pad);
-      y = 70 + Math.random() * Math.max(40, maxY - 70);
+    while (tries < 8 && Math.hypot(x - cx, y - cy) < 140) {
+      x = pad + Math.random() * Math.max(1, maxX - pad);
+      y = pad + Math.random() * Math.max(1, maxY - pad);
       tries += 1;
     }
 
@@ -287,25 +349,10 @@
     return true;
   }
 
-  /** Swipe/scroll → runaway water poofs away and returns to the menu slot. */
+  /** Scroll / swipe ends the blank-canvas chase. */
   function vanishFleeingWater(card) {
-    if (!card || !card.classList.contains('menu-card--fleeing')) return;
-    if (card.classList.contains('water-vanish')) return;
-
-    waterCooldown = true;
-    card.classList.remove('water-zip');
-    card.classList.add('water-vanish');
-    showToast(pick(['Water is weggezwommen 💧', 'Splash — water gone', 'Te laat, water scrollde weg']), false, 1400);
-
-    setTimeout(() => {
-      card.classList.remove('menu-card--fleeing', 'water-vanish', 'water-zip');
-      card.style.left = '';
-      card.style.top = '';
-      card.style.width = '';
-      setTimeout(() => {
-        waterCooldown = false;
-      }, 500);
-    }, 280);
+    if (!isWaterChase() && !(card && card.classList.contains('menu-card--fleeing'))) return;
+    endWaterChase(card);
   }
 
   /* ------------------------------------------------------------------ */
@@ -751,20 +798,23 @@
 
   });
 
-  // Water also flees when you hover / get close (desktop chaos)
+  // Water chase: click starts blank-canvas mode; during chase, hover still teleports
   const waterEl = document.getElementById('water-card');
   if (waterEl && !prefersReducedMotion) {
     waterEl.addEventListener(
       'pointerenter',
       () => {
-        fleeWater(waterEl);
+        if (isWaterChase()) fleeWater(waterEl);
       },
       { passive: true }
     );
 
-    // Swipe / scroll while it's floating → disappear back into the menu
-    const onBrowseAway = () => vanishFleeingWater(waterEl);
+    // Scroll / swipe ends chase and restores the menu
+    const onBrowseAway = () => {
+      if (isWaterChase()) vanishFleeingWater(waterEl);
+    };
     window.addEventListener('scroll', onBrowseAway, { passive: true });
+    window.addEventListener('wheel', onBrowseAway, { passive: true });
     window.addEventListener('touchmove', onBrowseAway, { passive: true });
   }
 
