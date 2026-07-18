@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Rochus · Bar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="bar.css" />
+</head>
+<body>
+  <div class="login" id="login-view">
+    <div class="login__card">
+      <p class="login__brand">ROCHUS</p>
+      <h1 class="login__title">Staff</h1>
+      <p class="login__sub">Voer de PIN in om bestellingen te zien</p>
+      <form class="login__form" id="login-form">
+        <input
+          type="password"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          autocomplete="current-password"
+          class="login__pin"
+          id="login-pin"
+          placeholder="PIN"
+          maxlength="12"
+          required
+        />
+        <button type="submit" class="login__btn">Open dashboard</button>
+        <p class="login__error" id="login-error" hidden></p>
+      </form>
+    </div>
+  </div>
+
+  <div class="dash" id="dash-view" hidden>
+    <header class="dash__header">
+      <div>
+        <p class="dash__brand">ROCHUS</p>
+        <h1 class="dash__title">Bestellingen</h1>
+      </div>
+      <div class="dash__actions">
+        <label class="dash__toggle">
+          <input type="checkbox" id="sound-toggle" checked />
+          <span>Geluid</span>
+        </label>
+        <a class="dash__link" href="/qr">QR-codes</a>
+        <button type="button" class="dash__logout" id="logout-btn">Uitloggen</button>
+      </div>
+    </header>
+
+    <div class="dash__flash" id="new-flash" hidden>Nieuwe bestelling</div>
+
+    <main class="board" id="order-board">
+      <p class="board__empty" id="board-empty">Nog geen open bestellingen</p>
+    </main>
+  </div>
+
+  <script src="bar.js" defer></script>
+</body>
+</html>

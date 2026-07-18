@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Rochus · QR-codes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="qr.css" />
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js" defer></script>
+  <script src="qr.js" defer></script>
+</head>
+<body>
+  <div class="login" id="login-view">
+    <div class="login__card">
+      <p class="login__brand">ROCHUS</p>
+      <h1 class="login__title">QR-codes</h1>
+      <p class="login__sub">Staff PIN vereist om tafelcodes te printen</p>
+      <form class="login__form" id="login-form">
+        <input type="password" inputmode="numeric" class="login__pin" id="login-pin" placeholder="PIN" maxlength="12" required />
+        <button type="submit" class="login__btn">Toon QR-codes</button>
+        <p class="login__error" id="login-error" hidden></p>
+      </form>
+      <p class="login__back"><a href="/bar">← Terug naar bar</a></p>
+    </div>
+  </div>
+
+  <div class="qr-page" id="qr-view" hidden>
+    <header class="qr-toolbar no-print">
+      <div>
+        <p class="qr-toolbar__brand">ROCHUS</p>
+        <h1 class="qr-toolbar__title">Tafel QR-codes</h1>
+        <p class="qr-toolbar__url" id="public-url"></p>
+      </div>
+      <div class="qr-toolbar__actions">
+        <button type="button" class="qr-btn" id="print-btn">Printen</button>
+        <a class="qr-btn qr-btn--ghost" href="/bar">Bar</a>
+        <button type="button" class="qr-btn qr-btn--ghost" id="logout-btn">Uitloggen</button>
+      </div>
+    </header>
+    <div class="qr-grid" id="qr-grid"></div>
+  </div>
+</body>
+</html>

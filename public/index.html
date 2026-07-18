@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Rochus — zomerse pop-up bar. Cocktails, wijnen, bieren en fingerfood." />
+  <title>Rochus — Summer Pop-Up Bar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,500&family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__bg" data-parallax>
+      <img src="assets/hero.jpg" alt="" width="1920" height="1080" />
+    </div>
+    <div class="hero__overlay"></div>
+    <div class="hero__content">
+      <div class="hero__badge">
+        <span class="dot" aria-hidden="true"></span>
+        Summer evenings
+      </div>
+      <h1 class="hero__title"><span>ROCHUS</span></h1>
+      <div class="hero__divider" aria-hidden="true"></div>
+      <p class="hero__subtitle">Zomerse pop-up bar — golden hour, cold drinks &amp; good vibes</p>
+    </div>
+  </header>
+
+  <nav class="nav-filter" aria-label="Menu categorieën">
+    <div class="nav-filter__inner">
+      <button type="button" class="nav-filter__btn active" data-filter="all">Menu</button>
+      <button type="button" class="nav-filter__btn" data-filter="bieren">Vatbier</button>
+      <button type="button" class="nav-filter__btn" data-filter="flessen">Flessen</button>
+      <button type="button" class="nav-filter__btn" data-filter="fris">Fris</button>
+      <button type="button" class="nav-filter__btn" data-filter="cocktails">Cocktails</button>
+      <button type="button" class="nav-filter__btn" data-filter="wijnen">Wijnen</button>
+      <button type="button" class="nav-filter__btn" data-filter="shots">Shots</button>
+      <button type="button" class="nav-filter__btn" data-filter="fingerfood">Bites</button>
+    </div>
+  </nav>
+
+  <div class="search-bar">
+    <div class="search-bar__input-wrap">
+      <span class="search-bar__icon" aria-hidden="true">⌕</span>
+      <input
+        type="search"
+        class="search-bar__input"
+        id="menu-search"
+        placeholder="Zoek in het menu…"
+        autocomplete="off"
+        aria-label="Zoek in het menu"
+      />
+    </div>
+  </div>
+
+  <main class="menu-content">
+    <aside class="daily-special stagger-in" aria-label="Signature van de avond">
+      <div class="daily-special__label">Signature</div>
+      <div class="daily-special__body">
+        <div class="daily-special__info">
+          <h2 class="daily-special__name">Tripel Karmeliet van 't vat</h2>
+          <p class="daily-special__detail">33 cl · Gouden tripelaar, fris en complex</p>
+        </div>
+        <div class="daily-special__price">€5</div>
+        <button
+          type="button"
+          class="menu-card__add-btn"
+          data-add
+          data-name="Tripel Karmeliet van 't vat"
+          data-price="5"
+          data-category="bieren"
+          aria-label="Voeg Tripel Karmeliet van 't vat toe"
+        >+</button>
+      </div>
+    </aside>
+
+    <!-- Bieren van 't Vat -->
+    <section class="menu-section" id="bieren" data-category="bieren">
+      <div class="menu-section__header stagger-in">
+        <span class="menu-section__emoji" aria-hidden="true">🍺</span>
+        <h2 class="menu-section__title">Bieren van 't Vat</h2>
+      </div>
+      <div class="menu-grid">
+        <article class="menu-card stagger-in" data-name="Stella Artois van 't vat">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Stella Artois van 't vat</h3>
+            <p class="menu-card__detail">33 cl</p>
+          </div>
+          <div class="menu-card__prices">
+            <span class="menu-card__price">€3</span>
+          </div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Stella Artois van 't vat" data-price="3" data-category="bieren" aria-label="Voeg Stella Artois van 't vat toe">+</button>
+        </article>
+        <article class="menu-card menu-card--featured stagger-in" data-name="Tripel Karmeliet van 't vat">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Tripel Karmeliet van 't vat</h3>
+            <p class="menu-card__detail">33 cl · Signature</p>
+          </div>
+          <div class="menu-card__prices">
+            <span class="menu-card__price">€5</span>
+          </div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Tripel Karmeliet van 't vat" data-price="5" data-category="bieren" aria-label="Voeg Tripel Karmeliet van 't vat toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Hoegaarden Rosé van 't vat">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Hoegaarden Rosé van 't vat</h3>
+            <p class="menu-card__detail">33 cl</p>
+          </div>
+          <div class="menu-card__prices">
+            <span class="menu-card__price">€4</span>
+          </div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Hoegaarden Rosé van 't vat" data-price="4" data-category="bieren" aria-label="Voeg Hoegaarden Rosé van 't vat toe">+</button>
+        </article>
+      </div>
+    </section>
+
+    <!-- Flessenbier -->
+    <section class="menu-section" id="flessen" data-category="flessen">
+      <div class="menu-section__header stagger-in">
+        <span class="menu-section__emoji" aria-hidden="true">🍻</span>
+        <h2 class="menu-section__title">Flessenbier</h2>
+      </div>
+      <div class="menu-grid">
+        <article class="menu-card stagger-in" data-name="Stella 0,0">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Stella 0,0</h3>
+            <p class="menu-card__detail">25 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Stella 0,0" data-price="3" data-category="flessen" aria-label="Voeg Stella 0,0 toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Sportzot">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Sportzot</h3>
+            <p class="menu-card__detail">33 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€5</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Sportzot" data-price="5" data-category="flessen" aria-label="Voeg Sportzot toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Tripel Karmeliet 0,0">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Tripel Karmeliet 0,0</h3>
+            <p class="menu-card__detail">33 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€5</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Tripel Karmeliet 0,0" data-price="5" data-category="flessen" aria-label="Voeg Tripel Karmeliet 0,0 toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Corona">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Corona</h3>
+            <p class="menu-card__detail">33 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€5</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Corona" data-price="5" data-category="flessen" aria-label="Voeg Corona toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Duvel">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Duvel</h3>
+            <p class="menu-card__detail">33 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€5</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Duvel" data-price="5" data-category="flessen" aria-label="Voeg Duvel toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Flying Fish">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Flying Fish</h3>
+            <p class="menu-card__detail">33 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€4</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Flying Fish" data-price="4" data-category="flessen" aria-label="Voeg Flying Fish toe">+</button>
+        </article>
+      </div>
+    </section>
+
+    <!-- Frisdranken -->
+    <section class="menu-section" id="fris" data-category="fris">
+      <div class="menu-section__header stagger-in">
+        <span class="menu-section__emoji" aria-hidden="true">🥤</span>
+        <h2 class="menu-section__title">Frisdranken</h2>
+      </div>
+      <div class="menu-grid">
+        <article class="menu-card stagger-in" data-name="Fruitsap (Minute Maid)">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Fruitsap (Minute Maid)</h3>
+            <p class="menu-card__detail">20 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Fruitsap (Minute Maid)" data-price="3" data-category="fris" aria-label="Voeg Fruitsap toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Coca-Cola">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Coca-Cola</h3>
+            <p class="menu-card__detail">25 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Coca-Cola" data-price="3" data-category="fris" aria-label="Voeg Coca-Cola toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Coca-Cola Zero">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Coca-Cola Zero</h3>
+            <p class="menu-card__detail">25 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Coca-Cola Zero" data-price="3" data-category="fris" aria-label="Voeg Coca-Cola Zero toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Fanta">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Fanta</h3>
+            <p class="menu-card__detail">25 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Fanta" data-price="3" data-category="fris" aria-label="Voeg Fanta toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Lipton Ice Tea">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Lipton Ice Tea</h3>
+            <p class="menu-card__detail">25 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Lipton Ice Tea" data-price="3" data-category="fris" aria-label="Voeg Lipton Ice Tea toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Chaudfontaine Plat">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Chaudfontaine Plat</h3>
+            <p class="menu-card__detail">25 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Chaudfontaine Plat" data-price="3" data-category="fris" aria-label="Voeg Chaudfontaine Plat toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Chaudfontaine Bruis">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Chaudfontaine Bruis</h3>
+            <p class="menu-card__detail">25 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Chaudfontaine Bruis" data-price="3" data-category="fris" aria-label="Voeg Chaudfontaine Bruis toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Royal Bliss Tonic">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Royal Bliss Tonic</h3>
+            <p class="menu-card__detail">20 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Royal Bliss Tonic" data-price="3" data-category="fris" aria-label="Voeg Royal Bliss Tonic toe">+</button>
+        </article>
+      </div>
+    </section>
+
+    <!-- Cocktails -->
+    <section class="menu-section" id="cocktails" data-category="cocktails">
+      <div class="menu-section__header stagger-in">
+        <span class="menu-section__emoji" aria-hidden="true">🍹</span>
+        <h2 class="menu-section__title">Cocktails</h2>
+      </div>
+      <div class="menu-grid">
+        <article class="menu-card stagger-in" data-name="Aperol Spritz">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Aperol Spritz</h3>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€8</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Aperol Spritz" data-price="8" data-category="cocktails" aria-label="Voeg Aperol Spritz toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Gin Tonic Bulldog">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Gin Tonic Bulldog</h3>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€9</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Gin Tonic Bulldog" data-price="9" data-category="cocktails" aria-label="Voeg Gin Tonic Bulldog toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Rum Captain Morgan">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Rum Captain Morgan</h3>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€9</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Rum Captain Morgan" data-price="9" data-category="cocktails" aria-label="Voeg Rum Captain Morgan toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Gin Tonic Tanqueray 0,0">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Gin Tonic Tanqueray 0,0</h3>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€9</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Gin Tonic Tanqueray 0,0" data-price="9" data-category="cocktails" aria-label="Voeg Gin Tonic Tanqueray 0,0 toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Hugo Spritz">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Hugo Spritz</h3>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€8</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Hugo Spritz" data-price="8" data-category="cocktails" aria-label="Voeg Hugo Spritz toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Limoncello Spritz">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Limoncello Spritz</h3>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€8</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Limoncello Spritz" data-price="8" data-category="cocktails" aria-label="Voeg Limoncello Spritz toe">+</button>
+        </article>
+      </div>
+    </section>
+
+    <!-- Wijnen & Bubbels -->
+    <section class="menu-section" id="wijnen" data-category="wijnen">
+      <div class="menu-section__header stagger-in">
+        <span class="menu-section__emoji" aria-hidden="true">🍷</span>
+        <h2 class="menu-section__title">Wijnen &amp; Bubbels</h2>
+      </div>
+      <div class="menu-grid">
+        <article class="menu-card stagger-in" data-name="Care Solidarity Rosé 2025">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Care Solidarity Rosé 2025</h3>
+          </div>
+          <div class="menu-card__prices menu-card__prices--dual">
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Glas</div>
+              <span class="menu-card__price">€5</span>
+            </div>
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Fles</div>
+              <span class="menu-card__price">€25</span>
+            </div>
+          </div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Care Solidarity Rosé 2025 (glas)" data-price="5" data-category="wijnen" aria-label="Voeg Care Solidarity Rosé glas toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Care Crianza Nativa Tempranillo-Merlot 2022">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Care Crianza Nativa Tempranillo-Merlot 2022</h3>
+          </div>
+          <div class="menu-card__prices menu-card__prices--dual">
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Glas</div>
+              <span class="menu-card__price">€5</span>
+            </div>
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Fles</div>
+              <span class="menu-card__price">€25</span>
+            </div>
+          </div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Care Crianza Nativa (glas)" data-price="5" data-category="wijnen" aria-label="Voeg Care Crianza Nativa glas toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Care Garnacha Blanca Nativa 2024">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Care Garnacha Blanca Nativa 2024</h3>
+          </div>
+          <div class="menu-card__prices menu-card__prices--dual">
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Glas</div>
+              <span class="menu-card__price">€5</span>
+            </div>
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Fles</div>
+              <span class="menu-card__price">€25</span>
+            </div>
+          </div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Care Garnacha Blanca Nativa (glas)" data-price="5" data-category="wijnen" aria-label="Voeg Care Garnacha Blanca glas toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Prosecco DOC Frizzante 2023">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Prosecco DOC Frizzante 2023</h3>
+          </div>
+          <div class="menu-card__prices menu-card__prices--dual">
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Glas</div>
+              <span class="menu-card__price">€6</span>
+            </div>
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Fles</div>
+              <span class="menu-card__price">€28</span>
+            </div>
+          </div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Prosecco DOC Frizzante (glas)" data-price="6" data-category="wijnen" aria-label="Voeg Prosecco glas toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Champagne Merreaux Brut Réserve">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Champagne Merreaux Brut Réserve</h3>
+          </div>
+          <div class="menu-card__prices menu-card__prices--dual">
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Glas</div>
+              <span class="menu-card__price menu-card__price--dash">–</span>
+            </div>
+            <div class="menu-card__price-group">
+              <div class="menu-card__price-label">Fles</div>
+              <span class="menu-card__price">€55</span>
+            </div>
+          </div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Champagne Merreaux Brut Réserve" data-price="55" data-category="wijnen" aria-label="Voeg Champagne Merreaux toe">+</button>
+        </article>
+      </div>
+    </section>
+
+    <!-- Shots -->
+    <section class="menu-section" id="shots" data-category="shots">
+      <div class="menu-section__header stagger-in">
+        <span class="menu-section__emoji" aria-hidden="true">🥃</span>
+        <h2 class="menu-section__title">Shots</h2>
+      </div>
+      <div class="menu-grid">
+        <article class="menu-card stagger-in" data-name="Tequila">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Tequila</h3>
+            <p class="menu-card__detail">4 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€4</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Tequila" data-price="4" data-category="shots" aria-label="Voeg Tequila toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Limoncello Bongiorno">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Limoncello Bongiorno</h3>
+            <p class="menu-card__detail">4 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€4</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Limoncello Bongiorno" data-price="4" data-category="shots" aria-label="Voeg Limoncello Bongiorno toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Rum">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Rum</h3>
+            <p class="menu-card__detail">4 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€4</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Rum" data-price="4" data-category="shots" aria-label="Voeg Rum toe">+</button>
+        </article>
+      </div>
+    </section>
+
+    <!-- Fingerfood & Snacks -->
+    <section class="menu-section" id="fingerfood" data-category="fingerfood">
+      <div class="menu-section__header stagger-in">
+        <span class="menu-section__emoji" aria-hidden="true">🍴</span>
+        <h2 class="menu-section__title">Fingerfood &amp; Snacks</h2>
+      </div>
+      <div class="menu-section__promo stagger-in">
+        <span aria-hidden="true">🍟</span>
+        <span>Actie: 3 + 1 gratis op alle fingerfood-artikelen</span>
+      </div>
+      <div class="menu-grid">
+        <article class="menu-card stagger-in" data-name="Zak Chips">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Zak Chips</h3>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€2,50</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Zak Chips" data-price="2.5" data-category="fingerfood" aria-label="Voeg Zak Chips toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Kaasballetjes (6 stuks)">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Kaasballetjes</h3>
+            <p class="menu-card__detail">6 stuks</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€6</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Kaasballetjes (6 stuks)" data-price="6" data-category="fingerfood" aria-label="Voeg Kaasballetjes toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Mozzarella Fingers (6 stuks)">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Mozzarella Fingers</h3>
+            <p class="menu-card__detail">6 stuks</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€6</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Mozzarella Fingers (6 stuks)" data-price="6" data-category="fingerfood" aria-label="Voeg Mozzarella Fingers toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Garnaalballetjes (6 stuks)">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Garnaalballetjes</h3>
+            <p class="menu-card__detail">6 stuks</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€6</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Garnaalballetjes (6 stuks)" data-price="6" data-category="fingerfood" aria-label="Voeg Garnaalballetjes toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Bitterballen (6 stuks)">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Bitterballen</h3>
+            <p class="menu-card__detail">6 stuks</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€6</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Bitterballen (6 stuks)" data-price="6" data-category="fingerfood" aria-label="Voeg Bitterballen toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Mini-loempia's (6 stuks)">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Mini-loempia's</h3>
+            <p class="menu-card__detail">6 stuks</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€6</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Mini-loempia's (6 stuks)" data-price="6" data-category="fingerfood" aria-label="Voeg Mini-loempia's toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Kippen Nuggets (6 stuks)">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Kippen Nuggets</h3>
+            <p class="menu-card__detail">6 stuks</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€6</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Kippen Nuggets (6 stuks)" data-price="6" data-category="fingerfood" aria-label="Voeg Kippen Nuggets toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Kipfingers (6 stuks)">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Kipfingers</h3>
+            <p class="menu-card__detail">6 stuks</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€6</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Kipfingers (6 stuks)" data-price="6" data-category="fingerfood" aria-label="Voeg Kipfingers toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Sharing Nacho's">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Sharing Nacho's</h3>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€15</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Sharing Nacho's" data-price="15" data-category="fingerfood" aria-label="Voeg Sharing Nacho's toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="105 Sharing Burger">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">105 Sharing Burger</h3>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€8</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="105 Sharing Burger" data-price="8" data-category="fingerfood" aria-label="Voeg 105 Sharing Burger toe">+</button>
+        </article>
+      </div>
+    </section>
+
+    <div class="no-results" id="no-results" role="status">
+      <span aria-hidden="true">🔍</span>
+      Geen resultaten gevonden
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p class="site-footer__name">ROCHUS</p>
+    <p class="site-footer__tagline">Summer pop-up · sip slow</p>
+    <p>Digitaal menukaart</p>
+  </footer>
+
+  <div class="table-chip" id="table-chip" hidden>
+    <span class="table-chip__label">Tafel</span>
+    <span class="table-chip__num" id="table-chip-num">—</span>
+  </div>
+
+  <button type="button" class="order-fab" id="order-fab" aria-label="Open bestelling">
+    ✦
+    <span class="order-fab__badge" id="order-badge">0</span>
+  </button>
+
+  <div class="order-overlay" id="order-overlay"></div>
+  <aside class="order-drawer" id="order-drawer" aria-label="Jouw bestelling" aria-hidden="true">
+    <div class="order-drawer__handle" aria-hidden="true"></div>
+    <div class="order-drawer__header">
+      <h2 class="order-drawer__title">Jouw bestelling</h2>
+      <button type="button" class="order-drawer__clear" id="order-clear">Wissen</button>
+    </div>
+    <div class="order-drawer__body" id="order-body">
+      <div class="order-drawer__empty" id="order-empty">
+        <span aria-hidden="true">✧</span>
+        Nog niets gekozen — tip: 3 + 1 gratis op bites
+      </div>
+    </div>
+    <div class="order-drawer__footer" id="order-footer" hidden>
+      <div class="order-drawer__discount" id="order-discount" hidden>
+        <span>Fingerfood actie (3+1)</span>
+        <span id="order-discount-amount">−€0</span>
+      </div>
+      <div class="order-drawer__total">
+        <span>Totaal</span>
+        <span class="order-drawer__total-amount" id="order-total">€0</span>
+      </div>
+      <label class="order-drawer__note-label" for="order-note">Opmerking <span>(optioneel)</span></label>
+      <input
+        type="text"
+        class="order-drawer__note"
+        id="order-note"
+        maxlength="200"
+        placeholder="bv. zonder ijs"
+        autocomplete="off"
+      />
+      <p class="order-drawer__cash">Betalen bij levering · cash</p>
+      <p class="order-drawer__table-hint" id="order-table-hint"></p>
+      <button type="button" class="order-drawer__submit" id="order-submit">Bestelling plaatsen</button>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="menu.js" defer></script>
+</body>
+</html>

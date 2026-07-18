@@ -1,0 +1,19 @@
+{
+  "name": "rochus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rochus summer pop-up bar — QR table ordering",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2"
+  }
+}
