@@ -894,6 +894,20 @@
       if (sectionHasMatch) anyVisible = true;
     });
 
+    // Signature callout visibility
+    const special = document.querySelector('.daily-special');
+    if (special) {
+      const specialMatch =
+        !q ||
+        "tripel karmeliet van 't vat signature".includes(q) ||
+        q.includes('tripel') ||
+        q.includes('karmeliet') ||
+        q.includes('signature');
+      const categoryOk = activeFilter === 'all' || activeFilter === 'bieren';
+      special.hidden = !(specialMatch && categoryOk);
+      if (!special.hidden && specialMatch) anyVisible = true;
+    }
+
     const showNone = Boolean(q && !anyVisible);
     noResults.classList.toggle('show', showNone);
     if (showNone) {
