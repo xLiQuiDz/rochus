@@ -759,9 +759,24 @@ h1, h2, h3, h4 {
   animation: fadeInUp 0.6s var(--ease-out-expo) 1s both;
 }
 
+.order-fab__icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
 .order-fab:hover {
   transform: scale(1.08);
   box-shadow: 0 8px 36px rgba(212, 175, 112, 0.55);
+}
+
+.order-fab--pulse {
+  animation: fabPulse 0.55s var(--ease-out-expo);
+}
+
+@keyframes fabPulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.14); }
+  100% { transform: scale(1); }
 }
 
 .order-fab__badge {

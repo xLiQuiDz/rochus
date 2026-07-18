@@ -39,6 +39,8 @@
   let tableNumber = null;
   let tableCount = 20;
   let submitting = false;
+  /** Only true while the confirm dialog is open — prevents accidental API submits. */
+  let confirmReady = false;
 
   function formatEuro(n) {
     return (
@@ -172,7 +174,7 @@
     submitBtn.disabled = order.size === 0 || submitting;
   }
 
-  function showToast(message, isError = false) {
+  function showToast(message, isError = false, ms = 2200) {
     toastEl.hidden = false;
     toastEl.textContent = message;
     toastEl.classList.toggle('toast--error', isError);
@@ -183,11 +185,11 @@
       setTimeout(() => {
         toastEl.hidden = true;
       }, 300);
-    }, 4200);
+    }, ms);
   }
 
   function openConfirm() {
-    if (!tableNumber || order.size === 0) return;
+    if (!tableNumber || order.size === 0 || submitting) return;
 
     const items = [...order.values()];
     const { discount, total, freeCount } = getTotals();
@@ -205,7 +207,7 @@
       remainingFree -= freeHere;
     }
 
-    confirmLead.textContent = `Tafel ${tableNumber} · controleer je bestelling voor je verstuurt`;
+    confirmLead.textContent = `Tafel ${tableNumber} · dit gaat pas naar de bar als je bevestigt`;
     confirmList.innerHTML = items
       .map((item) => {
         const freeHere = freeByKey.get(item.name) || 0;
@@ -226,19 +228,22 @@
     }
     confirmTotal.textContent = formatEuro(total);
 
+    confirmReady = true;
     confirmOverlay.hidden = false;
     confirmModal.hidden = false;
   }
 
   function closeConfirm() {
+    confirmReady = false;
     confirmOverlay.hidden = true;
     confirmModal.hidden = true;
     confirmSend.disabled = false;
-    confirmSend.textContent = 'Bevestigen & versturen';
+    confirmSend.textContent = 'Ja, verstuur naar de bar';
   }
 
   async function submitOrder() {
-    if (submitting || !tableNumber || order.size === 0) return;
+    // Hard gate: never POST unless the confirm dialog is open
+    if (!confirmReady || submitting || !tableNumber || order.size === 0) return;
     submitting = true;
     updateSubmitState();
     confirmSend.disabled = true;
@@ -274,14 +279,14 @@
       renderOrder();
       closeConfirm();
       closeDrawer();
-      showToast(`Bestelling bevestigd · tafel ${tableNumber} · we komen eraan`);
+      showToast(`Verstuurd naar de bar · tafel ${tableNumber}`, false, 4200);
     } catch (err) {
-      showToast(err.message || 'Bestelling mislukt', true);
+      showToast(err.message || 'Bestelling mislukt', true, 4200);
       confirmSend.disabled = false;
-      confirmSend.textContent = 'Bevestigen & versturen';
+      confirmSend.textContent = 'Ja, verstuur naar de bar';
     } finally {
       submitting = false;
-      submitBtn.textContent = 'Controleer bestelling';
+      submitBtn.textContent = 'Verder naar bevestiging';
       updateSubmitState();
     }
   }
@@ -306,7 +311,11 @@
       order.set(name, { name, price, category, qty: 1 });
     }
     renderOrder();
-    showToast(`${name} toegevoegd`);
+    // Cart only — never submits to the bar
+    showToast('In winkelmandje', false, 1600);
+    fab.classList.add('order-fab--pulse');
+    clearTimeout(addItem._pulse);
+    addItem._pulse = setTimeout(() => fab.classList.remove('order-fab--pulse'), 600);
   }
 
   function changeQty(name, delta) {

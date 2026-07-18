@@ -527,22 +527,22 @@
     <span class="table-chip__num" id="table-chip-num">—</span>
   </div>
 
-  <button type="button" class="order-fab" id="order-fab" aria-label="Open bestelling">
-    ✦
+  <button type="button" class="order-fab" id="order-fab" aria-label="Open winkelmandje">
+    <span class="order-fab__icon" aria-hidden="true">🛒</span>
     <span class="order-fab__badge" id="order-badge">0</span>
   </button>
 
   <div class="order-overlay" id="order-overlay"></div>
-  <aside class="order-drawer" id="order-drawer" aria-label="Jouw bestelling" aria-hidden="true">
+  <aside class="order-drawer" id="order-drawer" aria-label="Winkelmandje" aria-hidden="true">
     <div class="order-drawer__handle" aria-hidden="true"></div>
     <div class="order-drawer__header">
-      <h2 class="order-drawer__title">Jouw bestelling</h2>
-      <button type="button" class="order-drawer__clear" id="order-clear">Wissen</button>
+      <h2 class="order-drawer__title">Winkelmandje</h2>
+      <button type="button" class="order-drawer__clear" id="order-clear">Leegmaken</button>
     </div>
     <div class="order-drawer__body" id="order-body">
       <div class="order-drawer__empty" id="order-empty">
-        <span aria-hidden="true">✧</span>
-        Nog niets gekozen — tip: 3 + 1 gratis op bites
+        <span aria-hidden="true">🛒</span>
+        Je mandje is leeg — tik + om iets toe te voegen
       </div>
     </div>
     <div class="order-drawer__footer" id="order-footer" hidden>
@@ -563,9 +563,11 @@
         placeholder="bv. zonder ijs"
         autocomplete="off"
       />
-      <p class="order-drawer__cash">Betalen bij levering · cash</p>
+      <p class="order-drawer__cash">Nog niet verstuurd · cash bij levering</p>
       <p class="order-drawer__table-hint" id="order-table-hint"></p>
-      <button type="button" class="order-drawer__submit" id="order-submit">Controleer bestelling</button>
+      <button type="button" class="order-drawer__submit" id="order-submit">
+        Verder naar bevestiging
+      </button>
     </div>
   </aside>
 
@@ -578,7 +580,7 @@
     aria-labelledby="confirm-title"
     hidden
   >
-    <h2 class="confirm-modal__title" id="confirm-title">Bestelling bevestigen?</h2>
+    <h2 class="confirm-modal__title" id="confirm-title">Bestelling versturen?</h2>
     <p class="confirm-modal__lead" id="confirm-lead"></p>
     <ul class="confirm-modal__list" id="confirm-list"></ul>
     <div class="confirm-modal__totals">
@@ -591,13 +593,13 @@
         <span id="confirm-total">€0</span>
       </div>
     </div>
-    <p class="confirm-modal__cash">Cash bij levering aan tafel</p>
+    <p class="confirm-modal__cash">Pas na bevestiging gaat dit naar de bar · cash bij levering</p>
     <div class="confirm-modal__actions">
       <button type="button" class="confirm-modal__btn confirm-modal__btn--ghost" id="confirm-cancel">
-        Terug
+        Terug naar mandje
       </button>
       <button type="button" class="confirm-modal__btn confirm-modal__btn--primary" id="confirm-send">
-        Bevestigen &amp; versturen
+        Ja, verstuur naar de bar
       </button>
     </div>
   </div>
