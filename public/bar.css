@@ -48,6 +48,11 @@ body::before {
   padding: 24px;
 }
 
+.login[hidden],
+.dash[hidden] {
+  display: none !important;
+}
+
 .login__card {
   width: min(100%, 380px);
   padding: 40px 32px;
