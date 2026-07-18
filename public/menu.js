@@ -876,14 +876,40 @@
   /* Category filter + scroll spy                                       */
   /* ------------------------------------------------------------------ */
   const nav = document.querySelector('.nav-filter');
+  const navInner = nav?.querySelector('.nav-filter__inner');
   const filterBtns = [...document.querySelectorAll('.nav-filter__btn')];
   const sections = [...document.querySelectorAll('.menu-section[data-category]')];
   let activeFilter = 'all';
   let spyPaused = false;
+  let activeNavFilter = 'all';
+
+  function scrollNavBtnIntoView(btn) {
+    if (!navInner || !btn) return;
+    const pad = 20;
+    const btnLeft = btn.offsetLeft;
+    const btnRight = btnLeft + btn.offsetWidth;
+    const viewLeft = navInner.scrollLeft;
+    const viewRight = viewLeft + navInner.clientWidth;
+    let nextLeft = null;
+    if (btnLeft < viewLeft + pad) {
+      nextLeft = Math.max(0, btnLeft - pad);
+    } else if (btnRight > viewRight - pad) {
+      nextLeft = btnRight - navInner.clientWidth + pad;
+    }
+    if (nextLeft == null) return;
+    navInner.scrollTo({
+      left: nextLeft,
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    });
+  }
 
   function setActiveBtn(filter) {
+    if (filter === activeNavFilter) return;
+    activeNavFilter = filter;
     filterBtns.forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.filter === filter);
+      const on = btn.dataset.filter === filter;
+      btn.classList.toggle('active', on);
+      if (on) scrollNavBtnIntoView(btn);
     });
   }
 
@@ -895,6 +921,15 @@
       section.hidden = !match;
     });
     applySearch();
+    // Avoid chip flicker when page height jumps after filtering
+    lastChipScrollY = window.scrollY;
+    if (tableChip && !tableChip.hidden) {
+      if (filter === 'all') {
+        tableChip.classList.toggle('table-chip--away', window.scrollY > 72);
+      } else {
+        tableChip.classList.add('table-chip--away');
+      }
+    }
   }
 
   filterBtns.forEach((btn) => {
@@ -911,50 +946,74 @@
       const target = document.getElementById(filter);
       if (target && !target.hidden) {
         spyPaused = true;
+        if (tableChip && !tableChip.hidden) tableChip.classList.add('table-chip--away');
         target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
         setTimeout(() => {
           spyPaused = false;
-        }, 800);
+          lastChipScrollY = window.scrollY;
+        }, 900);
       }
     });
   });
 
-  /* Sticky nav shadow + table chip show/hide on scroll direction */
+  /* Sticky nav + section spy + table chip */
   let lastChipScrollY = window.scrollY;
   let chipScrollTicking = false;
+  let chipDockTop = null;
+
+  function updateActiveSectionFromScroll() {
+    if (spyPaused || activeFilter !== 'all') return;
+
+    const marker = (nav?.getBoundingClientRect().bottom || 64) + 20;
+    let current = 'all';
+
+    for (const section of sections) {
+      if (section.hidden || section.style.display === 'none') continue;
+      if (section.getBoundingClientRect().top <= marker) {
+        current = section.dataset.category;
+      }
+    }
+
+    setActiveBtn(current);
+  }
 
   function updateTableChipOnScroll() {
     nav.classList.toggle('scrolled', window.scrollY > 40);
 
     if (!tableChip || tableChip.hidden) {
+      updateActiveSectionFromScroll();
       chipScrollTicking = false;
       return;
     }
 
     const y = window.scrollY;
     const delta = y - lastChipScrollY;
-    const navRect = nav.getBoundingClientRect();
     const pastHero = y > 72;
 
     if (pastHero) {
       tableChip.classList.add('table-chip--docked');
-      // Sit just under the sticky category bar — never overlays filters
-      const top = Math.round(Math.max(navRect.bottom + 8, 56));
-      tableChip.style.setProperty('--chip-top', `${top}px`);
+      // Stable dock position — measure once, don't jitter every frame
+      if (chipDockTop == null) {
+        chipDockTop = Math.round((nav?.offsetHeight || 48) + 8);
+      }
+      tableChip.style.setProperty('--chip-top', `${chipDockTop}px`);
     } else {
-      tableChip.classList.remove('table-chip--docked');
+      tableChip.classList.remove('table-chip--docked', 'table-chip--away');
       tableChip.style.removeProperty('--chip-top');
+      chipDockTop = null;
     }
 
-    if (y < 40) {
-      tableChip.classList.remove('table-chip--away');
-    } else if (delta > 8) {
-      tableChip.classList.add('table-chip--away');
-    } else if (delta < -8) {
-      tableChip.classList.remove('table-chip--away');
+    // Hysteresis so tiny section scrolls don't flicker the chip
+    if (pastHero) {
+      if (delta > 14) {
+        tableChip.classList.add('table-chip--away');
+      } else if (delta < -14) {
+        tableChip.classList.remove('table-chip--away');
+      }
     }
 
-    lastChipScrollY = y;
+    if (Math.abs(delta) > 2) lastChipScrollY = y;
+    updateActiveSectionFromScroll();
     chipScrollTicking = false;
   }
 
@@ -969,22 +1028,9 @@
   );
   updateTableChipOnScroll();
 
-  /* Scroll spy when filter is "all" */
-  if ('IntersectionObserver' in window) {
-    const spyObserver = new IntersectionObserver(
-      (entries) => {
-        if (spyPaused || activeFilter !== 'all') return;
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]) {
-          setActiveBtn(visible[0].target.dataset.category);
-        }
-      },
-      { rootMargin: '-30% 0px -55% 0px', threshold: [0, 0.25, 0.5, 0.75] }
-    );
-    sections.forEach((s) => spyObserver.observe(s));
-  }
+  window.addEventListener('resize', () => {
+    chipDockTop = null;
+  });
 
   /* ------------------------------------------------------------------ */
   /* Search                                                             */
