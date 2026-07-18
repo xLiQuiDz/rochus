@@ -1322,6 +1322,232 @@ h1, h2, h3, h4 {
   color: #fecaca;
 }
 
+/* ============================================================
+   WATER DODGE CARD
+   ============================================================ */
+.menu-card--water {
+  border-color: rgba(140, 200, 220, 0.35);
+  box-shadow: inset 3px 0 0 0 rgba(140, 200, 220, 0.55);
+  background:
+    linear-gradient(180deg, rgba(180, 220, 235, 0.12) 0%, transparent 12px),
+    var(--bg-card);
+}
+
+.menu-card--water .menu-card__price {
+  color: #9ed0e0;
+}
+
+.menu-card--water .menu-card__add-btn {
+  border-color: rgba(140, 200, 220, 0.55);
+  color: #9ed0e0;
+}
+
+.menu-card--water:hover .menu-card__name {
+  color: #b8e4f0;
+}
+
+.menu-card--fleeing {
+  position: fixed;
+  z-index: 180;
+  width: min(300px, calc(100vw - 32px));
+  margin: 0;
+  transition:
+    left 0.32s var(--ease-out-expo),
+    top 0.32s var(--ease-out-expo),
+    transform 0.32s var(--ease-out-expo);
+  box-shadow:
+    inset 3px 0 0 0 rgba(140, 200, 220, 0.7),
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 28px rgba(140, 200, 220, 0.2);
+  animation: water-splash 0.35s var(--ease-out-expo);
+}
+
+.menu-card--fleeing.water-zip {
+  animation: water-zip 0.28s var(--ease-out-expo);
+}
+
+@keyframes water-splash {
+  0% { transform: scale(0.92) rotate(-2deg); }
+  60% { transform: scale(1.04) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes water-zip {
+  0% { filter: blur(0); }
+  40% { filter: blur(2px); }
+  100% { filter: blur(0); }
+}
+
+/* ============================================================
+   CHAOS / FUNNY BITS
+   ============================================================ */
+.chaos-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 450;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.chaos-sticker {
+  position: fixed;
+  z-index: 451;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(240, 217, 168, 0.45);
+  background: rgba(20, 16, 12, 0.82);
+  color: var(--amber-400);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: sticker-float 1.35s var(--ease-out-expo) forwards;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.chaos-confetti {
+  position: fixed;
+  top: -10vh;
+  z-index: 452;
+  animation: confetti-fall 1.6s var(--ease-out-expo) forwards;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+#brand-title {
+  cursor: pointer;
+  user-select: none;
+}
+
+#footer-brand {
+  cursor: pointer;
+  user-select: none;
+}
+
+.brand-jiggle {
+  animation: brand-jiggle 0.7s var(--ease-out-expo) !important;
+}
+
+.btn-twirl {
+  animation: btn-twirl 0.55s var(--ease-out-expo);
+}
+
+.fab-spin .order-fab__icon {
+  display: inline-block;
+  animation: fab-icon-spin 0.65s var(--ease-out-expo);
+}
+
+.gag-shake {
+  animation: gag-shake 0.55s var(--ease-out-expo) !important;
+}
+
+.gag-bounce {
+  animation: gag-bounce 0.55s var(--ease-out-expo) !important;
+}
+
+.gag-tilt {
+  animation: gag-tilt 0.55s var(--ease-out-expo) !important;
+}
+
+.gag-wobble {
+  animation: gag-wobble 0.6s var(--ease-out-expo) !important;
+}
+
+.disco-blip {
+  animation: disco-blip 0.9s ease-in-out;
+}
+
+.disco-blip .menu-card {
+  transition: border-color 0.2s ease;
+}
+
+@keyframes sticker-float {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.85) rotate(-6deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-48px) scale(1.05) rotate(8deg);
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift, 40px), 85vh) rotate(320deg);
+  }
+}
+
+@keyframes brand-jiggle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  20% { transform: rotate(-3deg) scale(1.03); }
+  40% { transform: rotate(3deg) scale(1.04); }
+  60% { transform: rotate(-2deg) scale(1.02); }
+  80% { transform: rotate(2deg) scale(1.03); }
+}
+
+@keyframes btn-twirl {
+  0% { transform: rotate(0deg) scale(1); }
+  40% { transform: rotate(180deg) scale(1.15); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes fab-icon-spin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes gag-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px) rotate(-1deg); }
+  40% { transform: translateX(6px) rotate(1deg); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes gag-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-8px) scale(1.03); }
+  55% { transform: translateY(2px) scale(0.98); }
+  75% { transform: translateY(-3px) scale(1.01); }
+}
+
+@keyframes gag-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2.5deg) scale(1.02); }
+  55% { transform: rotate(2.5deg) scale(1.02); }
+  80% { transform: rotate(-1deg); }
+}
+
+@keyframes gag-wobble {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  15% { transform: rotate(2deg) scale(1.02); }
+  30% { transform: rotate(-2deg) scale(1.02); }
+  45% { transform: rotate(1.5deg); }
+  60% { transform: rotate(-1.5deg); }
+  75% { transform: rotate(1deg); }
+}
+
+@keyframes disco-blip {
+  0%, 100% { filter: none; }
+  25% { filter: hue-rotate(25deg) saturate(1.25); }
+  50% { filter: hue-rotate(-20deg) saturate(1.35); }
+  75% { filter: hue-rotate(40deg) saturate(1.15); }
+}
+
 /* Confirm order modal */
 .confirm-overlay {
   position: fixed;
@@ -1787,9 +2013,29 @@ h1, h2, h3, h4 {
 
   .menu-card.shimmer::after,
   .daily-special::after,
-  .cart-spark {
+  .cart-spark,
+  .chaos-sticker,
+  .chaos-confetti {
     display: none !important;
     animation: none !important;
+  }
+
+  .brand-jiggle,
+  .btn-twirl,
+  .fab-spin .order-fab__icon,
+  .gag-shake,
+  .gag-bounce,
+  .gag-tilt,
+  .gag-wobble,
+  .disco-blip,
+  .menu-card--fleeing,
+  .menu-card--fleeing.water-zip {
+    animation: none !important;
+    filter: none !important;
+  }
+
+  .menu-card--fleeing {
+    transition: none !important;
   }
 
   [data-parallax] {

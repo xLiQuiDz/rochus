@@ -17,13 +17,13 @@
     </div>
     <div class="hero__overlay"></div>
     <div class="hero__content">
-      <div class="hero__badge">
+      <div class="hero__badge" id="hero-badge">
         <span class="dot" aria-hidden="true"></span>
-        Summer evenings
+        <span id="hero-badge-text">Summer evenings</span>
       </div>
-      <h1 class="hero__title"><span>ROCHUS</span></h1>
+      <h1 class="hero__title" id="brand-title" title="tik mij"><span>ROCHUS</span></h1>
       <div class="hero__divider" aria-hidden="true"></div>
-      <p class="hero__subtitle">Zomerse pop-up bar — golden hour, cold drinks &amp; good vibes</p>
+      <p class="hero__subtitle">Zomerse pop-up bar — golden hour, cold drinks &amp; questionable decisions</p>
     </div>
   </header>
 
@@ -250,6 +250,27 @@
           </div>
           <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
           <button type="button" class="menu-card__add-btn" data-add data-name="Royal Bliss Tonic" data-price="3" data-category="fris" aria-label="Voeg Royal Bliss Tonic toe">+</button>
+        </article>
+        <article
+          class="menu-card menu-card--water stagger-in"
+          data-name="Water"
+          data-water-dodge
+          id="water-card"
+        >
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Water</h3>
+            <p class="menu-card__detail">Te gezond · vangt je niet</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€0</span></div>
+          <button
+            type="button"
+            class="menu-card__add-btn"
+            data-add
+            data-name="Water"
+            data-price="0"
+            data-category="fris"
+            aria-label="Probeer Water toe te voegen (veel succes)"
+          >+</button>
         </article>
       </div>
     </section>
@@ -526,16 +547,18 @@
     </section>
 
     <div class="no-results" id="no-results" role="status">
-      <span aria-hidden="true">🔍</span>
-      Geen resultaten gevonden
+      <span aria-hidden="true" id="no-results-emoji">🫠</span>
+      <span id="no-results-text">Geen resultaten — die cocktail bestaat alleen in je dromen</span>
     </div>
   </main>
 
   <footer class="site-footer">
-    <p class="site-footer__name">ROCHUS</p>
-    <p class="site-footer__tagline">Summer pop-up · sip slow</p>
-    <p>Digitaal menukaart</p>
+    <p class="site-footer__name" id="footer-brand" title="geheim">ROCHUS</p>
+    <p class="site-footer__tagline" id="footer-tagline">Summer pop-up · sip slow · text your ex later</p>
+    <p>Digitaal menukaart · zero judgment zone</p>
   </footer>
+
+  <div class="chaos-layer" id="chaos-layer" aria-hidden="true"></div>
 
   <div class="table-chip" id="table-chip" hidden>
     <span class="table-chip__label">Tafel</span>
@@ -556,8 +579,8 @@
     </div>
     <div class="order-drawer__body" id="order-body">
       <div class="order-drawer__empty" id="order-empty">
-        <span aria-hidden="true">🛒</span>
-        Je mandje is leeg — tik + om iets toe te voegen
+        <span aria-hidden="true" id="order-empty-emoji">🛒</span>
+        <span id="order-empty-text">Je mandje is leeg — en dat is een beetje sad</span>
       </div>
     </div>
     <div class="order-drawer__footer" id="order-footer" hidden>
@@ -575,7 +598,7 @@
         class="order-drawer__note"
         id="order-note"
         maxlength="200"
-        placeholder="bv. zonder ijs"
+        placeholder="bv. zonder ijs / met drama"
         autocomplete="off"
       />
       <p class="order-drawer__cash">Nog niet verstuurd · cash bij levering</p>
@@ -595,7 +618,7 @@
     aria-labelledby="confirm-title"
     hidden
   >
-    <h2 class="confirm-modal__title" id="confirm-title">Bestelling versturen?</h2>
+    <h2 class="confirm-modal__title" id="confirm-title">Laatste check voor de chaos?</h2>
     <p class="confirm-modal__lead" id="confirm-lead"></p>
     <ul class="confirm-modal__list" id="confirm-list"></ul>
     <div class="confirm-modal__totals">

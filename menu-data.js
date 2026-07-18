@@ -17,6 +17,7 @@ const MENU_ITEMS = [
   { name: 'Chaudfontaine Plat', price: 3, category: 'fris' },
   { name: 'Chaudfontaine Bruis', price: 3, category: 'fris' },
   { name: 'Royal Bliss Tonic', price: 3, category: 'fris' },
+  { name: 'Water', price: 0, category: 'fris' },
   { name: 'Aperol Spritz', price: 8, category: 'cocktails' },
   { name: 'Gin Tonic Bulldog', price: 9, category: 'cocktails' },
   { name: 'Rum Captain Morgan', price: 9, category: 'cocktails' },

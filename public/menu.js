@@ -4,6 +4,258 @@
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ------------------------------------------------------------------ */
+  /* Chaos / vibes (young & stupid energy)                              */
+  /* ------------------------------------------------------------------ */
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  const ADD_TOASTS = [
+    'In ’t mandje 💅',
+    'Chef’s kiss',
+    'Main character energy',
+    'Hydratatie unlocked',
+    'Goed zo, chaoot',
+    'De bar is ready for you',
+    'Sip sip hooray',
+    'Zero judgment zone',
+    'Je bent een icoon',
+    'Dit is een moment',
+    'Respectloos lekker',
+    'Besteld. Geen spijt.',
+  ];
+
+  const FLOAT_STICKERS = [
+    'gevaarlijk lekker',
+    'hot girl summer',
+    'ik bel morgen',
+    'geen spijt',
+    'chaotic good',
+    'thirst trap',
+    'bar baby',
+    'slay',
+  ];
+
+  const EMPTY_LINES = [
+    { emoji: '🛒', text: 'Je mandje is leeg — en dat is een beetje sad' },
+    { emoji: '👻', text: 'Hier spookt niks… behalve je dorst' },
+    { emoji: '🥲', text: 'Leeg. Alsof je op een maandag wakker wordt' },
+    { emoji: '🧃', text: 'Tik + alsof je swipe — maar dan voor drank' },
+    { emoji: '👀', text: 'De bar staart je afwachtend aan…' },
+  ];
+
+  const NO_RESULT_LINES = [
+    { emoji: '🫠', text: 'Geen resultaten — die cocktail bestaat alleen in je dromen' },
+    { emoji: '🕵️', text: 'Niet gevonden. Misschien te niche. Misschien te drunk-typed.' },
+    { emoji: '🌵', text: 'Droog als de Sahara hier. Probeer “spritz”.' },
+    { emoji: '🧠', text: 'Onze AI (een intern) kent dit niet. Typ iets normalers.' },
+  ];
+
+  const CONFIRM_TITLES = [
+    'Laatste check voor de chaos?',
+    'Sure sure sure?',
+    'Dit is geen oefening',
+    'Commit to the bit?',
+    'Ready to make it everyone’s problem?',
+  ];
+
+  const CONFIRM_LEADS = [
+    'Tafel {n} · dit gaat pas naar de bar als je bevestigt',
+    'Tafel {n} · daarna is er geen weg terug (behalve cash)',
+    'Tafel {n} · de bar gaat je niet judgen. Misschien.',
+    'Tafel {n} · stuur ’t door voordat je het vergeet',
+  ];
+
+  const SENT_TOASTS = [
+    'Verstuurd · tafel {n} · cash klaarhouden 💸',
+    'De bar is gewaarschuwd · tafel {n}',
+    'Order locked in · tafel {n} · stay hydrated',
+    'Verstuurd · tafel {n} · jullie zijn legends',
+  ];
+
+  const HERO_BADGE_LINES = [
+    'Summer evenings',
+    'No thoughts, just vibes',
+    'Open · chaotic · cute',
+    'Sip first, think later',
+    'Young & hydrated',
+  ];
+
+  const FOOTER_LINES = [
+    'Summer pop-up · sip slow · text your ex later',
+    'Summer pop-up · hydrate or diedrate',
+    'Summer pop-up · we contain multitudes (en gin)',
+    'Summer pop-up · touch grass, then order spritz',
+  ];
+
+  /** @type {Record<string, { toast: string, className: string, sticker?: string }>} */
+  const ITEM_GAGS = {
+    'Aperol Spritz': { toast: 'Aperol o’clock 🍊', className: 'gag-bounce', sticker: 'aperol nation' },
+    'Hugo Spritz': { toast: 'Hugo zegt hallo 🌿', className: 'gag-bounce', sticker: 'garden party' },
+    'Limoncello Spritz': { toast: 'Citroen chaos activated', className: 'gag-wobble', sticker: 'zesty' },
+    Corona: { toast: 'Waar is het limoentje?!', className: 'gag-tilt', sticker: 'beach mode' },
+    Tequila: { toast: 'Geen spijt. Alleen lore.', className: 'gag-shake', sticker: 'oops' },
+    Rum: { toast: 'Pirate energy 🏴‍☠️', className: 'gag-shake' },
+    'Limoncello Bongiorno': { toast: 'Bongiornooooo', className: 'gag-wobble', sticker: 'ciao' },
+    Duvel: { toast: 'Duvel in detail', className: 'gag-tilt', sticker: 'Belgian menace' },
+    "Tripel Karmeliet van 't vat": {
+      toast: 'Signature unlocked ✨',
+      className: 'gag-bounce',
+      sticker: 'vip sip',
+    },
+    'Sharing Nacho\'s': { toast: 'Sharing is caring (tot de laatste chip)', className: 'gag-wobble' },
+    '105 Sharing Burger': { toast: 'Burger diplomacy', className: 'gag-bounce', sticker: 'feed me' },
+    Champagne: { toast: 'Champagne problems, but make it cash', className: 'gag-tilt', sticker: 'bougie' },
+    Water: { toast: 'Eindelijk water. Hydratatie legend 💧', className: 'gag-bounce', sticker: 'hydrate' },
+  };
+
+  const WATER_ESCAPE_TOASTS = [
+    'Water zegt nee 💧',
+    'Te gezond. Probeer een spritz.',
+    'Water is gaan joggen',
+    'Nice try, hydration warrior',
+    'Het water is sneller dan jij',
+    'Plot twist: water wil jou niet',
+    'Catch me if you can 💦',
+    'De bar keurt water af (grapje… half)',
+    'Bijna! Maar nee.',
+    'Water left the chat',
+  ];
+
+  let waterEscapes = 0;
+  let waterCooldown = false;
+  let waterAllowOrder = false;
+  const WATER_CATCH_AFTER = 10;
+
+  function pickItemGag(name, category) {
+    if (ITEM_GAGS[name]) return { ...ITEM_GAGS[name] };
+
+    const lower = name.toLowerCase();
+    for (const [key, gag] of Object.entries(ITEM_GAGS)) {
+      if (lower.includes(key.toLowerCase())) return { ...gag };
+    }
+
+    if (category === 'shots') {
+      return {
+        toast: pick(['Shot. Shot. Shot.', 'Kleine glaasjes, grote keuzes', 'Down the hatch 🫡']),
+        className: 'gag-shake',
+        sticker: 'yolo',
+      };
+    }
+    if (category === 'cocktails') {
+      return {
+        toast: pick(['Mixology, maar make it unserious', 'Fancy juice unlocked', pick(ADD_TOASTS)]),
+        className: 'gag-bounce',
+      };
+    }
+    if (category === 'fingerfood') {
+      return {
+        toast: pick(['Snack attack', '3+1 brain activated', 'Crunch time']),
+        className: 'gag-wobble',
+        sticker: 'nom',
+      };
+    }
+    return {
+      toast: pick(ADD_TOASTS),
+      className: Math.random() < 0.4 ? pick(['gag-tilt', 'gag-wobble', 'gag-bounce']) : '',
+    };
+  }
+
+  function spawnFloatingSticker(nearEl, text) {
+    const layer = document.getElementById('chaos-layer');
+    if (!layer || !nearEl) return;
+    const rect = nearEl.getBoundingClientRect();
+    const el = document.createElement('span');
+    el.className = 'chaos-sticker';
+    el.textContent = text;
+    el.style.left = `${rect.left + rect.width * 0.3 + Math.random() * 40}px`;
+    el.style.top = `${rect.top + 8}px`;
+    layer.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+    setTimeout(() => el.remove(), 1600);
+  }
+
+  function burstConfetti() {
+    const layer = document.getElementById('chaos-layer');
+    if (!layer) return;
+    const bits = ['✨', '🍊', '🥂', '💥', '🍋', '💅', '🥳', '🍟'];
+    for (let i = 0; i < 14; i++) {
+      const bit = document.createElement('span');
+      bit.className = 'chaos-confetti';
+      bit.textContent = pick(bits);
+      bit.style.left = `${20 + Math.random() * 60}vw`;
+      bit.style.setProperty('--drift', `${(Math.random() - 0.5) * 120}px`);
+      bit.style.animationDelay = `${Math.random() * 0.2}s`;
+      bit.style.fontSize = `${0.9 + Math.random() * 0.8}rem`;
+      layer.appendChild(bit);
+      bit.addEventListener('animationend', () => bit.remove(), { once: true });
+      setTimeout(() => bit.remove(), 2000);
+    }
+  }
+
+  /**
+   * Teleport the water card somewhere else on screen.
+   * @returns {boolean} true if it fled (block add), false if client finally caught it
+   */
+  function fleeWater(card) {
+    if (prefersReducedMotion || waterAllowOrder) return false;
+    if (waterCooldown) return true;
+
+    waterEscapes += 1;
+    if (waterEscapes >= WATER_CATCH_AFTER) {
+      waterEscapes = 0;
+      waterAllowOrder = true;
+      card.classList.remove('menu-card--fleeing', 'water-zip');
+      card.style.left = '';
+      card.style.top = '';
+      card.style.width = '';
+      showToast('Oké oké… je hebt water verdiend 💧', false, 2400);
+      return false;
+    }
+
+    waterCooldown = true;
+    setTimeout(() => {
+      waterCooldown = false;
+    }, 380);
+
+    showToast(pick(WATER_ESCAPE_TOASTS), false, 1500);
+
+    const rect = card.getBoundingClientRect();
+    if (!card.classList.contains('menu-card--fleeing')) {
+      card.style.width = `${Math.min(rect.width, window.innerWidth - 32)}px`;
+      card.classList.add('menu-card--fleeing');
+    }
+
+    const pad = 12;
+    const w = card.offsetWidth || 280;
+    const h = card.offsetHeight || 72;
+    const maxX = Math.max(pad, window.innerWidth - w - pad);
+    const maxY = Math.max(pad + 70, window.innerHeight - h - pad - 90);
+
+    let x = pad + Math.random() * (maxX - pad);
+    let y = 70 + Math.random() * Math.max(40, maxY - 70);
+
+    // Don't land too close to current spot
+    const cx = rect.left;
+    const cy = rect.top;
+    let tries = 0;
+    while (tries < 8 && Math.hypot(x - cx, y - cy) < 120) {
+      x = pad + Math.random() * (maxX - pad);
+      y = 70 + Math.random() * Math.max(40, maxY - 70);
+      tries += 1;
+    }
+
+    card.classList.remove('water-zip');
+    void card.offsetWidth;
+    card.classList.add('water-zip');
+    card.style.left = `${Math.round(x)}px`;
+    card.style.top = `${Math.round(y)}px`;
+
+    if (Math.random() < 0.4) {
+      spawnFloatingSticker(card, pick(['te sober', 'hydrate later', 'nah', 'splash', 'run']));
+    }
+    return true;
+  }
+
+  /* ------------------------------------------------------------------ */
   /* Order state                                                        */
   /* ------------------------------------------------------------------ */
   /** @type {Map<string, { name: string, price: number, category: string, qty: number }>} */
@@ -108,6 +360,11 @@
     if (items.length === 0) {
       emptyEl.hidden = false;
       footerEl.hidden = true;
+      const emptyLine = pick(EMPTY_LINES);
+      const emptyEmoji = document.getElementById('order-empty-emoji');
+      const emptyText = document.getElementById('order-empty-text');
+      if (emptyEmoji) emptyEmoji.textContent = emptyLine.emoji;
+      if (emptyText) emptyText.textContent = emptyLine.text;
       return;
     }
 
@@ -207,7 +464,9 @@
       remainingFree -= freeHere;
     }
 
-    confirmLead.textContent = `Tafel ${tableNumber} · dit gaat pas naar de bar als je bevestigt`;
+    const confirmTitle = document.getElementById('confirm-title');
+    if (confirmTitle) confirmTitle.textContent = pick(CONFIRM_TITLES);
+    confirmLead.textContent = pick(CONFIRM_LEADS).replace('{n}', String(tableNumber));
     confirmList.innerHTML = items
       .map((item) => {
         const freeHere = freeByKey.get(item.name) || 0;
@@ -279,7 +538,8 @@
       renderOrder();
       closeConfirm();
       closeDrawer();
-      showToast(`Verstuurd naar de bar · tafel ${tableNumber}`, false, 4200);
+      showToast(pick(SENT_TOASTS).replace('{n}', String(tableNumber)), false, 4200);
+      if (!prefersReducedMotion) burstConfetti();
     } catch (err) {
       showToast(err.message || 'Bestelling mislukt', true, 4200);
       confirmSend.disabled = false;
@@ -337,11 +597,17 @@
     }
     renderOrder();
     // Cart only — never submits to the bar
-    showToast('In winkelmandje', false, 1600);
+    const gag = pickItemGag(name, category);
+    showToast(gag.toast, false, 1800);
     fab.classList.add('order-fab--ready');
     fab.classList.add('order-fab--pulse');
+    if (!prefersReducedMotion && Math.random() < 0.35) {
+      fab.classList.add('fab-spin');
+      setTimeout(() => fab.classList.remove('fab-spin'), 700);
+    }
     clearTimeout(addItem._pulse);
     addItem._pulse = setTimeout(() => fab.classList.remove('order-fab--pulse'), 600);
+    return gag;
   }
 
   function changeQty(name, delta) {
@@ -353,29 +619,67 @@
   }
 
   document.addEventListener('click', (e) => {
+    const waterCard = e.target.closest('[data-water-dodge]');
+    if (waterCard) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Keyboard / reduced-motion users can order; mouse/touch must catch it
+      const viaKeyboard = e.detail === 0;
+      if (!viaKeyboard && fleeWater(waterCard)) return;
+      // Fall through: treat as successful add of water
+      const btn = waterCard.querySelector('[data-add]');
+      if (btn) {
+        const name = btn.dataset.name;
+        const price = parseFloat(btn.dataset.price);
+        const category = btn.dataset.category || 'fris';
+        if (name && Number.isFinite(price)) {
+          const gag = addItem(name, price, category);
+          waterAllowOrder = false;
+          waterEscapes = 0;
+          sparkToFab(btn);
+          if (!prefersReducedMotion && gag.className) {
+            waterCard.classList.add(gag.className);
+            setTimeout(() => waterCard.classList.remove(gag.className), 700);
+          }
+        }
+      }
+      return;
+    }
+
     const addBtn = e.target.closest('[data-add]');
     if (addBtn) {
       e.preventDefault();
       e.stopPropagation();
+      if (addBtn.closest('[data-water-dodge]')) return;
       const name = addBtn.dataset.name;
       const price = parseFloat(addBtn.dataset.price);
       const category = addBtn.dataset.category || 'other';
       if (!name || !Number.isFinite(price)) return;
-      addItem(name, price, category);
+      const gag = addItem(name, price, category);
       sparkToFab(addBtn);
+      if (!prefersReducedMotion) {
+        addBtn.classList.remove('btn-twirl');
+        void addBtn.offsetWidth;
+        addBtn.classList.add('btn-twirl');
+        setTimeout(() => addBtn.classList.remove('btn-twirl'), 600);
+      }
 
       const card = addBtn.closest('.menu-card, .daily-special');
       if (card) {
-        card.classList.remove('added');
+        card.classList.remove('added', 'gag-shake', 'gag-bounce', 'gag-tilt', 'gag-wobble');
         void card.offsetWidth;
-        card.classList.add('added');
-        card.addEventListener(
-          'animationend',
-          (ev) => {
-            if (ev.animationName === 'add-spring') card.classList.remove('added');
-          },
-          { once: true }
-        );
+        const gagClass = !prefersReducedMotion && gag.className ? gag.className : '';
+        if (gagClass) {
+          card.classList.add(gagClass);
+        } else {
+          card.classList.add('added');
+        }
+        setTimeout(() => {
+          card.classList.remove('added', 'gag-shake', 'gag-bounce', 'gag-tilt', 'gag-wobble');
+        }, 700);
+        if (!prefersReducedMotion && Math.random() < 0.28) {
+          spawnFloatingSticker(card, gag.sticker || pick(FLOAT_STICKERS));
+        }
       }
       return;
     }
@@ -392,8 +696,8 @@
       return;
     }
 
-    // Tap anywhere on a simple (non-wine) card to add
-    const card = e.target.closest('.menu-card:not(.menu-card--wine)');
+    // Tap anywhere on a simple (non-wine, non-water) card to add
+    const card = e.target.closest('.menu-card:not(.menu-card--wine):not([data-water-dodge])');
     if (card) {
       const btn = card.querySelector('.menu-card__add-btn[data-add]');
       if (btn) {
@@ -402,6 +706,18 @@
       }
     }
   });
+
+  // Water also flees when you hover / get close (desktop chaos)
+  const waterEl = document.getElementById('water-card');
+  if (waterEl && !prefersReducedMotion) {
+    waterEl.addEventListener(
+      'pointerenter',
+      () => {
+        fleeWater(waterEl);
+      },
+      { passive: true }
+    );
+  }
 
   fab.addEventListener('click', openDrawer);
   overlay.addEventListener('click', closeDrawer);
@@ -572,7 +888,15 @@
       if (!special.hidden && specialMatch) anyVisible = true;
     }
 
-    noResults.classList.toggle('show', Boolean(q && !anyVisible));
+    const showNone = Boolean(q && !anyVisible);
+    noResults.classList.toggle('show', showNone);
+    if (showNone) {
+      const line = pick(NO_RESULT_LINES);
+      const emoji = document.getElementById('no-results-emoji');
+      const text = document.getElementById('no-results-text');
+      if (emoji) emoji.textContent = line.emoji;
+      if (text) text.textContent = line.text;
+    }
   }
 
   searchInput.addEventListener('input', applySearch);
@@ -662,6 +986,81 @@
       },
       { passive: true }
     );
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Easter eggs                                                        */
+  /* ------------------------------------------------------------------ */
+  const brandTitle = document.getElementById('brand-title');
+  if (brandTitle) {
+    brandTitle.style.cursor = 'pointer';
+    brandTitle.addEventListener('click', () => {
+      if (!prefersReducedMotion) {
+        brandTitle.classList.remove('brand-jiggle');
+        void brandTitle.offsetWidth;
+        brandTitle.classList.add('brand-jiggle');
+        setTimeout(() => brandTitle.classList.remove('brand-jiggle'), 800);
+      }
+      showToast(pick(['ROCHUS. zeg ’t nog eens.', 'Je hebt de secret handshake gevonden', 'Shhh… dit is tussen ons', 'Ja hallo 👋']), false, 2200);
+      const badgeText = document.getElementById('hero-badge-text');
+      if (badgeText) badgeText.textContent = pick(HERO_BADGE_LINES);
+    });
+  }
+
+  const footerBrand = document.getElementById('footer-brand');
+  const footerTag = document.getElementById('footer-tagline');
+  if (footerBrand) {
+    footerBrand.style.cursor = 'pointer';
+    footerBrand.addEventListener('click', () => {
+      if (footerTag) footerTag.textContent = pick(FOOTER_LINES);
+      showToast(pick(['Footer supremacy', 'Je scrollde helemaal hierheen. Iconisch.', 'Bonuspunt voor commitment']), false, 2000);
+      if (!prefersReducedMotion) document.body.classList.add('disco-blip');
+      setTimeout(() => document.body.classList.remove('disco-blip'), 900);
+    });
+  }
+
+  // Triple-tap table chip → brief disco
+  const tableChipEl = document.getElementById('table-chip');
+  let chipTaps = 0;
+  let chipTimer = 0;
+  if (tableChipEl) {
+    tableChipEl.style.cursor = 'pointer';
+    tableChipEl.title = 'tik tik tik…';
+    tableChipEl.addEventListener('click', () => {
+      chipTaps += 1;
+      clearTimeout(chipTimer);
+      chipTimer = setTimeout(() => {
+        chipTaps = 0;
+      }, 900);
+      if (chipTaps >= 3) {
+        chipTaps = 0;
+        showToast('Tafel disco mode ✨ (tijdelijk, beloofd)', false, 2400);
+        if (!prefersReducedMotion) {
+          document.body.classList.add('disco-blip');
+          burstConfetti();
+          setTimeout(() => document.body.classList.remove('disco-blip'), 1200);
+        }
+      }
+    });
+  }
+
+  // Rotate hero badge vibes every so often
+  const badgeTextEl = document.getElementById('hero-badge-text');
+  if (badgeTextEl && !prefersReducedMotion) {
+    setInterval(() => {
+      if (document.hidden) return;
+      badgeTextEl.textContent = pick(HERO_BADGE_LINES);
+    }, 9000);
+  }
+
+  // Random idle stickers over the menu (rare)
+  if (!prefersReducedMotion) {
+    setInterval(() => {
+      if (document.hidden || Math.random() > 0.45) return;
+      const cards = [...document.querySelectorAll('.menu-card:not([hidden])')];
+      if (!cards.length) return;
+      spawnFloatingSticker(pick(cards), pick(FLOAT_STICKERS));
+    }, 14000);
   }
 
   renderOrder();
