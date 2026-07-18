@@ -569,9 +569,42 @@
       />
       <p class="order-drawer__cash">Betalen bij levering · cash</p>
       <p class="order-drawer__table-hint" id="order-table-hint"></p>
-      <button type="button" class="order-drawer__submit" id="order-submit">Bestelling plaatsen</button>
+      <button type="button" class="order-drawer__submit" id="order-submit">Controleer bestelling</button>
     </div>
   </aside>
+
+  <div class="confirm-overlay" id="confirm-overlay" hidden></div>
+  <div
+    class="confirm-modal"
+    id="confirm-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="confirm-title"
+    hidden
+  >
+    <h2 class="confirm-modal__title" id="confirm-title">Bestelling bevestigen?</h2>
+    <p class="confirm-modal__lead" id="confirm-lead"></p>
+    <ul class="confirm-modal__list" id="confirm-list"></ul>
+    <div class="confirm-modal__totals">
+      <div class="confirm-modal__row" id="confirm-discount-row" hidden>
+        <span>Actie 3+1</span>
+        <span id="confirm-discount">−€0</span>
+      </div>
+      <div class="confirm-modal__row confirm-modal__row--total">
+        <span>Totaal</span>
+        <span id="confirm-total">€0</span>
+      </div>
+    </div>
+    <p class="confirm-modal__cash">Cash bij levering aan tafel</p>
+    <div class="confirm-modal__actions">
+      <button type="button" class="confirm-modal__btn confirm-modal__btn--ghost" id="confirm-cancel">
+        Terug
+      </button>
+      <button type="button" class="confirm-modal__btn confirm-modal__btn--primary" id="confirm-send">
+        Bevestigen &amp; versturen
+      </button>
+    </div>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 

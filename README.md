@@ -1,33 +1,57 @@
 # Rochus — Summer Pop-Up Bar
 
-QR table ordering: guests scan a table code, order from the menu, pay **cash on delivery**. Staff see live tickets at `/bar`.
+QR table ordering with a live staff dashboard. Guests pay **cash on delivery**.
 
-## Quick start
+## Architecture
+
+| Service | Role |
+|---------|------|
+| **rochus** (Node/Express) | Menu UI, order API, staff dashboard, SSE |
+| **Postgres** | Orders, line items, staff sessions (transactions) |
+
+```
+Guest QR → Menu (?t=N) → Confirm modal → POST /api/orders → Postgres
+                                                      ↓
+Staff /bar ←── SSE live tickets ←── status updates ───┘
+```
+
+## Local development
 
 ```bash
 npm install
-cp .env.example .env   # optional
+# Point DATABASE_URL at a local or Railway Postgres instance
+export DATABASE_URL=postgresql://...
+export STAFF_PIN=7391
+export TABLE_COUNT=20
+export PUBLIC_URL=http://localhost:3000
 npm start
 ```
 
-Open:
-- Menu: http://localhost:3000/?t=1
-- Staff bar: http://localhost:3000/bar (default PIN `2468`)
-- Print QR sheets: http://localhost:3000/qr
+- Menu: http://localhost:3000/?t=1  
+- Staff: http://localhost:3000/bar  
+- QR print: http://localhost:3000/qr  
+
+## Guest flow
+
+1. Scan table QR → menu with **Tafel N** locked  
+2. Add drinks/food (+ buttons)  
+3. Open cart (✦) → **Controleer bestelling**  
+4. Confirmation modal → **Bevestigen & versturen**  
+5. Order lands on staff dashboard  
 
 ## Environment
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | HTTP port |
-| `STAFF_PIN` | `2468` | Staff login for `/bar` and `/qr` |
-| `TABLE_COUNT` | `20` | Tables `1…N` for QR codes |
-| `PUBLIC_URL` | `http://localhost:PORT` | Base URL encoded in QR codes |
-| `DATA_DIR` | `./data` | SQLite directory (use `/data` on Railway) |
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Postgres connection (required) |
+| `STAFF_PIN` | Staff login PIN |
+| `TABLE_COUNT` | Tables `1…N` (default 20) |
+| `PUBLIC_URL` | Public base URL for QR codes |
+| `PORT` | HTTP port (Railway injects this) |
+| `PGSSL` | Set `true` if SSL is required for Postgres |
 
-## Railway
+## Production (Railway)
 
-1. Create a service from this repo.
-2. Add a volume mounted at `/data`.
-3. Set variables: `STAFF_PIN`, `PUBLIC_URL` (your Railway domain), `TABLE_COUNT`, `DATA_DIR=/data`.
-4. Deploy, open `/qr`, print cards, put one on each table.
+- App service + Postgres plugin  
+- `DATABASE_URL` referenced from Postgres  
+- Health check: `/api/health`  

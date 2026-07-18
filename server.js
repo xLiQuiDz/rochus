@@ -2,7 +2,17 @@ const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const { createOrder, getOrderById, listOrders, updateOrderStatus } = require('./db');
+const {
+  initDb,
+  createOrder,
+  getOrderById,
+  listOrders,
+  updateOrderStatus,
+  createStaffSession,
+  touchStaffSession,
+  deleteStaffSession,
+  cleanupExpiredSessions,
+} = require('./db');
 const { validateAndPrice } = require('./menu-data');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -10,10 +20,7 @@ const STAFF_PIN = process.env.STAFF_PIN || '2468';
 const TABLE_COUNT = Math.max(1, Number(process.env.TABLE_COUNT) || 20);
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 const SESSION_COOKIE = 'rochus_staff';
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
-
-/** @type {Map<string, number>} token -> expiry */
-const sessions = new Map();
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 /** @type {Set<import('express').Response>} */
 const sseClients = new Set();
@@ -23,29 +30,34 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 
-function createSession() {
+function sessionExpiryDate() {
+  return new Date(Date.now() + SESSION_TTL_MS);
+}
+
+async function createSession() {
   const token = crypto.randomBytes(24).toString('hex');
-  sessions.set(token, Date.now() + SESSION_TTL_MS);
+  await createStaffSession(token, sessionExpiryDate());
   return token;
 }
 
-function isAuthed(req) {
+async function isAuthed(req) {
   const token = req.cookies?.[SESSION_COOKIE];
   if (!token) return false;
-  const exp = sessions.get(token);
-  if (!exp || exp < Date.now()) {
-    sessions.delete(token);
-    return false;
-  }
-  sessions.set(token, Date.now() + SESSION_TTL_MS);
+  const ok = await touchStaffSession(token, sessionExpiryDate());
+  if (!ok) return false;
   return true;
 }
 
 function requireStaff(req, res, next) {
-  if (!isAuthed(req)) {
-    return res.status(401).json({ error: 'Niet ingelogd' });
-  }
-  next();
+  isAuthed(req)
+    .then((ok) => {
+      if (!ok) return res.status(401).json({ error: 'Niet ingelogd' });
+      next();
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).json({ error: 'Auth-fout' });
+    });
 }
 
 function broadcast(event, data) {
@@ -55,37 +67,63 @@ function broadcast(event, data) {
   }
 }
 
+app.get('/api/health', async (_req, res) => {
+  try {
+    const { pool } = require('./db');
+    await pool.query('SELECT 1');
+    res.json({ ok: true, db: true });
+  } catch (err) {
+    res.status(503).json({ ok: false, db: false, error: err.message });
+  }
+});
+
 app.get('/api/config', (_req, res) => {
   res.json({ tableCount: TABLE_COUNT, publicUrl: PUBLIC_URL });
 });
 
-app.get('/api/auth/me', (req, res) => {
-  res.json({ authenticated: isAuthed(req) });
-});
-
-app.post('/api/auth/login', (req, res) => {
-  const pin = String(req.body?.pin || '');
-  if (pin !== STAFF_PIN) {
-    return res.status(401).json({ error: 'Onjuiste PIN' });
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    res.json({ authenticated: await isAuthed(req) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ authenticated: false });
   }
-  const token = createSession();
-  res.cookie(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: SESSION_TTL_MS,
-  });
-  res.json({ ok: true });
 });
 
-app.post('/api/auth/logout', (req, res) => {
-  const token = req.cookies?.[SESSION_COOKIE];
-  if (token) sessions.delete(token);
-  res.clearCookie(SESSION_COOKIE);
-  res.json({ ok: true });
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const pin = String(req.body?.pin || '');
+    if (pin !== STAFF_PIN) {
+      return res.status(401).json({ error: 'Onjuiste PIN' });
+    }
+    const token = await createSession();
+    res.cookie(SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: SESSION_TTL_MS,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Login mislukt' });
+  }
 });
 
-app.post('/api/orders', (req, res) => {
+app.post('/api/auth/logout', async (req, res) => {
+  try {
+    const token = req.cookies?.[SESSION_COOKIE];
+    if (token) await deleteStaffSession(token);
+    res.clearCookie(SESSION_COOKIE);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.clearCookie(SESSION_COOKIE);
+    res.json({ ok: true });
+  }
+});
+
+app.post('/api/orders', async (req, res) => {
   try {
     const table = Math.floor(Number(req.body?.table));
     if (!Number.isFinite(table) || table < 1 || table > TABLE_COUNT) {
@@ -96,18 +134,33 @@ app.post('/api/orders', (req, res) => {
       .trim()
       .slice(0, 200);
 
+    const clientRequestId = String(req.body?.client_request_id || '')
+      .trim()
+      .slice(0, 64);
+
     const priced = validateAndPrice(req.body?.items || []);
-    const order = createOrder({ table_number: table, note, priced });
+    const order = await createOrder({
+      table_number: table,
+      note,
+      priced,
+      client_request_id: clientRequestId || null,
+    });
     broadcast('order', order);
     res.status(201).json(order);
   } catch (err) {
+    console.error(err);
     res.status(400).json({ error: err.message || 'Bestelling mislukt' });
   }
 });
 
-app.get('/api/orders', requireStaff, (req, res) => {
-  const status = req.query.status ? String(req.query.status) : undefined;
-  res.json(listOrders({ status }));
+app.get('/api/orders', requireStaff, async (req, res) => {
+  try {
+    const status = req.query.status ? String(req.query.status) : undefined;
+    res.json(await listOrders({ status }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon bestellingen niet laden' });
+  }
 });
 
 app.get('/api/orders/stream', requireStaff, (req, res) => {
@@ -129,23 +182,29 @@ app.get('/api/orders/stream', requireStaff, (req, res) => {
   });
 });
 
-app.patch('/api/orders/:id', requireStaff, (req, res) => {
+app.patch('/api/orders/:id', requireStaff, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const status = String(req.body?.status || '');
-    const order = updateOrderStatus(id, status);
+    const order = await updateOrderStatus(id, status);
     if (!order) return res.status(404).json({ error: 'Bestelling niet gevonden' });
     broadcast('order', order);
     res.json(order);
   } catch (err) {
+    console.error(err);
     res.status(400).json({ error: err.message || 'Update mislukt' });
   }
 });
 
-app.get('/api/orders/:id', requireStaff, (req, res) => {
-  const order = getOrderById(Number(req.params.id));
-  if (!order) return res.status(404).json({ error: 'Bestelling niet gevonden' });
-  res.json(order);
+app.get('/api/orders/:id', requireStaff, async (req, res) => {
+  try {
+    const order = await getOrderById(Number(req.params.id));
+    if (!order) return res.status(404).json({ error: 'Bestelling niet gevonden' });
+    res.json(order);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon bestelling niet laden' });
+  }
 });
 
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
@@ -158,7 +217,20 @@ app.get('/qr', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'qr.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Rochus listening on ${PUBLIC_URL} (port ${PORT})`);
-  console.log(`Tables: 1–${TABLE_COUNT} · Staff PIN set · DB ready`);
+async function start() {
+  await initDb();
+  await cleanupExpiredSessions();
+  setInterval(() => {
+    cleanupExpiredSessions().catch((err) => console.error(err));
+  }, 60 * 60 * 1000);
+
+  app.listen(PORT, () => {
+    console.log(`Rochus listening on ${PUBLIC_URL} (port ${PORT})`);
+    console.log(`Tables: 1–${TABLE_COUNT} · Postgres ready`);
+  });
+}
+
+start().catch((err) => {
+  console.error('Failed to start', err);
+  process.exit(1);
 });

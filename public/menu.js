@@ -26,6 +26,15 @@
   const tableChip = document.getElementById('table-chip');
   const tableChipNum = document.getElementById('table-chip-num');
   const toastEl = document.getElementById('toast');
+  const confirmOverlay = document.getElementById('confirm-overlay');
+  const confirmModal = document.getElementById('confirm-modal');
+  const confirmLead = document.getElementById('confirm-lead');
+  const confirmList = document.getElementById('confirm-list');
+  const confirmDiscountRow = document.getElementById('confirm-discount-row');
+  const confirmDiscount = document.getElementById('confirm-discount');
+  const confirmTotal = document.getElementById('confirm-total');
+  const confirmCancel = document.getElementById('confirm-cancel');
+  const confirmSend = document.getElementById('confirm-send');
 
   let tableNumber = null;
   let tableCount = 20;
@@ -177,16 +186,74 @@
     }, 4200);
   }
 
+  function openConfirm() {
+    if (!tableNumber || order.size === 0) return;
+
+    const items = [...order.values()];
+    const { discount, total, freeCount } = getTotals();
+
+    let remainingFree = freeCount;
+    const fingerfoodSorted = items
+      .filter((i) => i.category === 'fingerfood')
+      .slice()
+      .sort((a, b) => a.price - b.price);
+    const freeByKey = new Map();
+    for (const item of fingerfoodSorted) {
+      if (remainingFree <= 0) break;
+      const freeHere = Math.min(item.qty, remainingFree);
+      freeByKey.set(item.name, freeHere);
+      remainingFree -= freeHere;
+    }
+
+    confirmLead.textContent = `Tafel ${tableNumber} · controleer je bestelling voor je verstuurt`;
+    confirmList.innerHTML = items
+      .map((item) => {
+        const freeHere = freeByKey.get(item.name) || 0;
+        const line = (item.qty - freeHere) * item.price;
+        const freeTag =
+          freeHere > 0 ? ` <small style="color:#22c55e">(${freeHere} gratis)</small>` : '';
+        return `<li><span><span class="qty">${item.qty}×</span>${escapeHtml(
+          item.name
+        )}${freeTag}</span><span>${formatEuro(line)}</span></li>`;
+      })
+      .join('');
+
+    if (discount > 0) {
+      confirmDiscountRow.hidden = false;
+      confirmDiscount.textContent = `−${formatEuro(discount)}`;
+    } else {
+      confirmDiscountRow.hidden = true;
+    }
+    confirmTotal.textContent = formatEuro(total);
+
+    confirmOverlay.hidden = false;
+    confirmModal.hidden = false;
+  }
+
+  function closeConfirm() {
+    confirmOverlay.hidden = true;
+    confirmModal.hidden = true;
+    confirmSend.disabled = false;
+    confirmSend.textContent = 'Bevestigen & versturen';
+  }
+
   async function submitOrder() {
     if (submitting || !tableNumber || order.size === 0) return;
     submitting = true;
     updateSubmitState();
+    confirmSend.disabled = true;
+    confirmSend.textContent = 'Versturen…';
     submitBtn.textContent = 'Bezig…';
 
     const items = [...order.values()].map((item) => ({
       name: item.name,
       qty: item.qty,
     }));
+
+    const clientRequestId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     try {
       const res = await fetch('/api/orders', {
@@ -196,6 +263,7 @@
           table: tableNumber,
           items,
           note: (noteInput.value || '').trim(),
+          client_request_id: clientRequestId,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -204,13 +272,16 @@
       order.clear();
       noteInput.value = '';
       renderOrder();
+      closeConfirm();
       closeDrawer();
-      showToast(`Bestelling doorgestuurd · tafel ${tableNumber}`);
+      showToast(`Bestelling bevestigd · tafel ${tableNumber} · we komen eraan`);
     } catch (err) {
       showToast(err.message || 'Bestelling mislukt', true);
+      confirmSend.disabled = false;
+      confirmSend.textContent = 'Bevestigen & versturen';
     } finally {
       submitting = false;
-      submitBtn.textContent = 'Bestelling plaatsen';
+      submitBtn.textContent = 'Controleer bestelling';
       updateSubmitState();
     }
   }
@@ -282,11 +353,20 @@
     renderOrder();
   });
 
-  submitBtn.addEventListener('click', submitOrder);
+  submitBtn.addEventListener('click', openConfirm);
+  confirmCancel.addEventListener('click', closeConfirm);
+  confirmOverlay.addEventListener('click', closeConfirm);
+  confirmSend.addEventListener('click', submitOrder);
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawer.classList.contains('open')) {
-      closeDrawer();
+    if (e.key === 'Escape') {
+      if (!confirmModal.hidden) {
+        closeConfirm();
+        return;
+      }
+      if (drawer.classList.contains('open')) {
+        closeDrawer();
+      }
     }
   });
 
