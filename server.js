@@ -16,7 +16,7 @@ const {
 const { validateAndPrice } = require('./menu-data');
 
 const PORT = Number(process.env.PORT) || 3000;
-const STAFF_PIN = process.env.STAFF_PIN || '2468';
+const STAFF_PIN = process.env.STAFF_PIN || '4321';
 const TABLE_COUNT = Math.max(1, Number(process.env.TABLE_COUNT) || 20);
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 const SESSION_COOKIE = 'rochus_staff';

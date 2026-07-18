@@ -21,7 +21,7 @@ Staff /bar ←── SSE live tickets ←── status updates ───┘
 npm install
 # Point DATABASE_URL at a local or Railway Postgres instance
 export DATABASE_URL=postgresql://...
-export STAFF_PIN=7391
+export STAFF_PIN=4321
 export TABLE_COUNT=20
 export PUBLIC_URL=http://localhost:3000
 npm start
