@@ -16,6 +16,8 @@
   const orders = new Map();
   let eventSource = null;
   let audioCtx = null;
+  let openReminderTimer = null;
+  const OPEN_REMINDER_MS = 60 * 1000;
 
   function formatEuroCents(cents) {
     const n = cents / 100;
@@ -45,24 +47,76 @@
     return status;
   }
 
+  function getOpenOrders() {
+    return [...orders.values()].filter((o) => o.status === 'new' || o.status === 'preparing');
+  }
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+  }
+
+  function tone(freq, startAt, duration, peak = 0.16) {
+    const ctx = ensureAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, startAt);
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(peak, startAt + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startAt);
+    osc.stop(startAt + duration + 0.02);
+  }
+
   function playChime() {
     if (!soundToggle.checked) return;
     try {
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.4);
+      const ctx = ensureAudio();
+      const t = ctx.currentTime;
+      tone(880, t, 0.28);
+      tone(1320, t + 0.12, 0.28);
     } catch {
       /* ignore */
+    }
+  }
+
+  /** Stronger double beep for open-order reminder */
+  function playOpenReminder() {
+    if (!soundToggle.checked) return;
+    if (getOpenOrders().length === 0) return;
+    try {
+      const ctx = ensureAudio();
+      const t = ctx.currentTime;
+      tone(740, t, 0.22, 0.18);
+      tone(990, t + 0.2, 0.22, 0.18);
+      tone(740, t + 0.45, 0.28, 0.2);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function syncOpenReminder() {
+    const hasOpen = getOpenOrders().length > 0;
+    if (hasOpen && !openReminderTimer) {
+      openReminderTimer = setInterval(playOpenReminder, OPEN_REMINDER_MS);
+    } else if (!hasOpen && openReminderTimer) {
+      clearInterval(openReminderTimer);
+      openReminderTimer = null;
+    }
+  }
+
+  function stopOpenReminder() {
+    if (openReminderTimer) {
+      clearInterval(openReminderTimer);
+      openReminderTimer = null;
     }
   }
 
@@ -75,14 +129,15 @@
   }
 
   function renderBoard() {
-    const open = [...orders.values()]
-      .filter((o) => o.status === 'new' || o.status === 'preparing')
-      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    const open = getOpenOrders().sort((a, b) =>
+      String(b.created_at).localeCompare(String(a.created_at))
+    );
 
     board.querySelectorAll('.ticket').forEach((el) => el.remove());
 
     if (open.length === 0) {
       boardEmpty.hidden = false;
+      syncOpenReminder();
       return;
     }
     boardEmpty.hidden = true;
@@ -149,6 +204,8 @@
       `;
       board.appendChild(ticket);
     }
+
+    syncOpenReminder();
   }
 
   function escapeHtml(str) {
@@ -207,6 +264,7 @@
       eventSource.close();
       eventSource = null;
     }
+    stopOpenReminder();
     loginView.hidden = false;
     dashView.hidden = true;
   }
@@ -214,8 +272,10 @@
   async function showDash() {
     loginView.hidden = true;
     dashView.hidden = false;
+    ensureAudio();
     await loadOrders();
     connectStream();
+    syncOpenReminder();
   }
 
   loginForm.addEventListener('submit', async (e) => {
@@ -235,12 +295,22 @@
       return;
     }
     loginPin.value = '';
+    ensureAudio();
     await showDash();
   });
 
   logoutBtn.addEventListener('click', async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     showLogin();
+  });
+
+  soundToggle.addEventListener('change', () => {
+    if (soundToggle.checked) {
+      ensureAudio();
+      syncOpenReminder();
+    } else {
+      stopOpenReminder();
+    }
   });
 
   board.addEventListener('click', async (e) => {
