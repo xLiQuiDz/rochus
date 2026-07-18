@@ -306,6 +306,7 @@
       order.set(name, { name, price, category, qty: 1 });
     }
     renderOrder();
+    showToast(`${name} toegevoegd`);
   }
 
   function changeQty(name, delta) {
@@ -320,9 +321,11 @@
     const addBtn = e.target.closest('[data-add]');
     if (addBtn) {
       e.preventDefault();
+      e.stopPropagation();
       const name = addBtn.dataset.name;
       const price = parseFloat(addBtn.dataset.price);
       const category = addBtn.dataset.category || 'other';
+      if (!name || !Number.isFinite(price)) return;
       addItem(name, price, category);
 
       const card = addBtn.closest('.menu-card, .daily-special');
@@ -343,6 +346,17 @@
     const dec = e.target.closest('[data-dec]');
     if (dec) {
       changeQty(dec.getAttribute('data-dec'), -1);
+      return;
+    }
+
+    // Tap anywhere on a simple (non-wine) card to add
+    const card = e.target.closest('.menu-card:not(.menu-card--wine)');
+    if (card) {
+      const btn = card.querySelector('.menu-card__add-btn[data-add]');
+      if (btn) {
+        e.preventDefault();
+        btn.click();
+      }
     }
   });
 
@@ -525,6 +539,7 @@
   /* ------------------------------------------------------------------ */
   if (!prefersReducedMotion && 'IntersectionObserver' in window) {
     const staggerEls = document.querySelectorAll('.stagger-in');
+    staggerEls.forEach((el) => el.classList.add('is-animating'));
     const staggerObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -543,6 +558,10 @@
       { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
     );
     staggerEls.forEach((el) => staggerObserver.observe(el));
+    // Safety: never leave cards invisible
+    setTimeout(() => {
+      staggerEls.forEach((el) => el.classList.add('visible'));
+    }, 1200);
   } else {
     document.querySelectorAll('.stagger-in').forEach((el) => el.classList.add('visible'));
   }

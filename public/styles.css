@@ -123,6 +123,11 @@ h1, h2, h3, h4 {
 
 /* --- Utility: Stagger animation --- */
 .stagger-in {
+  opacity: 1;
+  transform: none;
+}
+
+.stagger-in.is-animating {
   opacity: 0;
   transform: translateY(24px);
   transition: opacity 0.6s var(--ease-out-expo), transform 0.6s var(--ease-out-expo);
@@ -533,6 +538,7 @@ h1, h2, h3, h4 {
   opacity: 0;
   background: linear-gradient(135deg, rgba(212, 175, 112, 0.08) 0%, transparent 60%);
   transition: opacity var(--transition-med);
+  pointer-events: none;
 }
 
 .menu-card:hover {
@@ -564,6 +570,7 @@ h1, h2, h3, h4 {
   font-size: 0.7rem;
   color: var(--amber-500);
   opacity: 0.8;
+  pointer-events: none;
 }
 
 .menu-card--featured:hover {
@@ -630,10 +637,76 @@ h1, h2, h3, h4 {
 }
 
 /* Add to order button */
+/* Wine size pickers */
+.menu-card--wine {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  cursor: default;
+}
+
+.menu-card--wine .menu-card__info {
+  flex: 1 1 100%;
+}
+
+.menu-card__size-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.menu-card__size-btn {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(212, 175, 112, 0.08);
+  border: 1px solid rgba(212, 175, 112, 0.28);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.menu-card__size-btn:hover {
+  background: rgba(212, 175, 112, 0.18);
+  border-color: var(--amber-500);
+}
+
+.menu-card__size-btn:active {
+  transform: scale(0.98);
+}
+
+.menu-card__size-btn .label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.menu-card__size-btn .price {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--amber-400);
+}
+
+.menu-card__size-btn--disabled,
+.menu-card__size-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .menu-card__add-btn {
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -641,11 +714,13 @@ h1, h2, h3, h4 {
   border: 1px solid rgba(212, 175, 112, 0.3);
   border-radius: 50%;
   color: var(--amber-400);
-  font-size: 1.2rem;
+  font-size: 1.35rem;
   font-weight: 300;
   cursor: pointer;
   transition: all var(--transition-fast);
   line-height: 1;
+  position: relative;
+  z-index: 2;
 }
 
 .menu-card__add-btn:hover {
