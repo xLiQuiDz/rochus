@@ -303,6 +303,31 @@
     return escapeHtml(str).replace(/'/g, '&#39;');
   }
 
+  function sparkToFab(fromEl) {
+    if (prefersReducedMotion || !fromEl || !fab) return;
+
+    const from = fromEl.getBoundingClientRect();
+    const to = fab.getBoundingClientRect();
+    const startX = from.left + from.width / 2;
+    const startY = from.top + from.height / 2;
+    const endX = to.left + to.width / 2;
+    const endY = to.top + to.height / 2;
+    const dx = endX - startX;
+    const dy = endY - startY;
+
+    for (let i = 0; i < 3; i++) {
+      const spark = document.createElement('span');
+      spark.className = 'cart-spark';
+      spark.style.left = `${startX - 3.5}px`;
+      spark.style.top = `${startY - 3.5}px`;
+      spark.style.setProperty('--spark-dx', `${dx + (i - 1) * 10}px`);
+      spark.style.setProperty('--spark-dy', `${dy + (i - 1) * 8}px`);
+      spark.style.animationDelay = `${i * 40}ms`;
+      document.body.appendChild(spark);
+      spark.addEventListener('animationend', () => spark.remove(), { once: true });
+    }
+  }
+
   function addItem(name, price, category) {
     const existing = order.get(name);
     if (existing) {
@@ -313,6 +338,7 @@
     renderOrder();
     // Cart only — never submits to the bar
     showToast('In winkelmandje', false, 1600);
+    fab.classList.add('order-fab--ready');
     fab.classList.add('order-fab--pulse');
     clearTimeout(addItem._pulse);
     addItem._pulse = setTimeout(() => fab.classList.remove('order-fab--pulse'), 600);
@@ -336,12 +362,20 @@
       const category = addBtn.dataset.category || 'other';
       if (!name || !Number.isFinite(price)) return;
       addItem(name, price, category);
+      sparkToFab(addBtn);
 
       const card = addBtn.closest('.menu-card, .daily-special');
       if (card) {
         card.classList.remove('added');
         void card.offsetWidth;
         card.classList.add('added');
+        card.addEventListener(
+          'animationend',
+          (ev) => {
+            if (ev.animationName === 'add-spring') card.classList.remove('added');
+          },
+          { once: true }
+        );
       }
       return;
     }
@@ -546,6 +580,16 @@
   /* ------------------------------------------------------------------ */
   /* Stagger-in animations                                              */
   /* ------------------------------------------------------------------ */
+  function triggerCardShimmer(el) {
+    if (!el.classList.contains('menu-card')) return;
+    el.classList.remove('shimmer');
+    void el.offsetWidth;
+    el.classList.add('shimmer');
+    const clear = () => el.classList.remove('shimmer');
+    el.addEventListener('animationend', clear, { once: true });
+    setTimeout(clear, 1000);
+  }
+
   if (!prefersReducedMotion && 'IntersectionObserver' in window) {
     const staggerEls = document.querySelectorAll('.stagger-in');
     staggerEls.forEach((el) => el.classList.add('is-animating'));
@@ -558,8 +602,12 @@
               ? [...el.parentElement.children].filter((c) => c.classList.contains('stagger-in'))
               : [];
             const idx = siblings.indexOf(el);
-            el.style.transitionDelay = `${Math.max(0, idx) * 60}ms`;
+            const delay = Math.max(0, idx) * 60;
+            el.style.transitionDelay = `${delay}ms`;
             el.classList.add('visible');
+            if (el.classList.contains('menu-card')) {
+              setTimeout(() => triggerCardShimmer(el), delay + 80);
+            }
             staggerObserver.unobserve(el);
           }
         });
@@ -569,10 +617,28 @@
     staggerEls.forEach((el) => staggerObserver.observe(el));
     // Safety: never leave cards invisible
     setTimeout(() => {
-      staggerEls.forEach((el) => el.classList.add('visible'));
+      staggerEls.forEach((el) => {
+        if (!el.classList.contains('visible')) {
+          el.classList.add('visible');
+          triggerCardShimmer(el);
+        }
+      });
     }, 1200);
   } else {
     document.querySelectorAll('.stagger-in').forEach((el) => el.classList.add('visible'));
+  }
+
+  /* Lock FAB entrance animation after first play */
+  if (fab) {
+    fab.addEventListener(
+      'animationend',
+      (ev) => {
+        if (ev.animationName === 'fadeInUp') fab.classList.add('order-fab--ready');
+      },
+      { once: true }
+    );
+    // Safety if animation was skipped / already done
+    setTimeout(() => fab.classList.add('order-fab--ready'), 2000);
   }
 
   /* ------------------------------------------------------------------ */

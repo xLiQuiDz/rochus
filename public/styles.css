@@ -26,6 +26,21 @@
 
   /* Soft summer blush */
   --blush: rgba(232, 180, 160, 0.12);
+  --blush-strong: rgba(232, 180, 160, 0.2);
+
+  /* Category accents — chilled glass edge tints */
+  --cat-accent: rgba(212, 175, 112, 0.55);
+  --cat-bieren: rgba(212, 175, 112, 0.55);
+  --cat-flessen: rgba(200, 168, 120, 0.5);
+  --cat-fris: rgba(140, 200, 180, 0.45);
+  --cat-cocktails: rgba(255, 140, 90, 0.5);
+  --cat-wijnen: rgba(220, 140, 150, 0.5);
+  --cat-shots: rgba(240, 200, 120, 0.5);
+  --cat-fingerfood: rgba(232, 180, 160, 0.45);
+
+  /* Glass surface */
+  --glass-highlight: rgba(255, 246, 229, 0.1);
+  --glass-edge: rgba(255, 246, 229, 0.14);
 
   /* Text */
   --text-primary: #f7f1e8;
@@ -378,42 +393,83 @@ h1, h2, h3, h4 {
 .daily-special {
   margin-bottom: var(--space-2xl);
   padding: var(--space-xl) var(--space-lg);
-  background: linear-gradient(
-    135deg,
-    rgba(212, 175, 112, 0.14) 0%,
-    rgba(20, 16, 12, 0.75) 42%,
-    rgba(232, 180, 160, 0.08) 100%
-  );
+  background:
+    linear-gradient(180deg, var(--glass-highlight) 0%, transparent 12px),
+    linear-gradient(
+      135deg,
+      rgba(212, 175, 112, 0.18) 0%,
+      rgba(20, 16, 12, 0.78) 42%,
+      rgba(232, 180, 160, 0.12) 100%
+    );
   border: 1px solid var(--border-amber);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-glow);
+  box-shadow: var(--shadow-glow-strong);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   position: relative;
   overflow: hidden;
+  animation: signature-breathe 4s ease-in-out infinite;
 }
 
 .daily-special::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at top right, rgba(240, 217, 168, 0.12), transparent 55%);
+  background: radial-gradient(ellipse at top right, rgba(240, 217, 168, 0.16), transparent 55%);
   pointer-events: none;
+}
+
+/* Slow drifting liquid sheen */
+.daily-special::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -60%;
+  width: 50%;
+  height: 180%;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 246, 229, 0.1) 48%,
+    rgba(240, 217, 168, 0.18) 50%,
+    rgba(255, 246, 229, 0.08) 52%,
+    transparent 70%
+  );
+  transform: skewX(-18deg);
+  animation: liquid-sheen-drift 7s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .daily-special__label {
   position: relative;
+  z-index: 1;
   display: inline-block;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--amber-400);
   margin-bottom: var(--space-md);
+  padding-bottom: 6px;
+}
+
+.daily-special__label::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--amber-400), transparent 90%);
+  transform-origin: left;
+  animation: gold-underline 3.5s var(--ease-out-expo) infinite;
 }
 
 .daily-special__body {
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: var(--space-md);
@@ -426,7 +482,7 @@ h1, h2, h3, h4 {
 
 .daily-special__name {
   font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-  font-size: clamp(1.35rem, 3.5vw, 1.7rem);
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 4px;
@@ -434,20 +490,23 @@ h1, h2, h3, h4 {
 }
 
 .daily-special__detail {
-  font-size: 0.82rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.95rem;
   color: var(--text-secondary);
 }
 
 .daily-special__price {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 700;
   color: var(--amber-400);
   flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .daily-special.added {
-  animation: pop-in 0.35s var(--ease-out-expo);
+  animation: add-spring 0.45s var(--ease-out-expo);
 }
 
 /* ============================================================
@@ -462,9 +521,18 @@ h1, h2, h3, h4 {
 }
 
 .menu-section {
+  --cat-accent: var(--cat-bieren);
   margin-bottom: var(--space-3xl);
   scroll-margin-top: 80px;
 }
+
+.menu-section[data-category="bieren"] { --cat-accent: var(--cat-bieren); }
+.menu-section[data-category="flessen"] { --cat-accent: var(--cat-flessen); }
+.menu-section[data-category="fris"] { --cat-accent: var(--cat-fris); }
+.menu-section[data-category="cocktails"] { --cat-accent: var(--cat-cocktails); }
+.menu-section[data-category="wijnen"] { --cat-accent: var(--cat-wijnen); }
+.menu-section[data-category="shots"] { --cat-accent: var(--cat-shots); }
+.menu-section[data-category="fingerfood"] { --cat-accent: var(--cat-fingerfood); }
 
 .menu-section__header {
   display: flex;
@@ -475,9 +543,24 @@ h1, h2, h3, h4 {
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.menu-section__emoji {
-  font-size: 1.8rem;
-  line-height: 1;
+.menu-section__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  color: var(--amber-500);
+}
+
+.menu-section__mark svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .menu-section__title {
@@ -512,22 +595,29 @@ h1, h2, h3, h4 {
   gap: var(--space-md);
 }
 
-/* --- Menu Item Card --- */
+/* --- Menu Item Card — condensation glass --- */
 .menu-card {
   position: relative;
-  background: var(--bg-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background:
+    linear-gradient(180deg, var(--glass-highlight) 0%, transparent 10px),
+    var(--bg-card);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: var(--space-lg);
+  padding: var(--space-lg) var(--space-lg) var(--space-lg) calc(var(--space-lg) + 4px);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
   cursor: pointer;
-  transition: all var(--transition-med);
+  transition:
+    background var(--transition-med),
+    border-color var(--transition-med),
+    transform var(--transition-med),
+    box-shadow var(--transition-med);
   overflow: hidden;
+  box-shadow: inset 3px 0 0 0 var(--cat-accent);
 }
 
 .menu-card::before {
@@ -536,16 +626,49 @@ h1, h2, h3, h4 {
   inset: 0;
   border-radius: var(--radius-md);
   opacity: 0;
-  background: linear-gradient(135deg, rgba(212, 175, 112, 0.08) 0%, transparent 60%);
+  background:
+    linear-gradient(135deg, var(--blush) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(212, 175, 112, 0.1) 0%, transparent 60%);
   transition: opacity var(--transition-med);
   pointer-events: none;
+  z-index: 0;
+}
+
+/* Liquid shimmer sweep (triggered once on reveal) */
+.menu-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -80%;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(255, 246, 229, 0.07) 42%,
+    rgba(240, 217, 168, 0.22) 50%,
+    rgba(255, 246, 229, 0.07) 58%,
+    transparent 80%
+  );
+  transform: skewX(-16deg);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.menu-card.shimmer::after {
+  animation: liquid-shimmer 0.85s var(--ease-out-expo) forwards;
 }
 
 .menu-card:hover {
-  background: var(--bg-card-hover);
+  background:
+    linear-gradient(180deg, var(--glass-edge) 0%, transparent 12px),
+    var(--bg-card-hover);
   border-color: var(--border-glass);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    inset 3px 0 0 0 var(--cat-accent),
+    var(--shadow-card);
 }
 
 .menu-card:hover::before {
@@ -559,38 +682,54 @@ h1, h2, h3, h4 {
 /* Featured / highlighted card */
 .menu-card--featured {
   border-color: var(--border-amber);
-  box-shadow: var(--shadow-glow);
-}
-
-.menu-card--featured::after {
-  content: '★';
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  font-size: 0.7rem;
-  color: var(--amber-500);
-  opacity: 0.8;
-  pointer-events: none;
+  box-shadow:
+    inset 3px 0 0 0 var(--amber-500),
+    var(--shadow-glow);
+  animation: signature-breathe-card 4s ease-in-out infinite;
+  padding-top: calc(var(--space-lg) + 6px);
 }
 
 .menu-card--featured:hover {
-  box-shadow: var(--shadow-glow-strong);
+  box-shadow:
+    inset 3px 0 0 0 var(--amber-400),
+    var(--shadow-glow-strong);
   border-color: var(--amber-600);
+}
+
+.menu-card__badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 2;
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amber-400);
+  padding: 3px 8px;
+  border: 1px solid rgba(212, 175, 112, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(20, 16, 12, 0.45);
+  pointer-events: none;
 }
 
 /* Card content */
 .menu-card__info {
+  position: relative;
+  z-index: 2;
   flex: 1;
   min-width: 0;
 }
 
 .menu-card__name {
   font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-  font-size: 1.15rem;
+  font-size: 1.18rem;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 2px;
   letter-spacing: 0.02em;
+  line-height: 1.25;
   transition: color var(--transition-fast);
 }
 
@@ -599,16 +738,24 @@ h1, h2, h3, h4 {
 }
 
 .menu-card__detail {
-  font-size: 0.78rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.88rem;
   color: var(--text-muted);
   font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 .menu-card__prices {
+  position: relative;
+  z-index: 2;
   display: flex;
-  align-items: center;
-  gap: var(--space-md);
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
   flex-shrink: 0;
+  min-width: 3.25rem;
 }
 
 .menu-card__price-group {
@@ -625,10 +772,12 @@ h1, h2, h3, h4 {
 
 .menu-card__price {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--amber-400);
   white-space: nowrap;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 .menu-card__price--dash {
@@ -636,8 +785,7 @@ h1, h2, h3, h4 {
   font-weight: 400;
 }
 
-/* Add to order button */
-/* Wine size pickers */
+/* Wine size pickers — frosted glass chips */
 .menu-card--wine {
   flex-wrap: wrap;
   align-items: flex-start;
@@ -649,33 +797,46 @@ h1, h2, h3, h4 {
 }
 
 .menu-card__size-actions {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   width: 100%;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .menu-card__size-btn {
   flex: 1;
   min-width: 120px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 12px;
-  background: rgba(212, 175, 112, 0.08);
+  padding: 11px 14px;
+  background:
+    linear-gradient(180deg, var(--glass-highlight) 0%, transparent 8px),
+    rgba(212, 175, 112, 0.08);
   border: 1px solid rgba(212, 175, 112, 0.28);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: 'Plus Jakarta Sans', sans-serif;
   cursor: pointer;
   transition: all var(--transition-fast);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 0 rgba(255, 246, 229, 0.08);
 }
 
 .menu-card__size-btn:hover {
-  background: rgba(212, 175, 112, 0.18);
+  background:
+    linear-gradient(180deg, var(--glass-edge) 0%, transparent 10px),
+    rgba(212, 175, 112, 0.18);
   border-color: var(--amber-500);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 246, 229, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .menu-card__size-btn:active {
@@ -694,6 +855,7 @@ h1, h2, h3, h4 {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--amber-400);
+  font-variant-numeric: tabular-nums;
 }
 
 .menu-card__size-btn--disabled,
@@ -703,32 +865,34 @@ h1, h2, h3, h4 {
   pointer-events: none;
 }
 
+/* Gold ring add button */
 .menu-card__add-btn {
   flex-shrink: 0;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(212, 175, 112, 0.1);
-  border: 1px solid rgba(212, 175, 112, 0.3);
+  background: transparent;
+  border: 1.5px solid rgba(212, 175, 112, 0.55);
   border-radius: 50%;
   color: var(--amber-400);
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   font-weight: 300;
   cursor: pointer;
   transition: all var(--transition-fast);
   line-height: 1;
   position: relative;
   z-index: 2;
+  box-shadow: inset 0 0 0 0 rgba(212, 175, 112, 0.2);
 }
 
 .menu-card__add-btn:hover {
-  background: linear-gradient(135deg, var(--amber-400), var(--amber-600));
+  background: linear-gradient(145deg, var(--amber-400), var(--amber-600));
   color: var(--bg-deep);
   border-color: transparent;
   transform: scale(1.08);
-  box-shadow: 0 0 14px rgba(212, 175, 112, 0.4);
+  box-shadow: 0 0 18px rgba(212, 175, 112, 0.45);
 }
 
 .menu-card__add-btn:active {
@@ -757,6 +921,11 @@ h1, h2, h3, h4 {
   justify-content: center;
   transition: all var(--transition-fast);
   animation: fadeInUp 0.6s var(--ease-out-expo) 1s both;
+}
+
+/* Lock entrance so pulse / class toggles don't restart fadeInUp (opacity: 0) */
+.order-fab--ready {
+  animation: none;
 }
 
 .order-fab__icon {
@@ -1356,20 +1525,121 @@ h1, h2, h3, h4 {
   }
 }
 
-@keyframes pop-in {
+@keyframes add-spring {
   0% {
-    transform: scale(0.8);
-    opacity: 0;
+    transform: scale(0.97);
+    border-color: var(--amber-400);
+    box-shadow:
+      inset 3px 0 0 0 var(--amber-400),
+      0 0 0 0 rgba(212, 175, 112, 0);
+  }
+  45% {
+    transform: scale(1.02);
+    border-color: var(--amber-500);
+    box-shadow:
+      inset 3px 0 0 0 var(--amber-400),
+      0 0 28px rgba(212, 175, 112, 0.28);
   }
   100% {
     transform: scale(1);
+  }
+}
+
+/* Glow-only breathe for signature callout */
+@keyframes signature-breathe {
+  0%, 100% {
+    box-shadow: 0 0 22px rgba(212, 175, 112, 0.12), 0 0 48px rgba(212, 175, 112, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 36px rgba(212, 175, 112, 0.26), 0 0 72px rgba(212, 175, 112, 0.1);
+  }
+}
+
+/* Inset accent + glow for featured menu cards */
+@keyframes signature-breathe-card {
+  0%, 100% {
+    box-shadow:
+      inset 3px 0 0 0 var(--amber-500),
+      0 0 22px rgba(212, 175, 112, 0.1),
+      0 0 48px rgba(212, 175, 112, 0.04);
+  }
+  50% {
+    box-shadow:
+      inset 3px 0 0 0 var(--amber-400),
+      0 0 36px rgba(212, 175, 112, 0.22),
+      0 0 72px rgba(212, 175, 112, 0.08);
+  }
+}
+
+@keyframes liquid-shimmer {
+  0% {
+    left: -80%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    left: 130%;
+    opacity: 0;
+  }
+}
+
+@keyframes liquid-sheen-drift {
+  0%, 100% {
+    transform: skewX(-18deg) translateX(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: skewX(-18deg) translateX(180%);
+    opacity: 0.9;
+  }
+}
+
+@keyframes gold-underline {
+  0%, 100% {
+    transform: scaleX(0.55);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleX(1);
     opacity: 1;
   }
 }
 
-/* Card pop feedback */
+@keyframes spark-fly {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(var(--spark-dx), var(--spark-dy)) scale(0.35);
+    opacity: 0;
+  }
+}
+
+.cart-spark {
+  position: fixed;
+  z-index: 400;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--amber-400) 0%, var(--amber-600) 70%, transparent 100%);
+  box-shadow: 0 0 8px rgba(212, 175, 112, 0.7);
+  pointer-events: none;
+  animation: spark-fly 0.55s var(--ease-out-expo) forwards;
+}
+
+/* Card add feedback */
 .menu-card.added {
-  animation: pop-in 0.35s var(--ease-out-expo);
+  animation: add-spring 0.45s var(--ease-out-expo);
+}
+
+.menu-card--featured.added {
+  animation: add-spring 0.45s var(--ease-out-expo);
 }
 
 /* No results message */
@@ -1411,11 +1681,20 @@ h1, h2, h3, h4 {
   }
 
   .menu-card {
-    padding: var(--space-md);
+    padding: var(--space-md) var(--space-md) var(--space-md) calc(var(--space-md) + 4px);
+  }
+
+  .menu-card--featured {
+    padding-top: calc(var(--space-md) + 8px);
   }
 
   .menu-card__name {
-    font-size: 0.92rem;
+    font-size: 1.05rem;
+  }
+
+  .menu-card__add-btn {
+    width: 44px;
+    height: 44px;
   }
 
   .order-fab {
@@ -1499,7 +1778,17 @@ h1, h2, h3, h4 {
   .hero__badge,
   .hero__title,
   .hero__subtitle,
-  .order-fab {
+  .order-fab,
+  .daily-special,
+  .menu-card--featured,
+  .menu-section__promo {
+    animation: none !important;
+  }
+
+  .menu-card.shimmer::after,
+  .daily-special::after,
+  .cart-spark {
+    display: none !important;
     animation: none !important;
   }
 
