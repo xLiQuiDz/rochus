@@ -1366,6 +1366,12 @@ h1, h2, h3, h4 {
   animation: water-zip 0.28s var(--ease-out-expo);
 }
 
+.menu-card--fleeing.water-vanish {
+  animation: water-vanish 0.28s var(--ease-out-expo) forwards;
+  pointer-events: none;
+  transition: none;
+}
+
 @keyframes water-splash {
   0% { transform: scale(0.92) rotate(-2deg); }
   60% { transform: scale(1.04) rotate(2deg); }
@@ -1376,6 +1382,19 @@ h1, h2, h3, h4 {
   0% { filter: blur(0); }
   40% { filter: blur(2px); }
   100% { filter: blur(0); }
+}
+
+@keyframes water-vanish {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.6) rotate(-8deg);
+    filter: blur(4px);
+  }
 }
 
 /* ============================================================

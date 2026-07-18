@@ -255,6 +255,27 @@
     return true;
   }
 
+  /** Swipe/scroll → runaway water poofs away and returns to the menu slot. */
+  function vanishFleeingWater(card) {
+    if (!card || !card.classList.contains('menu-card--fleeing')) return;
+    if (card.classList.contains('water-vanish')) return;
+
+    waterCooldown = true;
+    card.classList.remove('water-zip');
+    card.classList.add('water-vanish');
+    showToast(pick(['Water is weggezwommen 💧', 'Splash — water gone', 'Te laat, water scrollde weg']), false, 1400);
+
+    setTimeout(() => {
+      card.classList.remove('menu-card--fleeing', 'water-vanish', 'water-zip');
+      card.style.left = '';
+      card.style.top = '';
+      card.style.width = '';
+      setTimeout(() => {
+        waterCooldown = false;
+      }, 500);
+    }, 280);
+  }
+
   /* ------------------------------------------------------------------ */
   /* Order state                                                        */
   /* ------------------------------------------------------------------ */
@@ -717,6 +738,11 @@
       },
       { passive: true }
     );
+
+    // Swipe / scroll while it's floating → disappear back into the menu
+    const onBrowseAway = () => vanishFleeingWater(waterEl);
+    window.addEventListener('scroll', onBrowseAway, { passive: true });
+    window.addEventListener('touchmove', onBrowseAway, { passive: true });
   }
 
   fab.addEventListener('click', openDrawer);
