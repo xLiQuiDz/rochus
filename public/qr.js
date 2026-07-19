@@ -8,11 +8,27 @@
   const loginError = document.getElementById('login-error');
   const qrGrid = document.getElementById('qr-grid');
   const publicUrlEl = document.getElementById('public-url');
+  const tableCountEl = document.getElementById('table-count-label');
   const printBtn = document.getElementById('print-btn');
   const logoutBtn = document.getElementById('logout-btn');
 
   let publicUrl = window.location.origin;
-  let tableCount = 20;
+  let tableCount = 30;
+
+  const FUN_LINES = [
+    'Jouw ronde start hier',
+    'Scan me, drink me',
+    'Pop-up privilege',
+    'Zomer op tafel',
+    'Bestel zonder te zwaaien',
+    'VIP van deze tafel',
+    'Een tipje: begin met spritz',
+    'Cash klaar? Scan maar',
+    'Tafelkoning(in) mode',
+    'Geen app, wel fun',
+    'Menu in je pocket',
+    'Rochus zegt: proost',
+  ];
 
   function showLogin() {
     loginView.hidden = false;
@@ -24,59 +40,48 @@
     if (res.ok) {
       const cfg = await res.json();
       publicUrl = cfg.publicUrl || window.location.origin;
-      tableCount = cfg.tableCount || 20;
+      tableCount = cfg.tableCount || 30;
     }
 
     publicUrlEl.textContent = publicUrl;
+    if (tableCountEl) {
+      tableCountEl.textContent = `${tableCount} stickers · klaar om te printen`;
+    }
     qrGrid.innerHTML = '';
 
     for (let t = 1; t <= tableCount; t++) {
-      const url = `${publicUrl}/?t=${t}`;
+      const fun = FUN_LINES[(t - 1) % FUN_LINES.length];
       const card = document.createElement('article');
-      card.className = 'qr-card';
+      card.className = 'qr-sticker';
       card.innerHTML = `
-        <p class="qr-card__brand">ROCHUS</p>
-        <p class="qr-card__table">Tafel ${t}</p>
-        <canvas id="qr-${t}" width="148" height="148"></canvas>
-        <p class="qr-card__hint">Scan &amp; bestel<br />Cash bij levering</p>
+        <div class="qr-sticker__cut" aria-hidden="true"></div>
+        <div class="qr-sticker__inner">
+          <p class="qr-sticker__brand">ROCHUS</p>
+          <p class="qr-sticker__eyebrow">zomer pop-up</p>
+          <p class="qr-sticker__table">Tafel <span>${t}</span></p>
+          <div class="qr-sticker__qr">
+            <img
+              src="/api/qr/${t}.png"
+              alt="QR code tafel ${t}"
+              width="220"
+              height="220"
+              decoding="async"
+              loading="eager"
+            />
+          </div>
+          <p class="qr-sticker__fun">${fun}</p>
+          <p class="qr-sticker__cta">Scan &amp; bestel</p>
+          <p class="qr-sticker__promo">Actie 3+1 op snacks van €6</p>
+          <p class="qr-sticker__cash">Cash bij levering</p>
+        </div>
       `;
       qrGrid.appendChild(card);
-
-      const canvas = card.querySelector('canvas');
-      if (window.QRCode && canvas) {
-        QRCode.toCanvas(
-          canvas,
-          url,
-          {
-            width: 148,
-            margin: 1,
-            color: { dark: '#0a0908', light: '#ffffff' },
-          },
-          () => {}
-        );
-      }
     }
   }
 
   async function showQr() {
     loginView.hidden = true;
     qrView.hidden = false;
-    // Wait a tick for QRCode lib if still loading
-    const waitLib = () =>
-      new Promise((resolve) => {
-        if (window.QRCode) return resolve();
-        const t = setInterval(() => {
-          if (window.QRCode) {
-            clearInterval(t);
-            resolve();
-          }
-        }, 50);
-        setTimeout(() => {
-          clearInterval(t);
-          resolve();
-        }, 3000);
-      });
-    await waitLib();
     await renderCodes();
   }
 

@@ -14,10 +14,11 @@ const {
   cleanupExpiredSessions,
 } = require('./db');
 const { validateAndPrice } = require('./menu-data');
+const QRCode = require('qrcode');
 
 const PORT = Number(process.env.PORT) || 3000;
 const STAFF_PIN = process.env.STAFF_PIN || '4321';
-const TABLE_COUNT = Math.max(1, Number(process.env.TABLE_COUNT) || 20);
+const TABLE_COUNT = Math.max(1, Number(process.env.TABLE_COUNT) || 30);
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 const SESSION_COOKIE = 'rochus_staff';
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -84,6 +85,32 @@ app.get('/api/health', async (_req, res) => {
 
 app.get('/api/config', (_req, res) => {
   res.json({ tableCount: TABLE_COUNT, publicUrl: PUBLIC_URL });
+});
+
+/** PNG QR for table N — used on printable stickers */
+app.get('/api/qr/:table.png', async (req, res) => {
+  try {
+    const table = Number(req.params.table);
+    if (!Number.isFinite(table) || table < 1 || table > TABLE_COUNT) {
+      return res.status(404).send('Onbekende tafel');
+    }
+    const url = `${PUBLIC_URL}/?t=${table}`;
+    const png = await QRCode.toBuffer(url, {
+      type: 'png',
+      width: 440,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#1a1208', light: '#fffaf2' },
+    });
+    res.set({
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=86400',
+    });
+    res.send(png);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('QR-fout');
+  }
 });
 
 app.get('/api/auth/me', async (req, res) => {

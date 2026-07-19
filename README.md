@@ -22,7 +22,7 @@ npm install
 # Point DATABASE_URL at a local or Railway Postgres instance
 export DATABASE_URL=postgresql://...
 export STAFF_PIN=4321
-export TABLE_COUNT=20
+export TABLE_COUNT=30
 export PUBLIC_URL=http://localhost:3000
 npm start
 ```
@@ -45,7 +45,7 @@ npm start
 |----------|-------------|
 | `DATABASE_URL` | Postgres connection (required) |
 | `STAFF_PIN` | Staff login PIN |
-| `TABLE_COUNT` | Tables `1…N` (default 20) |
+| `TABLE_COUNT` | Tables `1…N` (default 30) |
 | `PUBLIC_URL` | Public base URL for QR codes |
 | `PORT` | HTTP port (Railway injects this) |
 | `PGSSL` | Set `true` if SSL is required for Postgres |

@@ -5,6 +5,9 @@
   --text: #f7f1e8;
   --muted: #8a7f72;
   --border: rgba(245, 230, 200, 0.12);
+  --sticker: #fffaf2;
+  --ink: #1a1208;
+  --ink-soft: #5c5044;
 }
 
 *,
@@ -17,7 +20,10 @@
 
 body {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(212, 175, 112, 0.14), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(232, 180, 160, 0.08), transparent),
+    var(--bg);
   color: var(--text);
   min-height: 100vh;
 }
@@ -105,7 +111,7 @@ body {
 }
 
 .qr-page {
-  max-width: 1100px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 24px 16px 48px;
 }
@@ -140,6 +146,12 @@ body {
   word-break: break-all;
 }
 
+.qr-toolbar__meta {
+  color: var(--gold-soft);
+  font-size: 0.8rem;
+  margin-top: 6px;
+}
+
 .qr-toolbar__actions {
   display: flex;
   flex-wrap: wrap;
@@ -168,52 +180,143 @@ body {
 
 .qr-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 22px;
 }
 
-.qr-card {
-  background: #fff;
-  color: #111;
-  border-radius: 14px;
-  padding: 20px 16px;
-  text-align: center;
+/* --- Printable sticker --- */
+.qr-sticker {
+  position: relative;
+  background: var(--sticker);
+  color: var(--ink);
+  border-radius: 22px;
+  padding: 4px;
   break-inside: avoid;
   page-break-inside: avoid;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(212, 175, 112, 0.2);
 }
 
-.qr-card__brand {
-  font-family: 'Cinzel', serif;
-  letter-spacing: 0.2em;
-  font-size: 0.7rem;
-  color: #8a7f72;
-  margin-bottom: 4px;
+.qr-sticker__cut {
+  position: absolute;
+  inset: 8px;
+  border: 1.5px dashed rgba(140, 110, 70, 0.45);
+  border-radius: 18px;
+  pointer-events: none;
 }
 
-.qr-card__table {
+.qr-sticker__inner {
+  position: relative;
+  z-index: 1;
+  padding: 18px 14px 16px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(212, 175, 112, 0.18), transparent 42%),
+    radial-gradient(circle at 88% 12%, rgba(232, 180, 160, 0.16), transparent 36%),
+    linear-gradient(180deg, #fffdf8 0%, var(--sticker) 100%);
+  border-radius: 18px;
+}
+
+.qr-sticker__brand {
   font-family: 'Cinzel', serif;
-  font-size: 1.6rem;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  font-size: 0.72rem;
   font-weight: 600;
-  margin-bottom: 12px;
+  color: #9a7b45;
 }
 
-.qr-card canvas,
-.qr-card img {
-  width: 148px;
-  height: 148px;
-  margin: 0 auto 12px;
+.qr-sticker__eyebrow {
+  margin-top: 2px;
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.qr-sticker__table {
+  margin: 8px 0 10px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.qr-sticker__table span {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 0.05em 0.28em;
+  margin-left: 0.1em;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f0d9a8, #d4af70);
+  color: #1a1208;
+  font-family: 'Cinzel', serif;
+  font-size: 0.92em;
+  font-weight: 600;
+}
+
+.qr-sticker__qr {
+  width: 168px;
+  height: 168px;
+  margin: 0 auto 10px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(26, 18, 8, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 112, 0.25);
+}
+
+.qr-sticker__qr img {
+  width: 100%;
+  height: 100%;
   display: block;
+  object-fit: contain;
 }
 
-.qr-card__hint {
-  font-size: 0.75rem;
-  color: #666;
-  line-height: 1.4;
+.qr-sticker__fun {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: #6b5744;
+  margin-bottom: 6px;
+  min-height: 1.2em;
+}
+
+.qr-sticker__cta {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.qr-sticker__promo {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #8a6428;
+  background: rgba(212, 175, 112, 0.22);
+  border-radius: 999px;
+  padding: 4px 8px;
+  display: inline-block;
+}
+
+.qr-sticker__cash {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  color: var(--ink-soft);
 }
 
 @media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
   body {
-    background: #fff;
+    background: #fff !important;
   }
 
   .no-print {
@@ -227,10 +330,23 @@ body {
 
   .qr-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 12mm;
+    gap: 8mm;
   }
 
-  .qr-card {
-    border: 1px solid #ddd;
+  .qr-sticker {
+    box-shadow: none;
+    border: none;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .qr-sticker__inner {
+    background: #fffaf2;
+    border: 1px solid #e6d7b8;
+  }
+
+  .qr-sticker__cut {
+    border-color: #c4a574;
   }
 }
