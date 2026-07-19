@@ -148,7 +148,7 @@
     }
     if (category === 'fingerfood') {
       return {
-        toast: pick(['Snack attack', '3+1 brain activated', 'Crunch time']),
+        toast: pick(['Snack attack', 'Crunch time', 'Nom nom']),
         className: 'gag-wobble',
         sticker: 'nom',
       };
@@ -420,24 +420,24 @@
 
   function getTotals() {
     let subtotal = 0;
-    let fingerfoodUnits = [];
+    const promoUnits = [];
 
     for (const item of order.values()) {
       const line = item.price * item.qty;
       subtotal += line;
-      if (item.category === 'fingerfood') {
+      // 3+1 only on €6 snack packs (promo flag)
+      if (item.promo) {
         for (let i = 0; i < item.qty; i++) {
-          fingerfoodUnits.push(item.price);
+          promoUnits.push(item.price);
         }
       }
     }
 
-    // 3+1: every 4th fingerfood unit free (cheapest of each group of 4)
-    fingerfoodUnits.sort((a, b) => a - b);
+    promoUnits.sort((a, b) => a - b);
     let discount = 0;
-    const freeCount = Math.floor(fingerfoodUnits.length / 4);
+    const freeCount = Math.floor(promoUnits.length / 4);
     for (let i = 0; i < freeCount; i++) {
-      discount += fingerfoodUnits[i];
+      discount += promoUnits[i];
     }
 
     return { subtotal, discount, total: subtotal - discount, freeCount };
@@ -473,16 +473,16 @@
 
     const { discount, total, freeCount } = getTotals();
 
-    // Distribute free tags across fingerfood lines (cheapest units first)
+    // Distribute free tags across promo snack lines only
     let remainingFree = freeCount;
-    const fingerfoodSorted = items
-      .filter((i) => i.category === 'fingerfood')
+    const promoSorted = items
+      .filter((i) => i.promo)
       .slice()
       .sort((a, b) => a.price - b.price);
 
     /** @type {Map<string, number>} */
     const freeByKey = new Map();
-    for (const item of fingerfoodSorted) {
+    for (const item of promoSorted) {
       if (remainingFree <= 0) break;
       const freeHere = Math.min(item.qty, remainingFree);
       freeByKey.set(item.name, freeHere);
@@ -552,12 +552,12 @@
     const { discount, total, freeCount } = getTotals();
 
     let remainingFree = freeCount;
-    const fingerfoodSorted = items
-      .filter((i) => i.category === 'fingerfood')
+    const promoSorted = items
+      .filter((i) => i.promo)
       .slice()
       .sort((a, b) => a.price - b.price);
     const freeByKey = new Map();
-    for (const item of fingerfoodSorted) {
+    for (const item of promoSorted) {
       if (remainingFree <= 0) break;
       const freeHere = Math.min(item.qty, remainingFree);
       freeByKey.set(item.name, freeHere);
@@ -688,12 +688,12 @@
     }
   }
 
-  function addItem(name, price, category) {
+  function addItem(name, price, category, promo = false) {
     const existing = order.get(name);
     if (existing) {
       existing.qty += 1;
     } else {
-      order.set(name, { name, price, category, qty: 1 });
+      order.set(name, { name, price, category, qty: 1, promo: Boolean(promo) });
     }
     renderOrder();
     // Cart only — never submits to the bar
@@ -732,8 +732,9 @@
         const name = btn.dataset.name;
         const price = parseFloat(btn.dataset.price);
         const category = btn.dataset.category || 'fris';
+        const promo = btn.dataset.promo === 'true';
         if (name && Number.isFinite(price)) {
-          const gag = addItem(name, price, category);
+          const gag = addItem(name, price, category, promo);
           waterAllowOrder = false;
           waterEscapes = 0;
           sparkToFab(btn);
@@ -754,8 +755,9 @@
       const name = addBtn.dataset.name;
       const price = parseFloat(addBtn.dataset.price);
       const category = addBtn.dataset.category || 'other';
+      const promo = addBtn.dataset.promo === 'true';
       if (!name || !Number.isFinite(price)) return;
-      const gag = addItem(name, price, category);
+      const gag = addItem(name, price, category, promo);
       sparkToFab(addBtn);
       if (!prefersReducedMotion) {
         addBtn.classList.remove('btn-twirl');

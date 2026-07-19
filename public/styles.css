@@ -590,6 +590,32 @@ h1, h2, h3, h4 {
   animation: subtle-glow 3s ease-in-out infinite alternate;
 }
 
+.menu-section__promo em {
+  display: block;
+  margin-top: 0.2em;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  opacity: 0.95;
+}
+
+.menu-card__promo-tag {
+  display: inline-block;
+  margin-left: 0.35em;
+  padding: 0.12em 0.4em;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  color: var(--bg-deep, #0c0a08);
+  background: var(--amber-400, #d4af70);
+  border-radius: 3px;
+}
+
 /* --- Menu Grid --- */
 .menu-grid {
   display: grid;

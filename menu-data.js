@@ -17,7 +17,6 @@ const MENU_ITEMS = [
   { name: 'Chaudfontaine Plat', price: 3, category: 'fris' },
   { name: 'Chaudfontaine Bruis', price: 3, category: 'fris' },
   { name: 'Royal Bliss Tonic', price: 3, category: 'fris' },
-  { name: 'Water', price: 0, category: 'fris' },
   { name: 'Aperol Spritz', price: 8, category: 'cocktails' },
   { name: 'Gin Tonic Bulldog', price: 9, category: 'cocktails' },
   { name: 'Rum Captain Morgan', price: 9, category: 'cocktails' },
@@ -36,17 +35,22 @@ const MENU_ITEMS = [
   { name: 'Tequila', price: 4, category: 'shots' },
   { name: 'Limoncello Bongiorno', price: 4, category: 'shots' },
   { name: 'Rum', price: 4, category: 'shots' },
-  { name: 'Zak Chips', price: 2.5, category: 'fingerfood' },
-  { name: 'Kaasballetjes (6 stuks)', price: 6, category: 'fingerfood' },
-  { name: 'Mozzarella Fingers (6 stuks)', price: 6, category: 'fingerfood' },
-  { name: 'Garnaalballetjes (6 stuks)', price: 6, category: 'fingerfood' },
-  { name: 'Bitterballen (6 stuks)', price: 6, category: 'fingerfood' },
-  { name: "Mini-loempia's (6 stuks)", price: 6, category: 'fingerfood' },
-  { name: 'Kippen Nuggets (6 stuks)', price: 6, category: 'fingerfood' },
-  { name: 'Kipfingers (6 stuks)', price: 6, category: 'fingerfood' },
-  { name: "Sharing Nacho's", price: 15, category: 'fingerfood' },
-  { name: '105 Sharing Burger', price: 8, category: 'fingerfood' },
+  { name: 'Zak Chips', price: 2.5, category: 'fingerfood', promo: false },
+  { name: 'Kaasballetjes (6 stuks)', price: 6, category: 'fingerfood', promo: true },
+  { name: 'Mozzarella Fingers (6 stuks)', price: 6, category: 'fingerfood', promo: true },
+  { name: 'Garnaalballetjes (6 stuks)', price: 6, category: 'fingerfood', promo: true },
+  { name: 'Bitterballen (6 stuks)', price: 6, category: 'fingerfood', promo: true },
+  { name: "Mini-loempia's (6 stuks)", price: 6, category: 'fingerfood', promo: true },
+  { name: 'Kippen Nuggets (6 stuks)', price: 6, category: 'fingerfood', promo: true },
+  { name: 'Kipfingers (6 stuks)', price: 6, category: 'fingerfood', promo: true },
+  { name: "Sharing Nacho's", price: 15, category: 'fingerfood', promo: false },
+  { name: '105 Sharing Burger', price: 8, category: 'fingerfood', promo: false },
 ];
+
+/** 3+1 applies only to €6 snack packs (not chips, nachos, burger). */
+function isPromoFingerfood(item) {
+  return Boolean(item && item.category === 'fingerfood' && item.promo === true);
+}
 
 const byName = new Map(MENU_ITEMS.map((item) => [item.name, item]));
 
@@ -59,7 +63,7 @@ function toCents(euros) {
 }
 
 /**
- * Validate client line items against catalog and apply 3+1 fingerfood.
+ * Validate client line items against catalog and apply 3+1 on promo snacks (€6).
  * @param {{ name: string, qty: number }[]} rawItems
  */
 function validateAndPrice(rawItems) {
@@ -67,7 +71,7 @@ function validateAndPrice(rawItems) {
     throw new Error('Bestelling is leeg');
   }
 
-  /** @type {{ name: string, qty: number, price: number, category: string, unit_price_cents: number }[]} */
+  /** @type {{ name: string, qty: number, price: number, category: string, unit_price_cents: number, promo: boolean }[]} */
   const lines = [];
 
   for (const raw of rawItems) {
@@ -86,29 +90,30 @@ function validateAndPrice(rawItems) {
       price: catalog.price,
       category: catalog.category,
       unit_price_cents: toCents(catalog.price),
+      promo: catalog.promo === true,
     });
   }
 
   let subtotalCents = 0;
-  const fingerfoodUnits = [];
+  const promoUnits = [];
 
   for (const line of lines) {
     subtotalCents += line.unit_price_cents * line.qty;
-    if (line.category === 'fingerfood') {
+    if (isPromoFingerfood(line)) {
       for (let i = 0; i < line.qty; i++) {
-        fingerfoodUnits.push({ name: line.name, unit_price_cents: line.unit_price_cents });
+        promoUnits.push({ name: line.name, unit_price_cents: line.unit_price_cents });
       }
     }
   }
 
-  fingerfoodUnits.sort((a, b) => a.unit_price_cents - b.unit_price_cents);
-  const freeCount = Math.floor(fingerfoodUnits.length / 4);
+  promoUnits.sort((a, b) => a.unit_price_cents - b.unit_price_cents);
+  const freeCount = Math.floor(promoUnits.length / 4);
   let discountCents = 0;
   /** @type {Map<string, number>} */
   const freeByName = new Map();
 
   for (let i = 0; i < freeCount; i++) {
-    const unit = fingerfoodUnits[i];
+    const unit = promoUnits[i];
     discountCents += unit.unit_price_cents;
     freeByName.set(unit.name, (freeByName.get(unit.name) || 0) + 1);
   }
@@ -134,4 +139,5 @@ module.exports = {
   getMenuItem,
   toCents,
   validateAndPrice,
+  isPromoFingerfood,
 };
