@@ -61,7 +61,7 @@
           <p class="qr-sticker__table">Tafel <span>${t}</span></p>
           <div class="qr-sticker__qr">
             <img
-              src="/api/qr/${t}.png"
+              src="/api/qr/${t}"
               alt="QR code tafel ${t}"
               width="220"
               height="220"

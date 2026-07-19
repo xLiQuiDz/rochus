@@ -88,9 +88,9 @@ app.get('/api/config', (_req, res) => {
 });
 
 /** PNG QR for table N — used on printable stickers */
-app.get('/api/qr/:table.png', async (req, res) => {
+app.get('/api/qr/:table', async (req, res) => {
   try {
-    const table = Number(req.params.table);
+    const table = Number(String(req.params.table).replace(/\.png$/i, ''));
     if (!Number.isFinite(table) || table < 1 || table > TABLE_COUNT) {
       return res.status(404).send('Onbekende tafel');
     }
