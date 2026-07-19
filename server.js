@@ -62,8 +62,13 @@ function requireStaff(req, res, next) {
 
 function broadcast(event, data) {
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-  for (const client of sseClients) {
-    client.write(payload);
+  for (const client of [...sseClients]) {
+    try {
+      client.write(payload);
+      if (typeof client.flush === 'function') client.flush();
+    } catch {
+      sseClients.delete(client);
+    }
   }
 }
 
@@ -164,17 +169,28 @@ app.get('/api/orders', requireStaff, async (req, res) => {
 });
 
 app.get('/api/orders/stream', requireStaff, (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  req.socket.setTimeout(0);
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
 
-  res.write(`event: connected\ndata: ${JSON.stringify({ ok: true })}\n\n`);
+  // Pad first chunk so some proxies flush immediately
+  res.write(`:${' '.repeat(2048)}\n\n`);
+  res.write(`event: connected\ndata: ${JSON.stringify({ ok: true, at: Date.now() })}\n\n`);
+  if (typeof res.flush === 'function') res.flush();
   sseClients.add(res);
 
   const heartbeat = setInterval(() => {
-    res.write(': ping\n\n');
-  }, 25000);
+    try {
+      res.write(`: ping ${Date.now()}\n\n`);
+      if (typeof res.flush === 'function') res.flush();
+    } catch {
+      clearInterval(heartbeat);
+      sseClients.delete(res);
+    }
+  }, 15000);
 
   req.on('close', () => {
     clearInterval(heartbeat);

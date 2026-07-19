@@ -11,13 +11,18 @@
   const logoutBtn = document.getElementById('logout-btn');
   const soundToggle = document.getElementById('sound-toggle');
   const newFlash = document.getElementById('new-flash');
+  const liveStatus = document.getElementById('live-status');
+  const liveStatusText = document.getElementById('live-status-text');
 
   /** @type {Map<number, object>} */
   const orders = new Map();
   let eventSource = null;
   let audioCtx = null;
   let openReminderTimer = null;
+  let pollTimer = null;
+  let streamRetryTimer = null;
   const OPEN_REMINDER_MS = 60 * 1000;
+  const POLL_MS = 3000;
 
   function formatEuroCents(cents) {
     const n = cents / 100;
@@ -216,21 +221,59 @@
       .replace(/"/g, '&quot;');
   }
 
+  function setLiveStatus(mode, text) {
+    if (!liveStatus || !liveStatusText) return;
+    liveStatus.classList.remove('dash__live--ok', 'dash__live--warn', 'dash__live--err');
+    if (mode) liveStatus.classList.add(`dash__live--${mode}`);
+    liveStatusText.textContent = text;
+  }
+
   function upsertOrder(order, { announce } = {}) {
     const prev = orders.get(order.id);
-    const isNewTicket = !prev && order.status === 'new';
+    const wasOpen = prev && (prev.status === 'new' || prev.status === 'preparing');
+    const isOpen = order.status === 'new' || order.status === 'preparing';
+    const isBrandNew = !prev && order.status === 'new';
+    const reopened = prev && !wasOpen && isOpen;
+
     orders.set(order.id, order);
-    if (order.status === 'served' || order.status === 'cancelled') {
-      /* keep in map but filtered out of board */
-    }
     renderBoard();
-    if (announce && isNewTicket) {
+
+    if (announce && (isBrandNew || reopened)) {
       playChime();
       flashNew();
     }
   }
 
-  async function loadOrders() {
+  function mergeOpenList(list, { announceNew } = {}) {
+    const incomingIds = new Set(list.map((o) => Number(o.id)));
+    const previousOpenIds = new Set(
+      [...orders.values()]
+        .filter((o) => o.status === 'new' || o.status === 'preparing')
+        .map((o) => Number(o.id))
+    );
+
+    // Mark missing open orders as served locally if they disappeared from open list
+    for (const id of previousOpenIds) {
+      if (!incomingIds.has(id)) {
+        const existing = orders.get(id);
+        if (existing && (existing.status === 'new' || existing.status === 'preparing')) {
+          orders.set(id, { ...existing, status: 'served' });
+        }
+      }
+    }
+
+    for (const order of list) {
+      const id = Number(order.id);
+      const isNew = !previousOpenIds.has(id);
+      upsertOrder(order, { announce: Boolean(announceNew && isNew) });
+    }
+
+    if (list.length === 0) {
+      renderBoard();
+    }
+  }
+
+  async function loadOrders({ announceNew = false } = {}) {
     const res = await fetch('/api/orders?status=open', { credentials: 'include' });
     if (res.status === 401) {
       showLogin();
@@ -238,24 +281,65 @@
     }
     if (!res.ok) throw new Error('Kon bestellingen niet laden');
     const list = await res.json();
-    orders.clear();
-    for (const order of list) orders.set(order.id, order);
-    renderBoard();
+    if (!announceNew) {
+      orders.clear();
+      for (const order of list) orders.set(order.id, order);
+      renderBoard();
+    } else {
+      mergeOpenList(list, { announceNew: true });
+    }
+  }
+
+  function startPolling() {
+    stopPolling();
+    pollTimer = setInterval(() => {
+      loadOrders({ announceNew: true }).catch(() => {
+        setLiveStatus('warn', 'Verbinding traag — opnieuw proberen…');
+      });
+    }, POLL_MS);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
   }
 
   function connectStream() {
-    if (eventSource) eventSource.close();
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    if (streamRetryTimer) {
+      clearTimeout(streamRetryTimer);
+      streamRetryTimer = null;
+    }
+
+    setLiveStatus('warn', 'Live verbinden…');
     eventSource = new EventSource('/api/orders/stream');
+
+    eventSource.addEventListener('connected', () => {
+      setLiveStatus('ok', 'Live · nieuwe orders verschijnen meteen');
+    });
+
     eventSource.addEventListener('order', (ev) => {
       try {
         const order = JSON.parse(ev.data);
         upsertOrder(order, { announce: true });
+        setLiveStatus('ok', 'Live · nieuwe orders verschijnen meteen');
       } catch {
         /* ignore */
       }
     });
+
     eventSource.onerror = () => {
-      /* browser will retry */
+      setLiveStatus('warn', 'Live even weg — polling actief');
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      streamRetryTimer = setTimeout(connectStream, 4000);
     };
   }
 
@@ -264,6 +348,11 @@
       eventSource.close();
       eventSource = null;
     }
+    if (streamRetryTimer) {
+      clearTimeout(streamRetryTimer);
+      streamRetryTimer = null;
+    }
+    stopPolling();
     stopOpenReminder();
     loginView.hidden = false;
     dashView.hidden = true;
@@ -273,8 +362,10 @@
     loginView.hidden = true;
     dashView.hidden = false;
     ensureAudio();
-    await loadOrders();
+    setLiveStatus('warn', 'Laden…');
+    await loadOrders({ announceNew: false });
     connectStream();
+    startPolling();
     syncOpenReminder();
   }
 
