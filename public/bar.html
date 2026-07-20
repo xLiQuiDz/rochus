@@ -12,14 +12,15 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍻</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="bar.css" />
 </head>
 <body>
+  <!-- ============ LOGIN ============ -->
   <div class="login" id="login-view">
     <div class="login__card">
       <p class="login__brand">ROCHUS</p>
-      <h1 class="login__title">Staff</h1>
+      <h1 class="login__title">Bar</h1>
       <p class="login__sub">Voer de PIN in om bestellingen te zien</p>
       <form class="login__form" id="login-form">
         <input
@@ -39,57 +40,155 @@
     </div>
   </div>
 
-  <div class="dash" id="dash-view" hidden>
-    <header class="dash__header">
-      <div class="dash__id">
-        <h1 class="dash__brand">ROCHUS <span class="dash__brand-sub">bar</span></h1>
-        <p class="dash__live" id="live-status">
-          <span class="dash__live-dot" aria-hidden="true"></span>
-          <span id="live-status-text">Verbinden…</span>
-        </p>
-        <p class="dash__stats" id="dash-stats" hidden></p>
+  <!-- ============ CONSOLE ============ -->
+  <div class="app" id="dash-view" hidden>
+    <header class="topbar">
+      <div class="topbar__brand">
+        <span class="topbar__mark">ROCHUS</span>
+        <span class="topbar__sub">bar</span>
       </div>
-      <div class="dash__actions">
-        <label class="dash__toggle" title="Geluid bij nieuwe tickets én elke minuut zolang er open bestellingen zijn">
-          <input type="checkbox" id="sound-toggle" checked />
-          <span class="dash__switch" aria-hidden="true"></span>
-          <span class="dash__toggle-text">🔔 Geluid</span>
-        </label>
-        <button type="button" class="dash__link" id="wake-toggle" hidden>💡 Scherm aan</button>
-        <button type="button" class="dash__link" id="stock-toggle-btn" aria-expanded="false" aria-controls="stock-panel">
-          📦 Voorraad
-        </button>
-        <a class="dash__link" href="/print">🖨️ Menukaart</a>
-        <a class="dash__link" href="/qr">🔳 QR</a>
-        <button type="button" class="dash__logout" id="logout-btn">Uitloggen</button>
-      </div>
+
+      <p class="topbar__live" id="live-status">
+        <span class="topbar__dot" aria-hidden="true"></span>
+        <span id="live-status-text">Verbinden…</span>
+      </p>
+
+      <div class="topbar__stats" id="dash-stats" hidden></div>
+
+      <button type="button" class="topbar__menu" id="menu-btn" aria-haspopup="dialog">
+        <span class="topbar__menu-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>Menu</span>
+        <span class="topbar__menu-dot" id="menu-alert" hidden aria-label="Er staan items op uitverkocht"></span>
+      </button>
     </header>
 
-    <section class="stock" id="stock-panel" hidden>
-      <div class="stock__header">
-        <div>
-          <h2 class="stock__title">Voorraad</h2>
-          <p class="stock__sub">Zet producten op uitverkocht — gasten zien ze dan niet meer als bestelbaar</p>
+    <main class="lanes">
+      <section class="lane lane--new" aria-labelledby="lane-new-title">
+        <header class="lane__head">
+          <h2 class="lane__title" id="lane-new-title">Nieuw</h2>
+          <span class="lane__count" id="count-new">0</span>
+          <span class="lane__hint">te starten</span>
+        </header>
+        <div class="lane__body" id="lane-new">
+          <div class="lane__empty" id="empty-new">
+            <span aria-hidden="true">🧊</span>
+            <p>Geen nieuwe bestellingen</p>
+          </div>
         </div>
-        <p class="stock__count" id="stock-count"></p>
-      </div>
-      <div class="stock__list" id="stock-list"></div>
-    </section>
+      </section>
 
-    <div class="dash__flash" id="new-flash" hidden>Nieuwe bestelling</div>
-
-    <main class="board" id="order-board">
-      <div class="board__empty" id="board-empty">
-        <span class="board__empty-icon" aria-hidden="true">🍸</span>
-        <p class="board__empty-title">Geen open bestellingen</p>
-        <p class="board__empty-sub">Alles geserveerd. Poets een glas, geniet even.</p>
-      </div>
+      <section class="lane lane--prep" aria-labelledby="lane-prep-title">
+        <header class="lane__head">
+          <h2 class="lane__title" id="lane-prep-title">In de maak</h2>
+          <span class="lane__count" id="count-prep">0</span>
+          <span class="lane__hint">bezig · breng naar tafel</span>
+        </header>
+        <div class="lane__body" id="lane-prep">
+          <div class="lane__empty" id="empty-prep">
+            <span aria-hidden="true">🍸</span>
+            <p>Niets in de maak</p>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
-  <div class="bar-toast" id="bar-toast" hidden>
+  <!-- ============ MENU DRAWER ============ -->
+  <div class="scrim" id="menu-scrim" hidden></div>
+  <aside class="drawer" id="menu-sheet" role="dialog" aria-modal="true" aria-label="Menu" hidden>
+    <header class="drawer__head">
+      <h2 class="drawer__title">Menu</h2>
+      <button type="button" class="drawer__close" id="menu-close" aria-label="Sluit menu">×</button>
+    </header>
+
+    <div class="drawer__body">
+      <p class="drawer__section">Tijdens de shift</p>
+
+      <label class="row row--switch">
+        <span class="row__icon" aria-hidden="true">🔔</span>
+        <span class="row__text">
+          <span class="row__label">Geluid</span>
+          <span class="row__sub">Ping bij nieuwe order + herinnering per minuut</span>
+        </span>
+        <input type="checkbox" id="sound-toggle" checked />
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+
+      <label class="row row--switch" id="wake-row" hidden>
+        <span class="row__icon" aria-hidden="true">💡</span>
+        <span class="row__text">
+          <span class="row__label">Scherm aan houden</span>
+          <span class="row__sub">Tablet valt niet in slaap</span>
+        </span>
+        <input type="checkbox" id="wake-toggle" />
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+
+      <button type="button" class="row row--btn" id="stock-open">
+        <span class="row__icon" aria-hidden="true">📦</span>
+        <span class="row__text">
+          <span class="row__label">Voorraad</span>
+          <span class="row__sub" id="stock-summary">Alles beschikbaar</span>
+        </span>
+        <span class="row__chev" aria-hidden="true">›</span>
+      </button>
+
+      <p class="drawer__section">Materiaal</p>
+
+      <a class="row row--btn" href="/print">
+        <span class="row__icon" aria-hidden="true">🖨️</span>
+        <span class="row__text">
+          <span class="row__label">Menukaart printen</span>
+          <span class="row__sub">A4 tafelkaart of klemkaart</span>
+        </span>
+        <span class="row__chev" aria-hidden="true">›</span>
+      </a>
+
+      <a class="row row--btn" href="/qr">
+        <span class="row__icon" aria-hidden="true">🔳</span>
+        <span class="row__text">
+          <span class="row__label">QR-codes</span>
+          <span class="row__sub">Stickers per tafel</span>
+        </span>
+        <span class="row__chev" aria-hidden="true">›</span>
+      </a>
+
+      <button type="button" class="row row--btn row--danger" id="logout-btn">
+        <span class="row__icon" aria-hidden="true">🚪</span>
+        <span class="row__text"><span class="row__label">Uitloggen</span></span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ STOCK SHEET ============ -->
+  <div class="sheet" id="stock-sheet" role="dialog" aria-modal="true" aria-label="Voorraad" hidden>
+    <header class="sheet__head">
+      <button type="button" class="sheet__back" id="stock-close" aria-label="Terug">‹</button>
+      <div class="sheet__titles">
+        <h2 class="sheet__title">Voorraad</h2>
+        <p class="sheet__sub">Uitverkocht? Gasten kunnen het meteen niet meer bestellen.</p>
+      </div>
+      <span class="sheet__count" id="stock-count"></span>
+    </header>
+
+    <div class="sheet__tools">
+      <div class="search">
+        <span class="search__icon" aria-hidden="true">⌕</span>
+        <input type="search" id="stock-search" class="search__input" placeholder="Zoek product…" autocomplete="off" aria-label="Zoek product" />
+      </div>
+      <div class="segmented" role="group" aria-label="Filter">
+        <button type="button" class="segmented__btn segmented__btn--on" data-stock-filter="all">Alles</button>
+        <button type="button" class="segmented__btn" data-stock-filter="oos">Uitverkocht</button>
+      </div>
+    </div>
+
+    <div class="sheet__body" id="stock-list"></div>
+  </div>
+
+  <!-- ============ TOAST ============ -->
+  <div class="toast" id="bar-toast" hidden>
     <span id="bar-toast-text"></span>
-    <button type="button" class="bar-toast__undo" id="bar-toast-undo" hidden>Ongedaan maken</button>
+    <button type="button" class="toast__undo" id="bar-toast-undo" hidden>Ongedaan maken</button>
   </div>
 
   <script src="bar.js" defer></script>
