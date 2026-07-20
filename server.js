@@ -33,8 +33,42 @@ const sseClients = new Set();
 
 const app = express();
 app.disable('x-powered-by');
+// Railway/reverse proxy: nodig zodat req.ip het echte client-IP is
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
+
+/* PIN brute-force bescherming — per IP, in-memory */
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 10;
+/** @type {Map<string, { count: number, first: number }>} */
+const loginFailures = new Map();
+
+function loginRateLimited(ip) {
+  const entry = loginFailures.get(ip);
+  if (!entry) return false;
+  if (Date.now() - entry.first > LOGIN_WINDOW_MS) {
+    loginFailures.delete(ip);
+    return false;
+  }
+  return entry.count >= LOGIN_MAX_FAILURES;
+}
+
+function recordLoginFailure(ip) {
+  const now = Date.now();
+  const entry = loginFailures.get(ip);
+  if (!entry || now - entry.first > LOGIN_WINDOW_MS) {
+    loginFailures.set(ip, { count: 1, first: now });
+  } else {
+    entry.count += 1;
+  }
+}
+
+function pinMatches(pin) {
+  const given = Buffer.from(String(pin));
+  const expected = Buffer.from(STAFF_PIN);
+  return given.length === expected.length && crypto.timingSafeEqual(given, expected);
+}
 
 function sessionExpiryDate() {
   return new Date(Date.now() + SESSION_TTL_MS);
@@ -199,10 +233,16 @@ app.get('/api/auth/me', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   try {
+    const ip = req.ip || 'unknown';
+    if (loginRateLimited(ip)) {
+      return res.status(429).json({ error: 'Te veel pogingen — probeer over een kwartier opnieuw' });
+    }
     const pin = String(req.body?.pin || '');
-    if (pin !== STAFF_PIN) {
+    if (!pinMatches(pin)) {
+      recordLoginFailure(ip);
       return res.status(401).json({ error: 'Onjuiste PIN' });
     }
+    loginFailures.delete(ip);
     const token = await createSession();
     res.cookie(SESSION_COOKIE, token, {
       httpOnly: true,
@@ -377,6 +417,10 @@ async function start() {
   await cleanupExpiredSessions();
   setInterval(() => {
     cleanupExpiredSessions().catch((err) => console.error(err));
+    const cutoff = Date.now() - LOGIN_WINDOW_MS;
+    for (const [ip, entry] of loginFailures) {
+      if (entry.first < cutoff) loginFailures.delete(ip);
+    }
   }, 60 * 60 * 1000);
 
   app.listen(PORT, () => {

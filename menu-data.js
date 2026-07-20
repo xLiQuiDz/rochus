@@ -73,8 +73,8 @@ function validateAndPrice(rawItems) {
 
   for (const raw of rawItems) {
     const name = String(raw.name || '').trim();
-    const qty = Math.floor(Number(raw.qty));
-    if (!name || !Number.isFinite(qty) || qty < 1 || qty > 99) {
+    const qty = Number(raw.qty);
+    if (!name || !Number.isInteger(qty) || qty < 1 || qty > 99) {
       throw new Error('Ongeldige bestelregel');
     }
     const catalog = getMenuItem(name);

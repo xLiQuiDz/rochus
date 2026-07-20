@@ -244,12 +244,23 @@ async function listOrders({ status } = {}) {
     );
   }
 
-  const orders = [];
-  for (const row of result.rows) {
-    const items = await getOrderItems(pool, row.id);
-    orders.push(mapOrder(row, items));
+  if (result.rows.length === 0) return [];
+
+  // Eén query voor alle line items i.p.v. één per order
+  const ids = result.rows.map((row) => Number(row.id));
+  const { rows: itemRows } = await pool.query(
+    `SELECT id, order_id, name, unit_price_cents, qty, category, free_qty
+     FROM order_items WHERE order_id = ANY($1::bigint[]) ORDER BY id`,
+    [ids]
+  );
+  const itemsByOrder = new Map();
+  for (const item of itemRows) {
+    const key = Number(item.order_id);
+    if (!itemsByOrder.has(key)) itemsByOrder.set(key, []);
+    itemsByOrder.get(key).push(item);
   }
-  return orders;
+
+  return result.rows.map((row) => mapOrder(row, itemsByOrder.get(Number(row.id)) || []));
 }
 
 async function updateOrderStatus(id, status) {
