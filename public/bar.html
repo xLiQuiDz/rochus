@@ -49,10 +49,24 @@
           <input type="checkbox" id="sound-toggle" checked />
           <span>Geluid (1 min reminder)</span>
         </label>
+        <button type="button" class="dash__link" id="stock-toggle-btn" aria-expanded="false" aria-controls="stock-panel">
+          Voorraad
+        </button>
         <a class="dash__link" href="/qr">QR-codes</a>
         <button type="button" class="dash__logout" id="logout-btn">Uitloggen</button>
       </div>
     </header>
+
+    <section class="stock" id="stock-panel" hidden>
+      <div class="stock__header">
+        <div>
+          <h2 class="stock__title">Voorraad</h2>
+          <p class="stock__sub">Zet producten op uitverkocht — gasten zien ze dan niet meer als bestelbaar</p>
+        </div>
+        <p class="stock__count" id="stock-count"></p>
+      </div>
+      <div class="stock__list" id="stock-list"></div>
+    </section>
 
     <div class="dash__flash" id="new-flash" hidden>Nieuwe bestelling</div>
 

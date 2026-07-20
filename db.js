@@ -71,10 +71,56 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS menu_availability (
+      item_name TEXT PRIMARY KEY,
+      out_of_stock BOOLEAN NOT NULL DEFAULT false,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
     CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_staff_sessions_expires ON staff_sessions(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_menu_availability_oos
+      ON menu_availability(item_name) WHERE out_of_stock = true;
   `);
+}
+
+/** @returns {Promise<string[]>} */
+async function listOutOfStock() {
+  const { rows } = await pool.query(
+    `SELECT item_name FROM menu_availability
+     WHERE out_of_stock = true
+     ORDER BY item_name`
+  );
+  return rows.map((r) => r.item_name);
+}
+
+/** @returns {Promise<Set<string>>} */
+async function getOutOfStockSet() {
+  return new Set(await listOutOfStock());
+}
+
+/**
+ * @param {string} itemName
+ * @param {boolean} outOfStock
+ */
+async function setItemOutOfStock(itemName, outOfStock) {
+  const name = String(itemName || '').trim();
+  if (!name) throw new Error('Productnaam ontbreekt');
+
+  if (!outOfStock) {
+    await pool.query('DELETE FROM menu_availability WHERE item_name = $1', [name]);
+  } else {
+    await pool.query(
+      `INSERT INTO menu_availability (item_name, out_of_stock, updated_at)
+       VALUES ($1, true, NOW())
+       ON CONFLICT (item_name) DO UPDATE
+         SET out_of_stock = true, updated_at = NOW()`,
+      [name]
+    );
+  }
+
+  return listOutOfStock();
 }
 
 async function getOrderItems(client, orderId) {
@@ -246,5 +292,8 @@ module.exports = {
   touchStaffSession,
   deleteStaffSession,
   cleanupExpiredSessions,
+  listOutOfStock,
+  getOutOfStockSet,
+  setItemOutOfStock,
   VALID_STATUSES,
 };

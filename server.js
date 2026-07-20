@@ -12,8 +12,11 @@ const {
   touchStaffSession,
   deleteStaffSession,
   cleanupExpiredSessions,
+  listOutOfStock,
+  getOutOfStockSet,
+  setItemOutOfStock,
 } = require('./db');
-const { validateAndPrice } = require('./menu-data');
+const { MENU_ITEMS, getMenuItem, validateAndPrice } = require('./menu-data');
 const QRCode = require('qrcode');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -85,6 +88,54 @@ app.get('/api/health', async (_req, res) => {
 
 app.get('/api/config', (_req, res) => {
   res.json({ tableCount: TABLE_COUNT, publicUrl: PUBLIC_URL });
+});
+
+/** Public: which items are currently out of stock */
+app.get('/api/menu/availability', async (_req, res) => {
+  try {
+    const outOfStock = await listOutOfStock();
+    res.set('Cache-Control', 'no-store');
+    res.json({ outOfStock });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon voorraad niet laden' });
+  }
+});
+
+/** Staff: full catalog with availability for the stock panel */
+app.get('/api/menu', requireStaff, async (_req, res) => {
+  try {
+    const oos = await getOutOfStockSet();
+    const items = MENU_ITEMS.map((item) => ({
+      name: item.name,
+      price: item.price,
+      category: item.category,
+      outOfStock: oos.has(item.name),
+    }));
+    res.set('Cache-Control', 'no-store');
+    res.json({ items, outOfStock: [...oos] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon menu niet laden' });
+  }
+});
+
+/** Staff: mark a catalog item available / out of stock */
+app.patch('/api/menu/availability', requireStaff, async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    const outOfStock = Boolean(req.body?.outOfStock);
+    if (!getMenuItem(name)) {
+      return res.status(400).json({ error: 'Onbekend product' });
+    }
+    const list = await setItemOutOfStock(name, outOfStock);
+    const payload = { outOfStock: list };
+    broadcast('availability', payload);
+    res.json(payload);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message || 'Voorraad-update mislukt' });
+  }
 });
 
 /** PNG QR for table N — used on printable stickers */
@@ -171,6 +222,15 @@ app.post('/api/orders', async (req, res) => {
       .slice(0, 64);
 
     const priced = validateAndPrice(req.body?.items || []);
+    const oos = await getOutOfStockSet();
+    const blocked = priced.items.find((item) => oos.has(item.name));
+    if (blocked) {
+      return res.status(409).json({
+        error: `${blocked.name} is uitverkocht`,
+        outOfStock: [...oos],
+      });
+    }
+
     const order = await createOrder({
       table_number: table,
       note,

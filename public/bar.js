@@ -13,9 +13,39 @@
   const newFlash = document.getElementById('new-flash');
   const liveStatus = document.getElementById('live-status');
   const liveStatusText = document.getElementById('live-status-text');
+  const stockToggleBtn = document.getElementById('stock-toggle-btn');
+  const stockPanel = document.getElementById('stock-panel');
+  const stockList = document.getElementById('stock-list');
+  const stockCount = document.getElementById('stock-count');
+
+  const CATEGORY_LABELS = {
+    bieren: "Bieren van 't vat",
+    flessen: 'Flessenbier',
+    fris: 'Frisdranken',
+    cocktails: 'Cocktails',
+    wijnen: 'Wijnen & bubbels',
+    shots: 'Shots',
+    warme: 'Warme dranken',
+    fingerfood: 'Fingerfood & snacks',
+  };
+
+  const CATEGORY_ORDER = [
+    'bieren',
+    'flessen',
+    'fris',
+    'cocktails',
+    'wijnen',
+    'shots',
+    'warme',
+    'fingerfood',
+  ];
 
   /** @type {Map<number, object>} */
   const orders = new Map();
+  /** @type {{ name: string, price: number, category: string, outOfStock: boolean }[]} */
+  let menuItems = [];
+  /** @type {Set<string>} */
+  let outOfStock = new Set();
   let eventSource = null;
   let audioCtx = null;
   let openReminderTimer = null;
@@ -23,6 +53,16 @@
   let streamRetryTimer = null;
   const OPEN_REMINDER_MS = 60 * 1000;
   const POLL_MS = 3000;
+
+  function formatEuro(price) {
+    return (
+      '€' +
+      Number(price).toLocaleString('nl-BE', {
+        minimumFractionDigits: Number(price) % 1 === 0 ? 0 : 2,
+        maximumFractionDigits: 2,
+      })
+    );
+  }
 
   function formatEuroCents(cents) {
     const n = cents / 100;
@@ -221,6 +261,79 @@
       .replace(/"/g, '&quot;');
   }
 
+  function applyAvailability(list) {
+    outOfStock = new Set(Array.isArray(list) ? list : []);
+    menuItems = menuItems.map((item) => ({
+      ...item,
+      outOfStock: outOfStock.has(item.name),
+    }));
+    if (!stockPanel.hidden) renderStock();
+    else updateStockCount();
+  }
+
+  function updateStockCount() {
+    if (!stockCount) return;
+    const n = outOfStock.size;
+    stockCount.textContent = n === 0 ? 'Alles beschikbaar' : `${n} uitverkocht`;
+    stockCount.style.color = n === 0 ? 'var(--muted)' : 'var(--danger)';
+  }
+
+  function renderStock() {
+    if (!stockList) return;
+    updateStockCount();
+
+    const byCat = new Map();
+    for (const item of menuItems) {
+      if (!byCat.has(item.category)) byCat.set(item.category, []);
+      byCat.get(item.category).push(item);
+    }
+
+    const parts = [];
+    for (const cat of CATEGORY_ORDER) {
+      const items = byCat.get(cat);
+      if (!items || items.length === 0) continue;
+      const rows = items
+        .map((item) => {
+          const oos = Boolean(item.outOfStock);
+          return `<li class="stock__item${oos ? ' stock__item--oos' : ''}">
+            <div>
+              <div class="stock__item-name">${escapeHtml(item.name)}</div>
+              <div class="stock__item-price">${formatEuro(item.price)}</div>
+            </div>
+            <button
+              type="button"
+              class="stock__btn ${oos ? 'stock__btn--oos' : 'stock__btn--available'}"
+              data-stock-name="${escapeHtml(item.name)}"
+              data-stock-oos="${oos ? 'false' : 'true'}"
+            >${oos ? 'Terug beschikbaar' : 'Uitverkocht'}</button>
+          </li>`;
+        })
+        .join('');
+      parts.push(`
+        <div class="stock__category">
+          <h3 class="stock__category-title">${escapeHtml(CATEGORY_LABELS[cat] || cat)}</h3>
+          <ul class="stock__items">${rows}</ul>
+        </div>
+      `);
+    }
+
+    stockList.innerHTML = parts.join('') || '<p class="board__empty">Geen producten</p>';
+  }
+
+  async function loadMenu() {
+    const res = await fetch('/api/menu', { credentials: 'include' });
+    if (res.status === 401) {
+      showLogin();
+      return;
+    }
+    if (!res.ok) throw new Error('Kon menu niet laden');
+    const data = await res.json();
+    menuItems = Array.isArray(data.items) ? data.items : [];
+    outOfStock = new Set(data.outOfStock || []);
+    if (!stockPanel.hidden) renderStock();
+    else updateStockCount();
+  }
+
   function setLiveStatus(mode, text) {
     if (!liveStatus || !liveStatusText) return;
     liveStatus.classList.remove('dash__live--ok', 'dash__live--warn', 'dash__live--err');
@@ -333,6 +446,15 @@
       }
     });
 
+    eventSource.addEventListener('availability', (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        applyAvailability(data.outOfStock || []);
+      } catch {
+        /* ignore */
+      }
+    });
+
     eventSource.onerror = () => {
       setLiveStatus('warn', 'Live even weg — polling actief');
       if (eventSource) {
@@ -354,6 +476,9 @@
     }
     stopPolling();
     stopOpenReminder();
+    stockPanel.hidden = true;
+    stockToggleBtn.setAttribute('aria-expanded', 'false');
+    stockToggleBtn.classList.remove('dash__link--active');
     loginView.hidden = false;
     dashView.hidden = true;
   }
@@ -363,7 +488,7 @@
     dashView.hidden = false;
     ensureAudio();
     setLiveStatus('warn', 'Laden…');
-    await loadOrders({ announceNew: false });
+    await Promise.all([loadOrders({ announceNew: false }), loadMenu()]);
     connectStream();
     startPolling();
     syncOpenReminder();
@@ -401,6 +526,47 @@
       syncOpenReminder();
     } else {
       stopOpenReminder();
+    }
+  });
+
+  stockToggleBtn.addEventListener('click', () => {
+    const open = stockPanel.hidden;
+    stockPanel.hidden = !open;
+    stockToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    stockToggleBtn.classList.toggle('dash__link--active', open);
+    if (open) {
+      if (menuItems.length === 0) {
+        loadMenu().catch(() => {});
+      } else {
+        renderStock();
+      }
+    }
+  });
+
+  stockList.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-stock-name]');
+    if (!btn) return;
+    const name = btn.dataset.stockName;
+    const nextOos = btn.dataset.stockOos === 'true';
+    if (!name) return;
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/menu/availability', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, outOfStock: nextOos }),
+      });
+      if (res.status === 401) {
+        showLogin();
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Update mislukt');
+      applyAvailability(data.outOfStock || []);
+    } catch (err) {
+      alert(err.message || 'Voorraad-update mislukt');
+      btn.disabled = false;
     }
   });
 

@@ -393,6 +393,10 @@
   let submitting = false;
   /** Only true while the confirm dialog is open — prevents accidental API submits. */
   let confirmReady = false;
+  /** @type {Set<string>} */
+  let outOfStock = new Set();
+  let availabilityTimer = null;
+  const AVAILABILITY_POLL_MS = 20000;
 
   function formatEuro(n) {
     return (
@@ -402,6 +406,87 @@
         maximumFractionDigits: 2,
       })
     );
+  }
+
+  function syncAvailabilityUI() {
+    document.querySelectorAll('[data-add]').forEach((btn) => {
+      const name = btn.dataset.name || '';
+      const oos = Boolean(name && outOfStock.has(name));
+      btn.disabled = oos;
+      btn.setAttribute('aria-disabled', oos ? 'true' : 'false');
+      btn.classList.toggle('is-oos', oos);
+      if (btn.classList.contains('menu-card__size-btn')) {
+        btn.classList.toggle('menu-card__size-btn--oos', oos);
+      }
+    });
+
+    document.querySelectorAll('.menu-card, .daily-special').forEach((card) => {
+      const addBtns = [...card.querySelectorAll('[data-add]')];
+      if (addBtns.length === 0) return;
+      const allOos = addBtns.every((b) => outOfStock.has(b.dataset.name || ''));
+      card.classList.toggle('menu-card--oos', allOos);
+      card.classList.toggle('daily-special--oos', allOos && card.classList.contains('daily-special'));
+
+      let badge = card.querySelector('.menu-card__oos-badge');
+      if (allOos) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'menu-card__oos-badge';
+          badge.textContent = 'Uitverkocht';
+          card.appendChild(badge);
+        }
+      } else if (badge) {
+        badge.remove();
+      }
+    });
+  }
+
+  function applyAvailability(list, { notifyCart } = {}) {
+    const next = new Set(Array.isArray(list) ? list : []);
+    let removed = 0;
+    for (const name of [...order.keys()]) {
+      if (next.has(name)) {
+        order.delete(name);
+        removed += 1;
+      }
+    }
+    outOfStock = next;
+    syncAvailabilityUI();
+    if (removed > 0) {
+      renderOrder();
+      if (notifyCart !== false) {
+        showToast(
+          removed === 1
+            ? 'Uitverkocht item verwijderd uit mandje'
+            : `${removed} uitverkochte items verwijderd uit mandje`,
+          true,
+          3200
+        );
+      }
+    }
+  }
+
+  async function refreshAvailability({ notifyCart } = {}) {
+    try {
+      const res = await fetch('/api/menu/availability', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      applyAvailability(data.outOfStock || [], { notifyCart });
+    } catch {
+      /* ignore transient network errors */
+    }
+  }
+
+  function startAvailabilityPolling() {
+    if (availabilityTimer) clearInterval(availabilityTimer);
+    availabilityTimer = setInterval(() => {
+      if (document.hidden) return;
+      refreshAvailability({ notifyCart: true });
+    }, AVAILABILITY_POLL_MS);
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) refreshAvailability({ notifyCart: true });
+    });
   }
 
   function openDrawer() {
@@ -631,7 +716,13 @@
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Bestelling mislukt');
+      if (!res.ok) {
+        if (res.status === 409 && Array.isArray(data.outOfStock)) {
+          applyAvailability(data.outOfStock, { notifyCart: false });
+          closeConfirm();
+        }
+        throw new Error(data.error || 'Bestelling mislukt');
+      }
 
       order.clear();
       noteInput.value = '';
@@ -689,6 +780,10 @@
   }
 
   function addItem(name, price, category, promo = false) {
+    if (outOfStock.has(name)) {
+      showToast('Uitverkocht', true, 2000);
+      return { toast: 'Uitverkocht', className: '' };
+    }
     const existing = order.get(name);
     if (existing) {
       existing.qty += 1;
@@ -713,6 +808,10 @@
   function changeQty(name, delta) {
     const item = order.get(name);
     if (!item) return;
+    if (delta > 0 && outOfStock.has(name)) {
+      showToast('Uitverkocht', true, 2000);
+      return;
+    }
     item.qty += delta;
     if (item.qty <= 0) order.delete(name);
     renderOrder();
@@ -751,6 +850,7 @@
     if (addBtn) {
       e.preventDefault();
       e.stopPropagation();
+      if (addBtn.disabled || addBtn.classList.contains('is-oos')) return;
       if (addBtn.closest('[data-water-dodge]')) return;
       const name = addBtn.dataset.name;
       const price = parseFloat(addBtn.dataset.price);
@@ -1253,4 +1353,6 @@
   }
 
   renderOrder();
+  refreshAvailability({ notifyCart: false });
+  startAvailabilityPolling();
 })();

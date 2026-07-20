@@ -246,6 +246,131 @@ body::before {
   100% { transform: scale(1); opacity: 1; }
 }
 
+.stock {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.stock[hidden] {
+  display: none !important;
+}
+
+.stock__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stock__title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.stock__sub {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.stock__count {
+  font-size: 0.8rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.stock__list {
+  display: grid;
+  gap: 18px;
+}
+
+.stock__category-title {
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.stock__items {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.stock__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+}
+
+.stock__item--oos {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.stock__item-name {
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.stock__item-price {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.stock__btn {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  background: transparent;
+  color: var(--gold-soft);
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.stock__btn:hover:not(:disabled) {
+  border-color: var(--gold);
+}
+
+.stock__btn--oos {
+  color: var(--ok);
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
+.stock__btn--available {
+  color: var(--danger);
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.stock__btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.dash__link--active {
+  border-color: var(--gold);
+  background: rgba(212, 175, 112, 0.12);
+}
+
 .board {
   display: grid;
   gap: 16px;
