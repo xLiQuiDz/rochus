@@ -3953,3 +3953,122 @@ h1, h2, h3, h4 {
   0% { opacity: 0; transform: scale(2.1); filter: blur(6px); }
   100% { opacity: 1; transform: scale(1); filter: blur(0); }
 }
+
+/* ============================================================
+   WIE BETAALT — spanningsopbouw: verhoor, vrijspraak, duel
+   ============================================================ */
+
+/* Zoekend oog: donker masker met een lichtgat dat over de vingers glijdt */
+.pick__iris {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3000px;
+  height: 3000px;
+  margin: -1500px 0 0 -1500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 0 92px, rgba(2, 1, 1, 0.84) 210px);
+  z-index: 4;
+  pointer-events: none;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.pick__iris[hidden] { display: none !important; }
+
+/* Onheilspellende regel bovenaan het podium */
+.pick__omen {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  width: max-content;
+  max-width: 92%;
+  font-family: 'Cinzel', serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--amber-400);
+  text-shadow: 0 0 20px rgba(212, 175, 112, 0.55);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pick__omen--in {
+  animation: omenIn 0.55s ease-out forwards;
+}
+
+@keyframes omenIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Sfeer verdicht zich zodra het oordeel loopt */
+.pick__surface--tense {
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(212, 175, 112, 0.05), transparent 55%),
+    #030202;
+  border-color: rgba(212, 175, 112, 0.3);
+}
+
+/* Doodse stilte vlak voor het vonnis: alles dooft */
+.pick__surface--void {
+  background: #010101;
+  border-color: transparent;
+}
+
+.pick__surface--void .pick__ring {
+  opacity: 0.05;
+  transition: opacity 0.6s ease;
+}
+
+.pick__surface--void .pick__ring::after { opacity: 0; }
+
+/* Soepel terugveren wanneer het oog verder glijdt */
+.pick__ring {
+  transition: scale 0.3s var(--ease-out-expo);
+}
+
+/* De vinger die het oog nu vasthoudt */
+.pick__ring--suspect {
+  z-index: 5;
+  border-width: 5px;
+  scale: 1.16;
+  animation: suspectStare 0.5s ease-in-out infinite;
+}
+
+@keyframes suspectStare {
+  0%, 100% { translate: 0 0; box-shadow: 0 0 34px var(--c), 0 0 70px var(--c); }
+  25% { translate: -1.5px 1px; }
+  50% { translate: 1.5px -1px; box-shadow: 0 0 52px var(--c), 0 0 104px var(--c); }
+  75% { translate: -1px -1.5px; }
+}
+
+/* Vrijgesproken: valt terug het donker in, met naamkaartje "vrij" */
+.pick__ring--safe {
+  animation: none;
+  opacity: 0.2;
+  filter: grayscale(0.75);
+  scale: 0.9;
+  transition: opacity 0.7s ease, filter 0.7s ease, scale 0.7s var(--ease-out-expo);
+}
+
+.pick__ring--safe::after {
+  animation: none;
+  opacity: 0.1;
+}
+
+.pick__ring--safe .pick__ring-tag {
+  opacity: 0.8;
+  border-style: dashed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pick__iris { transition: none; }
+  .pick__omen--in { animation: none; opacity: 1; }
+  .pick__ring--suspect { animation: none; }
+}

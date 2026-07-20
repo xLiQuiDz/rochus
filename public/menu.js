@@ -2192,6 +2192,30 @@
   const pickScan = document.getElementById('pick-scan');
   const pickSpot = document.getElementById('pick-spot');
   const pickFlash = document.getElementById('pick-flash');
+  const pickIris = document.getElementById('pick-iris');
+  const pickOmen = document.getElementById('pick-omen');
+  /** Loopt op bij elke reset — laat een lopend oordeel-script stilletjes sterven */
+  let pickSeq = 0;
+
+  const PICK_OMENS_SCAN = [
+    'Het toestel proeft jullie schuld…',
+    'Iemand hier ruikt naar onbetaalde rondes…',
+    'Vingers gelezen. Zonden geteld.',
+    'Het oordeel neemt de tijd. Altijd.',
+  ];
+  const PICK_OMENS_SAFE = [
+    'Niet jij. Nog niet.',
+    'Gespaard. Voorlopig.',
+    'Vrijgesproken — kijk niet zo opgelucht.',
+    'Deze mag blijven drinken.',
+    'Het oog glijdt verder…',
+  ];
+  const PICK_OMENS_DUEL = [
+    'Twee harten. Eén rekening.',
+    'Eén van jullie gaat dit voelen.',
+    'De laatste twee. Het toestel geniet.',
+    'Nog één keer twijfelen…',
+  ];
 
   /* Hartslag: hoe dichter bij de beslissing, hoe sneller hij slaat */
   let heartTimer = 0;
@@ -2353,42 +2377,156 @@
     }, 720);
   }
 
-  function doPick() {
+  /** Het zoekende oog: donker masker met lichtgat glijdt naar een vinger */
+  function irisTo(finger, hole = 1) {
+    if (!pickIris) return;
+    const t = `translate(${finger.x}px, ${finger.y}px) scale(${hole})`;
+    if (pickIris.hidden) {
+      // Eerste keer: niet vanaf (0,0) aan komen glijden
+      pickIris.style.transition = 'none';
+      pickIris.hidden = false;
+      pickIris.style.transform = t;
+      void pickIris.offsetWidth;
+      pickIris.style.transition = '';
+    } else {
+      pickIris.style.transform = t;
+    }
+  }
+
+  function irisOff() {
+    if (pickIris) pickIris.hidden = true;
+  }
+
+  function setOmen(text) {
+    if (!pickOmen) return;
+    pickOmen.classList.remove('pick__omen--in');
+    pickOmen.textContent = text;
+    if (!text) return;
+    void pickOmen.offsetWidth;
+    pickOmen.classList.add('pick__omen--in');
+  }
+
+  function markSuspect(id) {
+    fingers.forEach((f, fid) =>
+      f.el.classList.toggle('pick__ring--suspect', fid === id)
+    );
+  }
+
+  function clearSuspects() {
+    fingers.forEach((f) => f.el.classList.remove('pick__ring--suspect'));
+  }
+
+  /** Vrijspraak: ring valt terug het donker in, naamkaartje zegt "vrij" */
+  function releaseFinger(id) {
+    const f = fingers.get(id);
+    if (!f) return;
+    f.el.classList.remove('pick__ring--suspect');
+    f.el.classList.add('pick__ring--safe');
+    const tag = f.el.querySelector('.pick__ring-tag');
+    if (tag) tag.textContent = 'vrij ✓';
+    spawnGhost(f);
+    pickTone(920, 0.16, 'triangle', 0.07);
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+
+  /**
+   * Het oordeel, in vier aktes: verhoor, vrijspraak, duel, stilte.
+   * De verliezer staat vanaf het begin vast — de rest is theater.
+   */
+  async function doPick() {
     const ids = [...fingers.keys()];
     if (ids.length < 2) {
       onFingerSetChanged();
       return;
     }
     pickState = 'picking';
+    const seq = pickSeq;
     pickHint.hidden = true;
-    setHeart(260);
     syncScan();
     const loserId = ids[Math.floor(Math.random() * ids.length)];
 
-    // Fake-out: spotlight springt rond, vertraagt, en klikt vast op de verliezer
-    const hops = 14 + Math.floor(Math.random() * 6);
-    let step = 0;
-    const hop = () => {
-      fingers.forEach((f) => f.el.classList.remove('pick__ring--chosen'));
-      const isLast = step >= hops;
-      const id = isLast ? loserId : ids[Math.floor(Math.random() * ids.length)];
+    if (prefersReducedMotion) {
+      revealPick(loserId);
+      return;
+    }
+
+    const alive = () => pickSeq === seq && pickState === 'picking';
+    const beat = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    pickSurface.classList.add('pick__surface--tense');
+
+    // AKTE 1 — verhoor: het oog neemt élke vinger even op
+    setOmen(pick(PICK_OMENS_SCAN));
+    setHeart(700);
+    const order = shuffle([...ids]);
+    for (let i = 0; i < order.length; i++) {
+      if (!alive()) return;
+      const f = fingers.get(order[i]);
+      if (!f) continue;
+      irisTo(f, 1);
+      markSuspect(order[i]);
+      pickTone(170 + i * 26, 0.14, 'triangle', 0.07);
+      await beat(700 + Math.random() * 240);
+    }
+    if (!alive()) return;
+    clearSuspects();
+
+    // AKTE 2 — vrijspraak: wie het oog vangt, ontsnapt. Pauzes rekken uit.
+    const others = shuffle(ids.filter((id) => id !== loserId));
+    const duelist = others.pop();
+    let stare = 950;
+    let heart = 620;
+    for (const id of others) {
+      if (!alive()) return;
       const f = fingers.get(id);
       if (f) {
-        f.el.classList.add('pick__ring--chosen');
+        irisTo(f, 0.94);
+        markSuspect(id);
+        setHeart(heart);
+        pickTone(120, 0.2, 'sine', 0.1);
+      }
+      await beat(stare);
+      if (!alive()) return;
+      releaseFinger(id);
+      setOmen(pick(PICK_OMENS_SAFE));
+      stare = Math.min(1500, stare + 170);
+      heart = Math.max(360, heart - 90);
+      await beat(460);
+    }
+    if (!alive()) return;
+
+    // AKTE 3 — duel: het oog twijfelt steeds trager tussen de laatste twee
+    const duo = [duelist, loserId];
+    setOmen(pick(PICK_OMENS_DUEL));
+    setHeart(300);
+    const holds = [520, 600, 700, 820, 980, 1250];
+    for (let i = 0; i < holds.length; i++) {
+      if (!alive()) return;
+      const f = fingers.get(duo[i % 2]);
+      if (f) {
+        irisTo(f, 0.82);
+        markSuspect(duo[i % 2]);
         spawnGhost(f);
+        pickTone(105 + (i % 2) * 22, 0.16, 'sine', 0.12);
+        if (navigator.vibrate) navigator.vibrate(10);
       }
-      pickTone(isLast ? 300 : 520 + Math.random() * 240, 0.06, 'square', 0.08);
-      if (isLast) {
-        revealPick(loserId);
-        return;
-      }
-      step += 1;
-      // Traag uitlopen richting het einde
-      const t = step / hops;
-      const delay = 60 + Math.pow(t, 3) * 260;
-      setTimeout(hop, prefersReducedMotion ? 0 : delay);
-    };
-    hop();
+      await beat(holds[i]);
+    }
+    if (!alive()) return;
+
+    // AKTE 4 — doodse stilte: hartslag stopt, alles dooft. Dan het vonnis.
+    clearSuspects();
+    setOmen('');
+    setHeart(0);
+    pickScan.hidden = true;
+    irisOff();
+    pickSurface.classList.add('pick__surface--void');
+    pickTone(36, 1.1, 'sine', 0.2);
+    await beat(1050);
+    if (!alive()) return;
+    pickSurface.classList.remove('pick__surface--void');
+
+    revealPick(loserId);
   }
 
   function spawnGhost(finger) {
@@ -2420,6 +2558,9 @@
     pickState = 'revealed';
     setHeart(0);
     syncScan();
+    irisOff();
+    setOmen('');
+    pickSurface.classList.remove('pick__surface--tense', 'pick__surface--void');
     const chosen = fingers.get(loserId);
 
     // Fase 1: alles valt weg, alleen de uitverkorene blijft branden
@@ -2458,12 +2599,19 @@
   }
 
   function resetPickRound() {
+    pickSeq += 1;
     clearPickTimers();
     setHeart(0);
     pickReveal.hidden = true;
     pickCount.hidden = true;
     pickSpot.hidden = true;
-    pickSurface.classList.remove('pick__surface--blackout');
+    irisOff();
+    setOmen('');
+    pickSurface.classList.remove(
+      'pick__surface--blackout',
+      'pick__surface--tense',
+      'pick__surface--void'
+    );
     pickRings.innerHTML = '';
     fingers.clear();
     pickColorIdx = 0;
