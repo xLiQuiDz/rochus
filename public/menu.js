@@ -2176,6 +2176,12 @@
     'Vrijgesteld door het toestel. Doe er niet moeilijk over.',
   ];
 
+  const PICK_ALIASES = [
+    'de gierigaard', 'mr. tikkie', 'het feestvarken', 'de spookbetaler',
+    'de nagelbijter', 'sugar mama?', 'de bookkeeper', 'de chaoot',
+    'het slachtoffer', 'de vrijgevige (lol)',
+  ];
+
   let pickMode = 'loser';
   let pickState = 'idle'; // idle | waiting | counting | picking | revealed
   /** @type {Map<number, {x:number,y:number,el:HTMLElement,color:string}>} */
@@ -2183,6 +2189,67 @@
   let pickStabilizeTimer = 0;
   let pickCountTimer = 0;
   let pickColorIdx = 0;
+  let pickAliasBag = [];
+  const pickScan = document.getElementById('pick-scan');
+  const pickSpot = document.getElementById('pick-spot');
+  const pickFlash = document.getElementById('pick-flash');
+
+  /* Hartslag: hoe dichter bij de beslissing, hoe sneller hij slaat */
+  let heartTimer = 0;
+  let heartInterval = 0;
+
+  function heartThump() {
+    pickTone(58, 0.22, 'sine', 0.28);
+    setTimeout(() => pickTone(46, 0.26, 'sine', 0.2), 110);
+  }
+
+  function heartBeatOnce() {
+    heartThump();
+    if (navigator.vibrate) navigator.vibrate(10);
+    pickSurface.classList.remove('pick__surface--beat');
+    void pickSurface.offsetWidth;
+    pickSurface.classList.add('pick__surface--beat');
+    heartTimer = setTimeout(() => {
+      heartTimer = 0;
+      if (heartInterval > 0) heartBeatOnce();
+    }, heartInterval);
+  }
+
+  function setHeart(interval) {
+    heartInterval = interval;
+    if (interval <= 0) {
+      clearTimeout(heartTimer);
+      heartTimer = 0;
+    } else if (!heartTimer) {
+      heartBeatOnce();
+    }
+  }
+
+  function flashScreen() {
+    if (prefersReducedMotion) return;
+    pickFlash.classList.remove('pick__flash--go');
+    void pickFlash.offsetWidth;
+    pickFlash.classList.add('pick__flash--go');
+  }
+
+  function shakeStage() {
+    if (prefersReducedMotion) return;
+    pickSurface.classList.remove('pick__surface--shake');
+    void pickSurface.offsetWidth;
+    pickSurface.classList.add('pick__surface--shake');
+  }
+
+  function syncScan() {
+    const active =
+      (pickState === 'waiting' && fingers.size >= 2) ||
+      pickState === 'counting' ||
+      pickState === 'picking';
+    pickScan.hidden = !active;
+    pickScan.classList.toggle(
+      'pick__scan--fast',
+      pickState === 'counting' || pickState === 'picking'
+    );
+  }
 
   function pickTone(freq, dur, type = 'sine', peak = 0.14) {
     try {
@@ -2247,30 +2314,38 @@
     if (pickState === 'revealed' || pickState === 'picking') return;
     clearPickTimers();
     pickCount.hidden = true;
+    pickState = 'waiting';
+    updateHint();
     if (fingers.size >= 2) {
-      pickState = 'waiting';
-      updateHint();
+      setHeart(880);
       pickStabilizeTimer = setTimeout(startPickCountdown, 1300);
     } else {
-      pickState = 'waiting';
-      updateHint();
+      setHeart(0);
     }
+    syncScan();
   }
+
+  const COUNT_HEART = { 3: 600, 2: 440, 1: 320 };
 
   function startPickCountdown() {
     if (fingers.size < 2) return;
     pickState = 'counting';
     pickHint.hidden = true;
+    syncScan();
     let n = 3;
     showCount(n);
+    setHeart(COUNT_HEART[n]);
     pickTone(660, 0.15);
-    if (navigator.vibrate) navigator.vibrate(10);
+    flashScreen();
+    shakeStage();
     pickCountTimer = setInterval(() => {
       n -= 1;
       if (n > 0) {
         showCount(n);
-        pickTone(660, 0.15);
-        if (navigator.vibrate) navigator.vibrate(10);
+        setHeart(COUNT_HEART[n]);
+        pickTone(660 + (3 - n) * 120, 0.15);
+        flashScreen();
+        shakeStage();
       } else {
         clearInterval(pickCountTimer);
         pickCount.hidden = true;
@@ -2287,6 +2362,8 @@
     }
     pickState = 'picking';
     pickHint.hidden = true;
+    setHeart(260);
+    syncScan();
     const loserId = ids[Math.floor(Math.random() * ids.length)];
 
     // Fake-out: spotlight springt rond, vertraagt, en klikt vast op de verliezer
@@ -2297,7 +2374,10 @@
       const isLast = step >= hops;
       const id = isLast ? loserId : ids[Math.floor(Math.random() * ids.length)];
       const f = fingers.get(id);
-      if (f) f.el.classList.add('pick__ring--chosen');
+      if (f) {
+        f.el.classList.add('pick__ring--chosen');
+        spawnGhost(f);
+      }
       pickTone(isLast ? 300 : 520 + Math.random() * 240, 0.06, 'square', 0.08);
       if (isLast) {
         revealPick(loserId);
@@ -2312,46 +2392,106 @@
     hop();
   }
 
+  function spawnGhost(finger) {
+    if (prefersReducedMotion) return;
+    const ghost = document.createElement('div');
+    ghost.className = 'pick__ghost';
+    ghost.style.setProperty('--c', finger.color);
+    ghost.style.transform = `translate(${finger.x}px, ${finger.y}px)`;
+    pickRings.appendChild(ghost);
+    ghost.addEventListener('animationend', () => ghost.remove(), { once: true });
+    setTimeout(() => ghost.remove(), 700);
+  }
+
+  function spawnWaves(finger) {
+    if (prefersReducedMotion) return;
+    for (let i = 0; i < 3; i++) {
+      const wave = document.createElement('div');
+      wave.className = 'pick__wave';
+      wave.style.setProperty('--c', finger.color);
+      wave.style.transform = `translate(${finger.x}px, ${finger.y}px)`;
+      wave.style.animationDelay = `${i * 0.18}s`;
+      pickRings.appendChild(wave);
+      wave.addEventListener('animationend', () => wave.remove(), { once: true });
+      setTimeout(() => wave.remove(), 1600);
+    }
+  }
+
   function revealPick(loserId) {
     pickState = 'revealed';
+    setHeart(0);
+    syncScan();
+    const chosen = fingers.get(loserId);
+
+    // Fase 1: alles valt weg, alleen de uitverkorene blijft branden
+    pickSurface.classList.add('pick__surface--blackout');
     fingers.forEach((f, id) => {
       f.el.classList.remove('pick__ring--chosen');
       if (id === loserId) f.el.classList.add('pick__ring--chosen');
       else f.el.classList.add('pick__ring--dimmed');
     });
-    pickRevealLine.textContent = pick(pickMode === 'winner' ? PICK_WINNER_LINES : PICK_LOSER_LINES);
-    pickReveal.hidden = false;
-    // Gong
-    pickTone(180, 0.6, 'sine', 0.2);
-    pickTone(360, 0.5, 'triangle', 0.1);
-    if (navigator.vibrate) navigator.vibrate([40, 60, 120]);
-    celebrateOrderSuccess();
+
+    if (chosen) {
+      // Spotlight van bovenaf op de gekozen vinger
+      pickSpot.style.left = `${chosen.x}px`;
+      pickSpot.style.height = `${Math.max(60, chosen.y)}px`;
+      pickSpot.hidden = false;
+      spawnWaves(chosen);
+    }
+
+    // Zware dubbele boem
+    pickTone(50, 0.5, 'sine', 0.34);
+    setTimeout(() => pickTone(42, 0.7, 'sine', 0.3), 180);
+    if (navigator.vibrate) navigator.vibrate([60, 80, 160]);
+    flashScreen();
+    shakeStage();
+
+    // Fase 2: het vonnis, nét even later — dat halve tellen is de spanning
+    setTimeout(() => {
+      pickRevealLine.textContent = pick(
+        pickMode === 'winner' ? PICK_WINNER_LINES : PICK_LOSER_LINES
+      );
+      pickReveal.hidden = false;
+      pickTone(180, 0.6, 'sine', 0.2);
+      pickTone(360, 0.5, 'triangle', 0.1);
+      celebrateOrderSuccess();
+    }, prefersReducedMotion ? 0 : 650);
   }
 
   function resetPickRound() {
     clearPickTimers();
+    setHeart(0);
     pickReveal.hidden = true;
     pickCount.hidden = true;
-    fingers.forEach((f) => f.el.remove());
+    pickSpot.hidden = true;
+    pickSurface.classList.remove('pick__surface--blackout');
+    pickRings.innerHTML = '';
     fingers.clear();
     pickColorIdx = 0;
+    pickAliasBag = shuffle(PICK_ALIASES);
     pickState = 'waiting';
     updateHint();
+    syncScan();
   }
 
   function addFinger(ev) {
     if (pickState === 'revealed' || pickState === 'picking') return;
     const rect = pickSurface.getBoundingClientRect();
     const color = FINGER_COLORS[pickColorIdx % FINGER_COLORS.length];
+    const alias = pickAliasBag[pickColorIdx % pickAliasBag.length] || '';
     pickColorIdx += 1;
     const el = document.createElement('div');
     el.className = 'pick__ring';
     el.style.setProperty('--c', color);
-    el.innerHTML = `<span class="pick__ring-num">${fingers.size + 1}</span>`;
+    el.innerHTML =
+      `<span class="pick__ring-num">${fingers.size + 1}</span>` +
+      `<span class="pick__ring-tag">${escapeHtml(alias)}</span>`;
     const finger = { x: ev.clientX - rect.left, y: ev.clientY - rect.top, el, color };
     pickRings.appendChild(el);
     positionRing(finger);
     fingers.set(ev.pointerId, finger);
+    pickTone(340 + fingers.size * 60, 0.09, 'triangle', 0.07);
+    if (navigator.vibrate) navigator.vibrate(6);
     onFingerSetChanged();
   }
 
@@ -2412,7 +2552,9 @@
     resetPickRound();
     pickState = 'idle';
     pickOverlay.hidden = true;
-    if (!drawer.classList.contains('open')) document.body.style.overflow = '';
+    // Betaalscherm kan er nog onder liggen — scroll-lock dan behouden
+    const payOpen = payOverlay && !payOverlay.hidden;
+    if (!drawer.classList.contains('open') && !payOpen) document.body.style.overflow = '';
   }
 
   if (pickOverlay) {
@@ -2436,66 +2578,62 @@
 
   if (whoPaysBtn) whoPaysBtn.addEventListener('click', openPick);
 
-  /* ------------------------------------------------------------------ */
-  /* DRANKAUTOMAAT — gokkast met hendel                                 */
-  /* ------------------------------------------------------------------ */
-  const slotOverlay = document.getElementById('slot-overlay');
-  const slotBox = slotOverlay ? slotOverlay.querySelector('.slot') : null;
-  const slotDrums = [0, 1, 2].map((i) => document.getElementById(`drum-${i}`));
-  const slotLever = document.getElementById('slot-lever');
-  const slotArm = document.getElementById('slot-arm');
-  const slotHint = document.getElementById('slot-hint');
-  const slotBon = document.getElementById('slot-bon');
-  const slotSub = document.getElementById('slot-sub');
-  const slotCloseBtn = document.getElementById('slot-close');
+  // Extra ingangen: vanuit het Bancontact-scherm en de footer
+  const payWhoPaysBtn = document.getElementById('pay-whopays');
+  if (payWhoPaysBtn) payWhoPaysBtn.addEventListener('click', openPick);
+  const footerWhoPaysBtn = document.getElementById('footer-whopays');
+  if (footerWhoPaysBtn) footerWhoPaysBtn.addEventListener('click', openPick);
 
-  const SLOT_EMOJI = {
+  /* ------------------------------------------------------------------ */
+  /* DOBBELSTEEN — schud, zes drankjes, nieuw assortiment per spel      */
+  /* ------------------------------------------------------------------ */
+  const diceOverlay = document.getElementById('dice-overlay');
+  const diceGame = diceOverlay ? diceOverlay.querySelector('.dice-game') : null;
+  const diceCube = document.getElementById('dice-cube');
+  const diceStage = document.getElementById('dice-stage');
+  const diceSub = document.getElementById('dice-sub');
+  const diceRollBtn = document.getElementById('dice-roll');
+  const diceResult = document.getElementById('dice-result');
+  const diceCloseBtn = document.getElementById('dice-close');
+
+  const DICE_EMOJI = {
     bieren: '🍺',
-    flessen: '🍻',
     fris: '🥤',
     cocktails: '🍹',
     wijnen: '🍷',
     shots: '🥃',
     warme: '☕',
-    fingerfood: '🍟',
   };
 
-  const SLOT_LINES = [
-    'Twijfel opgelost. Machinaal.',
-    'De kast kent je dorst beter dan jij.',
-    'Geen keuzestress meer. Alleen dorst.',
-    'Drie rollen, één waarheid.',
-    'Dit is wat je nodig had. Bewezen met techniek.',
+  const DICE_LINES = [
+    'Het lot heeft gesproken. Jouw dorst ook.',
+    'Zes kanten. Eén waarheid. Drink.',
+    'Geen keuzestress meer — alleen een resultaat.',
+    'De steen kent je beter dan jijzelf.',
+    'Twijfel is voor mensen zonder dobbelsteen.',
   ];
 
-  const SLOT_NEARMISS_LINES = [
-    'Zó dicht bij de jackpot. Voel je dat? Dat is pijn.',
-    'Twee gelijk. De derde had andere plannen.',
-    'Bijna goud. Drink eerst, rouw later.',
+  /** Rotatie die vlak i naar de camera brengt */
+  const DICE_SETTLE = [
+    { x: 0, y: 0 },
+    { x: 0, y: 180 },
+    { x: 0, y: -90 },
+    { x: 0, y: 90 },
+    { x: -90, y: 0 },
+    { x: 90, y: 0 },
   ];
-
-  const SLOT_JACKPOT_LINES = [
-    'Dit is geen suggestie meer. Dit is bestemming.',
-    'De kast heeft je uitverkoren. Gedraag je ernaar.',
-    'Drie op een rij — vanavond ben jij de hoofdact.',
-  ];
-
-  const SLOT_FACES = 12; // vlakken per trommel
-  const SLOT_FACE_H = 78;
-  const JACKPOT_CHANCE = 0.09;
-  const NEARMISS_CHANCE = 0.3;
 
   /** @type {{name:string,price:number,category:string,emoji:string,short:string,btn:Element}[]} */
-  let slotPool = [];
-  let slotSpinning = false;
-  /** Huidige rotatie (graden) per trommel */
-  const drumAngle = [0, 0, 0];
-  /** Strip (items per vlak) per trommel van de laatste beurt */
-  const drumStrips = [[], [], []];
-  /** @type {{item:object, jackpot:boolean}|null} */
-  let slotWinner = null;
+  let diceFaces = [];
+  /** @type {{name:string,price:number,category:string,emoji:string,short:string,btn:Element}|null} */
+  let diceWinner = null;
+  let diceRolling = false;
+  let diceAngle = { x: -18, y: 32 };
+  let shakeListening = false;
+  let lastShake = { x: 0, y: 0, z: 0, t: 0 };
+  let motionPermission = 'unknown';
 
-  function slotShortName(name) {
+  function diceShortName(name) {
     let s = name
       .replace(" van 't vat", '')
       .replace(' (6 stuks)', '')
@@ -2504,23 +2642,21 @@
       .replace(' DOC Frizzante', '')
       .replace(' Brut Réserve', '')
       .replace('Care ', '');
-    // Glas/fles blijft staan — dat is een ander product én een andere prijs
-    const m = s.match(/^(.*?)\s*\((glas|fles)\)$/);
+    const m = s.match(/^(.*?)\s*\((glas)\)$/);
     if (m) {
-      const base = m[1].length > 14 ? `${m[1].slice(0, 13).trim()}…` : m[1];
-      return `${base} (${m[2]})`;
+      const base = m[1].length > 12 ? `${m[1].slice(0, 11).trim()}…` : m[1];
+      return `${base} (glas)`;
     }
-    return s.length > 20 ? `${s.slice(0, 19).trim()}…` : s;
+    return s.length > 16 ? `${s.slice(0, 15).trim()}…` : s;
   }
 
-  function buildSlotPool() {
-    // Alleen drank per glas: geen eten, geen flessen, en geen water
-    // (dat moet je zelf vangen)
+  function buildDrinkPool() {
+    // Alleen drankjes: geen flessenbier, geen wijnflessen, geen eten, geen water
     const btns = [...document.querySelectorAll('[data-add]')].filter((btn) => {
       const name = btn.dataset.name || '';
       const cat = btn.dataset.category || '';
       if (!name || name === 'Water' || btn.disabled || outOfStock.has(name)) return false;
-      if (cat === 'fingerfood') return false;
+      if (cat === 'flessen' || cat === 'fingerfood') return false;
       if (/\(fles\)$/.test(name)) return false;
       return true;
     });
@@ -2536,49 +2672,41 @@
         name: btn.dataset.name,
         price: parseFloat(btn.dataset.price) || 0,
         category: btn.dataset.category || 'cocktails',
-        emoji: SLOT_EMOJI[btn.dataset.category] || '🍸',
-        short: slotShortName(btn.dataset.name),
+        emoji: DICE_EMOJI[btn.dataset.category] || '🍸',
+        short: diceShortName(btn.dataset.name),
         btn,
       }));
   }
 
-  const SLOT_FACE_ANGLE = 360 / SLOT_FACES;
-  // Straal zodat de vlakken precies een gesloten cilinder vormen
-  const SLOT_RADIUS = Math.round(SLOT_FACE_H / 2 / Math.tan(Math.PI / SLOT_FACES));
+  /** Elk nieuw spel: zes andere drankjes op de zijden */
+  function dealNewFaces() {
+    const pool = shuffle(buildDrinkPool());
+    if (pool.length < 6) return null;
+    diceFaces = pool.slice(0, 6);
+    return diceFaces;
+  }
 
-  /**
-   * Bouw één trommel: 12 vlakken met het doelitem op vlak `targetFace`,
-   * de rest is een willekeurige greep uit de pool.
-   */
-  function buildDrum(drumIdx, targetItem, targetFace) {
-    const drum = slotDrums[drumIdx];
-    const others = shuffle(slotPool.filter((i) => i !== targetItem));
-    const strip = [];
-    for (let f = 0; f < SLOT_FACES; f++) {
-      strip.push(f === targetFace ? targetItem : others[f % others.length] || targetItem);
-    }
-    drumStrips[drumIdx] = strip;
-
-    drum.innerHTML = '';
-    strip.forEach((item, f) => {
+  function paintCube() {
+    if (!diceCube) return;
+    diceCube.innerHTML = '';
+    diceFaces.forEach((item, i) => {
       const face = document.createElement('div');
-      face.className = 'slot__face';
-      face.dataset.name = item.name;
-      // Vlak f staat vooraan wanneer de trommel -f·hoek gedraaid is
-      face.style.transform = `rotateX(${f * SLOT_FACE_ANGLE}deg) translateZ(${SLOT_RADIUS}px)`;
+      face.className = `dice__face dice__face--${i}`;
       face.innerHTML =
-        `<span class="slot__cell-emoji">${item.emoji}</span>` +
-        `<span class="slot__cell-name">${escapeHtml(item.short)}</span>`;
-      drum.appendChild(face);
+        `<span class="dice__face-emoji">${item.emoji}</span>` +
+        `<span class="dice__face-name">${escapeHtml(item.short)}</span>`;
+      diceCube.appendChild(face);
     });
   }
 
-  function setDrumAngle(drumIdx, deg) {
-    drumAngle[drumIdx] = deg;
-    slotDrums[drumIdx].style.transform = `rotateX(${deg}deg)`;
+  function applyCubeTransform(x, y, z = 0) {
+    diceAngle = { x, y };
+    if (diceCube) {
+      diceCube.style.transform = `rotateX(${x}deg) rotateY(${y}deg) rotateZ(${z}deg)`;
+    }
   }
 
-  function slotClack(pitch = 1) {
+  function diceClack(pitch = 1) {
     try {
       if (!wheelAudioCtx) {
         wheelAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2587,85 +2715,74 @@
       const t = wheelAudioCtx.currentTime;
       const osc = wheelAudioCtx.createOscillator();
       const gain = wheelAudioCtx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(150 * pitch, t);
-      osc.frequency.exponentialRampToValueAtTime(70 * pitch, t + 0.05);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(220 * pitch, t);
+      osc.frequency.exponentialRampToValueAtTime(90 * pitch, t + 0.08);
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.07, t + 0.005);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.09, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
       osc.connect(gain);
       gain.connect(wheelAudioCtx.destination);
       osc.start(t);
-      osc.stop(t + 0.09);
+      osc.stop(t + 0.12);
     } catch {
-      /* geen audio, geen drama */
+      /* stil mag ook */
     }
   }
 
-  function slotFanfare() {
-    try {
-      if (!wheelAudioCtx) {
-        wheelAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const t = wheelAudioCtx.currentTime;
-      [523, 659, 784, 1047].forEach((f, i) => {
-        const osc = wheelAudioCtx.createOscillator();
-        const gain = wheelAudioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(f, t + i * 0.09);
-        gain.gain.setValueAtTime(0.0001, t + i * 0.09);
-        gain.gain.exponentialRampToValueAtTime(0.12, t + i * 0.09 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.3);
-        osc.connect(gain);
-        gain.connect(wheelAudioCtx.destination);
-        osc.start(t + i * 0.09);
-        osc.stop(t + i * 0.09 + 0.32);
-      });
-    } catch {
-      /* stil is ook goed */
-    }
+  function showDiceResult(item) {
+    diceResult.innerHTML =
+      `<p class="dice__result-eyebrow">ROCHUS · HET LOT</p>` +
+      `<p class="dice__result-emoji" aria-hidden="true">${item.emoji}</p>` +
+      `<p class="dice__result-name">${escapeHtml(item.name)}</p>` +
+      `<p class="dice__result-price">${formatEuro(item.price)}</p>` +
+      `<p class="dice__result-line">${escapeHtml(pick(DICE_LINES))}</p>` +
+      `<div class="dice__result-actions">` +
+      `<button type="button" class="dice__result-btn dice__result-btn--take" id="dice-take">Zet op mijn bestelling</button>` +
+      `<button type="button" class="dice__result-btn dice__result-btn--again" id="dice-again">Nieuw spel</button>` +
+      `</div>`;
+    diceResult.hidden = false;
   }
 
-  /**
-   * Eén trommel meerdere toeren draaien en op targetFace landen,
-   * met een lichte overshoot zodat hij mechanisch "vastklikt".
-   */
-  function spinDrum(drumIdx, targetFace, turns, duration) {
+  function tumbleToFace(faceIdx) {
     return new Promise((resolve) => {
-      const from = drumAngle[drumIdx];
-      // Negatief = de trommel rolt naar beneden, zoals een echte kast
-      const to = -(turns * 360 + targetFace * SLOT_FACE_ANGLE);
+      const settle = DICE_SETTLE[faceIdx];
+      const spinsX = 3 + Math.floor(Math.random() * 3);
+      const spinsY = 4 + Math.floor(Math.random() * 3);
+      const fromX = diceAngle.x;
+      const fromY = diceAngle.y;
+      const toX = settle.x + spinsX * 360;
+      const toY = settle.y + spinsY * 360;
+      const duration = prefersReducedMotion ? 0 : 2200;
 
-      if (prefersReducedMotion) {
-        setDrumAngle(drumIdx, to);
+      if (duration === 0) {
+        applyCubeTransform(settle.x, settle.y);
         resolve();
         return;
       }
 
+      if (diceCube) diceCube.style.transition = 'none';
       const start = performance.now();
-      let lastNotch = Math.floor(Math.abs(from) / SLOT_FACE_ANGLE);
+      let lastTick = 0;
 
       const frame = (now) => {
         const t = Math.min(1, (now - start) / duration);
-        // Ease-out met overshoot: schiet ~een half vlak voorbij en veert terug
-        const s = 1.35;
-        const u = t - 1;
-        const eased = 1 + (s + 1) * u * u * u + s * u * u;
-        const deg = from + (to - from) * eased;
-        setDrumAngle(drumIdx, deg);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const x = fromX + (toX - fromX) * eased;
+        const y = fromY + (toY - fromY) * eased;
+        const z = Math.sin(t * Math.PI * 3) * 18 * (1 - t);
+        applyCubeTransform(x, y, z);
 
-        const notch = Math.floor(Math.abs(deg) / SLOT_FACE_ANGLE);
-        if (notch !== lastNotch) {
-          lastNotch = notch;
-          if (t > 0.25) slotClack(1 + drumIdx * 0.12);
+        if (t - lastTick > 0.12) {
+          lastTick = t;
+          diceClack(0.85 + Math.random() * 0.4);
         }
 
         if (t < 1) {
           requestAnimationFrame(frame);
         } else {
-          setDrumAngle(drumIdx, to);
-          slotClack(0.7);
-          if (navigator.vibrate) navigator.vibrate(14);
+          applyCubeTransform(settle.x, settle.y);
+          diceClack(0.55);
           resolve();
         }
       };
@@ -2673,236 +2790,165 @@
     });
   }
 
-  function coinRain() {
-    if (prefersReducedMotion) return;
-    for (let i = 0; i < 26; i++) {
-      const coin = document.createElement('span');
-      coin.className = 'slot-coin';
-      coin.textContent = Math.random() < 0.3 ? '✨' : '🪙';
-      coin.style.left = `${Math.random() * 100}vw`;
-      coin.style.animationDelay = `${Math.random() * 0.9}s`;
-      coin.style.fontSize = `${20 + Math.random() * 16}px`;
-      coin.style.setProperty('--spin', `${180 + Math.random() * 420}deg`);
-      document.body.appendChild(coin);
-      coin.addEventListener('animationend', () => coin.remove(), { once: true });
-      setTimeout(() => coin.remove(), 3000);
-    }
-  }
-
-  /** Printgeluid: snelle tikjes terwijl de bon uit de gleuf rolt. */
-  function bonPrintSound() {
-    for (let i = 0; i < 9; i++) {
-      setTimeout(() => slotClack(2.4 + (i % 3) * 0.3), i * 70);
-    }
-  }
-
-  function printBon(item, { jackpot, nearMiss }) {
-    const nr = String(Math.floor(1000 + Math.random() * 9000));
-    const line = jackpot
-      ? pick(SLOT_JACKPOT_LINES)
-      : nearMiss
-        ? pick(SLOT_NEARMISS_LINES)
-        : pick(SLOT_LINES);
-
-    slotBon.classList.toggle('slot__bon--jackpot', jackpot);
-    slotBon.innerHTML =
-      `<p class="slot__bon-head">ROCHUS · DRANKAUTOMAAT</p>` +
-      `<p class="slot__bon-meta">bon #${nr} · tafelvermaak inbegrepen</p>` +
-      `<hr class="slot__bon-rule" />` +
-      (jackpot ? `<p class="slot__bon-jackpot">★ JACKPOT ★</p>` : '') +
-      `<p class="slot__bon-emoji" aria-hidden="true">${jackpot ? '🎰' : item.emoji}</p>` +
-      `<p class="slot__bon-name">${escapeHtml(item.name)}</p>` +
-      `<p class="slot__bon-price">${formatEuro(item.price)}</p>` +
-      `<p class="slot__bon-line">${escapeHtml(line)}${
-        jackpot ? ' Bestel hem en de bar weet dat dit een jackpot-drankje is. 🏆' : ''
-      }</p>` +
-      `<div class="slot__bon-barcode" aria-hidden="true"></div>` +
-      `<div class="slot__bon-actions">` +
-      `<button type="button" class="slot__bon-btn slot__bon-btn--take" id="slot-take">Zet op mijn bestelling</button>` +
-      `<button type="button" class="slot__bon-btn slot__bon-btn--again" id="slot-again">Nog eens trekken</button>` +
-      `</div>`;
-    slotBon.hidden = false;
-    bonPrintSound();
-  }
-
-  async function spinSlot() {
-    if (slotSpinning || slotPool.length < 3) return;
-    slotSpinning = true;
-    slotWinner = null;
-    slotBox.classList.remove('slot--win', 'slot--jackpot');
-    slotBon.hidden = true;
-    if (slotHint) slotHint.hidden = true;
-
-    // Kies eerst de uitkomst per item, bouw dan de trommels eromheen
-    const roll = Math.random();
-    const randItem = () => slotPool[Math.floor(Math.random() * slotPool.length)];
-    let items;
-    if (roll < JACKPOT_CHANCE) {
-      const p = randItem();
-      items = [p, p, p];
-    } else if (roll < JACKPOT_CHANCE + NEARMISS_CHANCE) {
-      const p = randItem();
-      let other = randItem();
-      while (other === p && slotPool.length > 1) other = randItem();
-      items = Math.random() < 0.5 ? [p, p, other] : [other, p, p];
-    } else {
-      items = [randItem(), randItem(), randItem()];
-    }
-
-    const faces = items.map(() => Math.floor(Math.random() * SLOT_FACES));
-    items.forEach((item, i) => buildDrum(i, item, faces[i]));
-    [0, 1, 2].forEach((i) => setDrumAngle(i, 0));
-
-    await Promise.all([
-      spinDrum(0, faces[0], 3, 1600),
-      spinDrum(1, faces[1], 4, 2300),
-      spinDrum(2, faces[2], 5, 3100),
-    ]);
-
-    const picked = items[1];
-    const jackpot = items[0] === items[1] && items[1] === items[2];
-    const nearMiss = !jackpot && (items[0] === items[1] || items[1] === items[2] || items[0] === items[2]);
-    slotWinner = { item: picked, jackpot };
-
-    slotBox.classList.add('slot--win');
-    if (jackpot) {
-      slotBox.classList.add('slot--jackpot');
-      slotFanfare();
-      celebrateOrderSuccess();
-      coinRain();
-      if (navigator.vibrate) navigator.vibrate([40, 60, 40, 60, 80]);
-    } else {
-      burstConfetti();
-    }
-    printBon(picked, { jackpot, nearMiss });
-
-    slotSpinning = false;
-  }
-
-  /* De hendel: naar beneden slepen en loslaten */
-  if (slotLever && slotArm) {
-    const MAX_TRAVEL = 92;
-    let dragging = false;
-    let startY = 0;
-    let travel = 0;
-
-    const setArm = (y) => {
-      slotArm.style.transform = `translateY(${y}px)`;
-    };
-
-    const release = () => {
-      if (!dragging) return;
-      dragging = false;
-      slotArm.style.transition = 'transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)';
-      setArm(0);
-      setTimeout(() => {
-        slotArm.style.transition = '';
-      }, 460);
-      if (travel > MAX_TRAVEL * 0.55) spinSlot();
-      travel = 0;
-    };
-
-    slotLever.addEventListener('pointerdown', (ev) => {
-      if (slotSpinning) return;
-      dragging = true;
-      startY = ev.clientY;
-      slotArm.style.transition = '';
-      slotLever.setPointerCapture(ev.pointerId);
-    });
-
-    slotLever.addEventListener('pointermove', (ev) => {
-      if (!dragging) return;
-      travel = Math.max(0, Math.min(MAX_TRAVEL, ev.clientY - startY));
-      setArm(travel);
-      if (travel > MAX_TRAVEL * 0.55 && !slotLever.dataset.armed) {
-        slotLever.dataset.armed = '1';
-        if (navigator.vibrate) navigator.vibrate(8);
+  async function ensureMotionPermission() {
+    if (
+      typeof DeviceMotionEvent !== 'undefined' &&
+      typeof DeviceMotionEvent.requestPermission === 'function' &&
+      motionPermission !== 'granted'
+    ) {
+      try {
+        motionPermission = await DeviceMotionEvent.requestPermission();
+      } catch {
+        motionPermission = 'denied';
       }
-    });
-
-    slotLever.addEventListener('pointerup', () => {
-      delete slotLever.dataset.armed;
-      release();
-    });
-    slotLever.addEventListener('pointercancel', () => {
-      delete slotLever.dataset.armed;
-      release();
-    });
-
-    // Tikken of toetsenbord mag ook — niemand blijft in het ongewisse
-    slotLever.addEventListener('click', () => {
-      if (!slotSpinning && travel === 0) spinSlot();
-    });
-    slotLever.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter' || ev.key === ' ') {
-        ev.preventDefault();
-        spinSlot();
-      }
-    });
+    } else if (typeof DeviceMotionEvent !== 'undefined') {
+      motionPermission = 'granted';
+    }
+    return motionPermission === 'granted';
   }
 
-  function openSlot() {
-    slotPool = buildSlotPool();
-    if (slotPool.length < 3) {
-      showToast('Te weinig drank op voorraad voor een gokje 🍾', true, 2600);
-      return;
+  function onDeviceMotion(ev) {
+    if (diceRolling || !diceOverlay || diceOverlay.hidden) return;
+    const a = ev.accelerationIncludingGravity;
+    if (!a || a.x == null) return;
+    const now = Date.now();
+    if (lastShake.t) {
+      const dx = Math.abs(a.x - lastShake.x);
+      const dy = Math.abs(a.y - lastShake.y);
+      const dz = Math.abs(a.z - lastShake.z);
+      if (dx + dy + dz > 28 && now - lastShake.t > 900) {
+        lastShake.t = now;
+        rollDice();
+      }
     }
-    // Rusttoestand: elke trommel toont alvast een willekeurige greep
-    [0, 1, 2].forEach((i) => {
-      const item = slotPool[Math.floor(Math.random() * slotPool.length)];
-      buildDrum(i, item, 0);
-      setDrumAngle(i, -Math.floor(Math.random() * SLOT_FACES) * SLOT_FACE_ANGLE);
-    });
-    slotBox.classList.remove('slot--win', 'slot--jackpot');
-    slotBon.hidden = true;
-    slotSub.textContent = 'Geen idee wat je wil? Trek. De kast weet het wél.';
-    if (slotHint) slotHint.hidden = false;
-    slotOverlay.hidden = false;
+    lastShake = { x: a.x, y: a.y, z: a.z, t: lastShake.t || now };
+  }
+
+  function startShakeListen() {
+    if (shakeListening || prefersReducedMotion) return;
+    window.addEventListener('devicemotion', onDeviceMotion, { passive: true });
+    shakeListening = true;
+  }
+
+  function stopShakeListen() {
+    if (!shakeListening) return;
+    window.removeEventListener('devicemotion', onDeviceMotion);
+    shakeListening = false;
+  }
+
+  async function rollDice() {
+    if (diceRolling || diceFaces.length < 6) return;
+    diceRolling = true;
+    diceWinner = null;
+    diceGame.classList.remove('dice-game--landed');
+    diceGame.classList.add('dice-game--rolling');
+    diceResult.hidden = true;
+    diceSub.textContent = 'Rol… het lot is in beweging';
+    if (diceRollBtn) {
+      diceRollBtn.disabled = true;
+      diceRollBtn.textContent = 'Bezig…';
+    }
+    if (navigator.vibrate) navigator.vibrate([12, 40, 12]);
+
+    const faceIdx = Math.floor(Math.random() * 6);
+    await tumbleToFace(faceIdx);
+
+    const item = diceFaces[faceIdx];
+    diceWinner = item;
+    diceGame.classList.remove('dice-game--rolling');
+    diceGame.classList.add('dice-game--landed');
+    diceSub.textContent = 'Het lot heeft gekozen';
+    showDiceResult(item);
+    burstConfetti();
+    if (navigator.vibrate) navigator.vibrate([30, 50, 40]);
+
+    if (diceRollBtn) {
+      diceRollBtn.disabled = false;
+      diceRollBtn.textContent = 'Opnieuw schudden';
+    }
+    diceRolling = false;
+  }
+
+  function resetDiceRound({ newAssortment }) {
+    diceWinner = null;
+    diceGame.classList.remove('dice-game--rolling', 'dice-game--landed');
+    diceResult.hidden = true;
+    if (newAssortment) {
+      if (!dealNewFaces()) {
+        showToast('Te weinig drankjes voor een dobbelsteen 🎲', true, 2600);
+        return false;
+      }
+      paintCube();
+    }
+    applyCubeTransform(-18 + Math.random() * 10, 20 + Math.random() * 40);
+    diceSub.textContent = 'Schud je telefoon — of tik op de steen';
+    if (diceRollBtn) {
+      diceRollBtn.disabled = false;
+      diceRollBtn.textContent = 'Schud of tik hier';
+    }
+    return true;
+  }
+
+  async function openDice() {
+    if (!resetDiceRound({ newAssortment: true })) return;
+    diceOverlay.hidden = false;
     document.body.style.overflow = 'hidden';
+    // iOS vraagt toestemming pas na een user-gesture; open telt als één
+    await ensureMotionPermission();
+    startShakeListen();
   }
 
-  function closeSlot() {
-    slotOverlay.hidden = true;
-    slotSpinning = false;
+  function closeDice() {
+    stopShakeListen();
+    diceOverlay.hidden = true;
+    diceRolling = false;
+    diceGame.classList.remove('dice-game--rolling', 'dice-game--landed');
     if (!drawer.classList.contains('open')) document.body.style.overflow = '';
   }
 
-  if (slotOverlay) {
-    slotCloseBtn.addEventListener('click', closeSlot);
-    slotOverlay.addEventListener('click', (e) => {
-      if (e.target === slotOverlay) closeSlot();
+  if (diceOverlay) {
+    diceCloseBtn.addEventListener('click', closeDice);
+    diceOverlay.addEventListener('click', (e) => {
+      if (e.target === diceOverlay) closeDice();
     });
-    // De bon wordt elke beurt opnieuw geprint — dus delegatie i.p.v. vaste refs
-    slotBon.addEventListener('click', (e) => {
-      if (e.target.closest('#slot-again')) {
-        spinSlot();
+
+    const triggerRoll = async () => {
+      await ensureMotionPermission();
+      startShakeListen();
+      rollDice();
+    };
+
+    if (diceRollBtn) diceRollBtn.addEventListener('click', triggerRoll);
+    if (diceStage) {
+      diceStage.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        if (!diceResult.hidden) return;
+        triggerRoll();
+      });
+    }
+
+    diceResult.addEventListener('click', (e) => {
+      if (e.target.closest('#dice-again')) {
+        resetDiceRound({ newAssortment: true });
         return;
       }
-      if (e.target.closest('#slot-take')) {
-        if (!slotWinner) return;
-        const { item, jackpot } = slotWinner;
-        // Eerst sluiten: anders speelt de vonk naar het mandje achter de overlay
-        closeSlot();
+      if (e.target.closest('#dice-take')) {
+        if (!diceWinner) return;
+        const item = diceWinner;
+        closeDice();
         closeDrawer();
         addItem(item.name, item.price, item.category);
-        // Jackpot? Zet het op de bestelbon — zo weet de bar dat er
-        // gevierd mag worden bij het serveren.
-        if (jackpot && noteInput && !noteInput.value.includes('🎰')) {
-          noteInput.value =
-            (noteInput.value ? `${noteInput.value} · ` : '') + '🎰 jackpot-drankje!';
-        }
         revealOnMenu(item.btn);
         sparkToFab(item.btn);
-        if (jackpot) {
-          showToast('Jackpot genoteerd — de bar weet ervan 🏆', false, 3200);
-        }
+        showToast(`${item.name} staat op je bestelling 🎲`, false, 2600);
       }
     });
+
     document.addEventListener(
       'keydown',
       (e) => {
-        if (e.key === 'Escape' && !slotOverlay.hidden) {
-          closeSlot();
+        if (e.key === 'Escape' && !diceOverlay.hidden) {
+          closeDice();
           e.stopPropagation();
         }
       },
@@ -2917,7 +2963,7 @@
         void diceBtn.offsetWidth;
         diceBtn.classList.add('search-bar__dice--rolling');
       }
-      openSlot();
+      openDice();
     });
   }
 

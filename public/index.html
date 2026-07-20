@@ -63,9 +63,9 @@
         type="button"
         class="search-bar__dice"
         id="menu-dice"
-        aria-label="Drankautomaat — laat de kast kiezen wat je drinkt"
-        title="Drankautomaat"
-      >🎰</button>
+        aria-label="Dobbelsteen — schud en laat het lot kiezen wat je drinkt"
+        title="Dobbelsteen"
+      >🎲</button>
     </div>
   </div>
 
@@ -576,6 +576,9 @@
     <p class="site-footer__name" id="footer-brand" title="geheim">ROCHUS</p>
     <p class="site-footer__tagline" id="footer-tagline">Summer pop-up · sip slow · text your ex later</p>
     <p>Digitaal menukaart · zero judgment zone</p>
+    <button type="button" class="site-footer__whopays" id="footer-whopays">
+      🫵 Wie betaalt vanavond? Speel het uit
+    </button>
   </footer>
 
   <div class="chaos-layer" id="chaos-layer" aria-hidden="true"></div>
@@ -623,7 +626,11 @@
         autocomplete="off"
       />
       <button type="button" class="order-drawer__whopays" id="who-pays">
-        🎡 Wie betaalt deze ronde?
+        <span class="order-drawer__whopays-point" aria-hidden="true">🫵</span>
+        <span>
+          <span class="order-drawer__whopays-title">Wie betaalt deze ronde?</span>
+          <span class="order-drawer__whopays-sub">vingers op het scherm · het toestel beslist</span>
+        </span>
       </button>
       <p class="order-drawer__cash">Nog niet verstuurd · cash of Bancontact bij levering</p>
       <p class="order-drawer__table-hint" id="order-table-hint"></p>
@@ -702,6 +709,9 @@
       <p class="pay-modal__or">of laat iemand anders scannen</p>
       <img class="pay-modal__qr" id="pay-qr" src="/api/qr/payconiq.png" alt="Bancontact betaal-QR" width="180" height="180" loading="lazy" />
       <p class="pay-modal__hint">Betaald? Toon het vinkje even als we je bestelling brengen 🙌</p>
+      <button type="button" class="pay-modal__whopays" id="pay-whopays">
+        Onenigheid over wie betaalt? Vingers op het scherm 🫵
+      </button>
     </div>
   </div>
 
@@ -717,12 +727,15 @@
       </div>
 
       <div class="pick__surface" id="pick-surface">
+        <div class="pick__scan" id="pick-scan" hidden aria-hidden="true"></div>
         <div class="pick__hint" id="pick-hint">
           <span class="pick__hint-emoji" aria-hidden="true">🖐️</span>
           <span class="pick__hint-text" id="pick-hint-text">Leg allemaal een vinger op het scherm</span>
         </div>
         <div class="pick__count" id="pick-count" hidden></div>
+        <div class="pick__spot" id="pick-spot" hidden aria-hidden="true"></div>
         <div class="pick__rings" id="pick-rings" aria-hidden="true"></div>
+        <div class="pick__flash" id="pick-flash" aria-hidden="true"></div>
         <div class="pick__reveal" id="pick-reveal" hidden>
           <p class="pick__reveal-line" id="pick-reveal-line"></p>
           <button type="button" class="pick__again" id="pick-again">Nog een ronde 🔁</button>
@@ -735,42 +748,23 @@
     </div>
   </div>
 
-  <div class="slot-overlay" id="slot-overlay" hidden>
-    <div class="slot" role="dialog" aria-modal="true" aria-labelledby="slot-title">
-      <button type="button" class="slot__close" id="slot-close" aria-label="Sluit de drankautomaat">×</button>
+  <div class="dice-overlay" id="dice-overlay" hidden>
+    <div class="dice-game" role="dialog" aria-modal="true" aria-labelledby="dice-title">
+      <button type="button" class="dice__close" id="dice-close" aria-label="Sluit de dobbelsteen">×</button>
 
-      <div class="slot__marquee">
-        <span class="slot__bulbs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        <h2 class="slot__title" id="slot-title">DRANKAUTOMAAT</h2>
-        <p class="slot__sub" id="slot-sub">Trek aan de hendel — het toestel beslist</p>
-      </div>
+      <h2 class="dice__title" id="dice-title">DOBBEL</h2>
+      <p class="dice__sub" id="dice-sub">Schud je telefoon — of tik op de steen</p>
 
-      <div class="slot__body">
-        <div class="slot__cabinet">
-          <div class="slot__window">
-            <div class="slot__reel3d"><div class="slot__drum" id="drum-0"></div></div>
-            <div class="slot__reel3d"><div class="slot__drum" id="drum-1"></div></div>
-            <div class="slot__reel3d"><div class="slot__drum" id="drum-2"></div></div>
-            <div class="slot__glass" aria-hidden="true"></div>
-            <div class="slot__payline" aria-hidden="true">
-              <span class="slot__arrow slot__arrow--l">▶</span>
-              <span class="slot__arrow slot__arrow--r">◀</span>
-            </div>
-          </div>
-          <div class="slot__printer" aria-hidden="true"><i></i></div>
+      <div class="dice__stage" id="dice-stage">
+        <div class="dice__scene">
+          <div class="dice__cube" id="dice-cube" aria-hidden="true"></div>
         </div>
-
-        <div class="slot__lever" id="slot-lever" role="button" tabindex="0"
-             aria-label="Trek aan de hendel om te draaien">
-          <div class="slot__lever-track"></div>
-          <div class="slot__lever-arm" id="slot-arm"><span class="slot__lever-knob"></span></div>
-          <span class="slot__lever-hint" id="slot-hint">trek ↓</span>
-        </div>
+        <div class="dice__floor" aria-hidden="true"></div>
       </div>
 
-      <div class="slot__bonwrap" aria-live="polite">
-        <div class="slot__bon" id="slot-bon" hidden></div>
-      </div>
+      <button type="button" class="dice__roll" id="dice-roll">Schud of tik hier</button>
+
+      <div class="dice__result" id="dice-result" aria-live="polite" hidden></div>
     </div>
   </div>
 
