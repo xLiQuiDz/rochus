@@ -1824,7 +1824,6 @@
   const wheelSub = document.getElementById('wheel-sub');
   const wheelResult = document.getElementById('wheel-result');
   const wheelSpinBtn = document.getElementById('wheel-spin');
-  const wheelGotoBtn = document.getElementById('wheel-goto');
   const wheelCloseBtn = document.getElementById('wheel-close');
   const diceBtn = document.getElementById('menu-dice');
   const whoPaysBtn = document.getElementById('who-pays');
@@ -1849,21 +1848,11 @@
     { label: 'Jij. Punt. 🫵', line: 'Het rad koos jou. Protesteer en we draaien nog eens — tot het erger wordt.' },
   ];
 
-  const FATE_LINES = [
-    'Het lot neemt geen klachten aan.',
-    'Bezwaar indienen kan bij niemand.',
-    'Dit is nu je persoonlijkheid.',
-    'Het rad liegt nooit. Mensen wel.',
-    'Drink het en denk aan je keuzes.',
-    'Gekozen door het universum, betaald door jou.',
-  ];
-
   const WHEEL_SEGMENTS = 8;
   const WHEEL_SIZE = 640;
   const wheelCtx = wheelCanvas ? wheelCanvas.getContext('2d') : null;
 
-  let wheelMode = 'whopays';
-  /** @type {{ label: string, line: string, addBtn?: Element }[]} */
+  /** @type {{ label: string, line: string }[]} */
   let wheelItems = [];
   let wheelRot = 0;
   let wheelSpinning = false;
@@ -1988,11 +1977,9 @@
     if (!item) return;
     drawWheel(wheelWinner);
     wheelTick(true);
-    wheelResult.textContent =
-      wheelMode === 'whopays' ? item.line : `${item.label} — ${pick(FATE_LINES)}`;
+    wheelResult.textContent = item.line;
     wheelResult.hidden = false;
     wheelSpinBtn.textContent = 'Nog eens draaien';
-    wheelGotoBtn.hidden = wheelMode !== 'fate';
     burstConfetti();
   }
 
@@ -2031,36 +2018,14 @@
     wheelAnimFrame = requestAnimationFrame(frame);
   }
 
-  function openWheel(mode) {
-    wheelMode = mode;
-    if (mode === 'whopays') {
-      wheelTitle.textContent = 'Wie betaalt?';
-      wheelSub.textContent = 'Zwier het rad — het rad kent geen genade';
-      wheelItems = shuffle(WHO_PAYS_CARDS).slice(0, WHEEL_SEGMENTS);
-    } else {
-      // Water doet niet mee — dat moet je zelf vangen
-      const candidates = [...document.querySelectorAll('[data-add]')].filter((btn) => {
-        const name = btn.dataset.name || '';
-        return name && name !== 'Water' && !btn.disabled && !outOfStock.has(name);
-      });
-      if (candidates.length < 2) {
-        showToast('Alles is op?! Legendarische avond 🍾', true, 2600);
-        return;
-      }
-      wheelTitle.textContent = 'Het lot beslist';
-      wheelSub.textContent = 'Zwier het rad en drink wat het zegt';
-      wheelItems = shuffle(candidates)
-        .slice(0, WHEEL_SEGMENTS)
-        .map((btn) => ({
-          label: btn.dataset.name.replace(" van 't vat", '').replace(' (6 stuks)', ''),
-          line: '',
-          addBtn: btn,
-        }));
-    }
+  function openWheel() {
+    wheelTitle.textContent = 'Wie betaalt?';
+    wheelSub.textContent = 'Zwier het rad — het rad kent geen genade';
+    wheelItems = shuffle(WHO_PAYS_CARDS).slice(0, WHEEL_SEGMENTS);
+
     wheelRot = Math.random() * Math.PI * 2;
     wheelWinner = -1;
     wheelResult.hidden = true;
-    wheelGotoBtn.hidden = true;
     wheelSpinBtn.textContent = 'Draai';
     drawWheel();
     applyWheelRot();
@@ -2076,11 +2041,8 @@
     if (!drawer.classList.contains('open')) document.body.style.overflow = '';
   }
 
-  function gotoFateResult() {
-    const item = wheelItems[wheelWinner];
-    const addBtn = item && item.addBtn;
-    closeWheel();
-    closeDrawer();
+  /** Scroll naar een menukaart en laat hem even opvallen. */
+  function revealOnMenu(addBtn) {
     if (!addBtn) return;
     if (searchInput.value) searchInput.value = '';
     applyCategoryFilter('all');
@@ -2097,7 +2059,7 @@
       card.classList.add('gag-wobble');
       setTimeout(() => card.classList.remove('gag-wobble'), 900);
       triggerCardShimmer(card);
-      spawnFloatingSticker(card, 'het lot');
+      spawnFloatingSticker(card, 'gekozen');
     }
   }
 
@@ -2160,7 +2122,6 @@
   if (wheelSpinBtn) {
     wheelSpinBtn.addEventListener('click', () => spinWheel(Math.random() < 0.5 ? -1 : 1, 1));
   }
-  if (wheelGotoBtn) wheelGotoBtn.addEventListener('click', gotoFateResult);
   if (wheelCloseBtn) wheelCloseBtn.addEventListener('click', closeWheel);
   if (wheelOverlay) {
     wheelOverlay.addEventListener('click', (e) => {
@@ -2178,6 +2139,402 @@
     true
   );
 
+  if (whoPaysBtn) whoPaysBtn.addEventListener('click', () => openWheel());
+
+  /* ------------------------------------------------------------------ */
+  /* DRANKAUTOMAAT — gokkast met hendel                                 */
+  /* ------------------------------------------------------------------ */
+  const slotOverlay = document.getElementById('slot-overlay');
+  const slotBox = slotOverlay ? slotOverlay.querySelector('.slot') : null;
+  const slotStrips = [0, 1, 2].map((i) => document.getElementById(`strip-${i}`));
+  const slotLever = document.getElementById('slot-lever');
+  const slotArm = document.getElementById('slot-arm');
+  const slotHint = document.getElementById('slot-hint');
+  const slotResult = document.getElementById('slot-result');
+  const slotSub = document.getElementById('slot-sub');
+  const slotTakeBtn = document.getElementById('slot-take');
+  const slotAgainBtn = document.getElementById('slot-again');
+  const slotWaterBtn = document.getElementById('slot-water');
+  const slotCloseBtn = document.getElementById('slot-close');
+
+  const SLOT_EMOJI = {
+    bieren: '🍺',
+    flessen: '🍻',
+    fris: '🥤',
+    cocktails: '🍹',
+    wijnen: '🍷',
+    shots: '🥃',
+    warme: '☕',
+    fingerfood: '🍟',
+  };
+
+  const SLOT_LINES = [
+    'Het toestel heeft gesproken.',
+    'De machine kent je beter dan je vrienden.',
+    'Geen bezwaar mogelijk. Dit is techniek.',
+    'Drie rollen, één waarheid.',
+    'Zo staat het geschreven in de kast.',
+  ];
+
+  const SLOT_NEARMISS_LINES = [
+    'Zó dicht bij de jackpot. Voel je dat? Dat is pijn.',
+    'Twee gelijk. De derde had andere plannen.',
+    'Bijna. En bijna telt nergens.',
+  ];
+
+  const SLOT_REPEATS = 12;
+  const SREPEAT_TARGET = SLOT_REPEATS - 2; // in welke herhaling de rol stopt
+  const JACKPOT_CHANCE = 0.09;
+  const NEARMISS_CHANCE = 0.3;
+
+  /** @type {{name:string,price:number,category:string,emoji:string,short:string,btn:Element}[]} */
+  let slotPool = [];
+  let slotSpinning = false;
+  let slotCellH = 78;
+  let slotWinner = null;
+
+  function slotShortName(name) {
+    let s = name
+      .replace(" van 't vat", '')
+      .replace(' (6 stuks)', '')
+      .replace(' (Minute Maid)', '')
+      .replace('Chaudfontaine ', '')
+      .replace(' DOC Frizzante', '')
+      .replace(' Brut Réserve', '')
+      .replace('Care ', '');
+    // Glas/fles blijft staan — dat is een ander product én een andere prijs
+    const m = s.match(/^(.*?)\s*\((glas|fles)\)$/);
+    if (m) {
+      const base = m[1].length > 14 ? `${m[1].slice(0, 13).trim()}…` : m[1];
+      return `${base} (${m[2]})`;
+    }
+    return s.length > 20 ? `${s.slice(0, 19).trim()}…` : s;
+  }
+
+  function buildSlotPool() {
+    // Water doet niet mee — dat moet je zelf vangen
+    const btns = [...document.querySelectorAll('[data-add]')].filter((btn) => {
+      const name = btn.dataset.name || '';
+      return name && name !== 'Water' && !btn.disabled && !outOfStock.has(name);
+    });
+    const seen = new Set();
+    return btns
+      .filter((btn) => {
+        const n = btn.dataset.name;
+        if (seen.has(n)) return false;
+        seen.add(n);
+        return true;
+      })
+      .map((btn) => ({
+        name: btn.dataset.name,
+        price: parseFloat(btn.dataset.price) || 0,
+        category: btn.dataset.category || 'cocktails',
+        emoji: SLOT_EMOJI[btn.dataset.category] || '🍸',
+        short: slotShortName(btn.dataset.name),
+        btn,
+      }));
+  }
+
+  function renderSlotStrips() {
+    slotStrips.forEach((strip) => {
+      strip.innerHTML = '';
+      for (let r = 0; r < SLOT_REPEATS; r++) {
+        for (const item of slotPool) {
+          const cell = document.createElement('div');
+          cell.className = 'slot__cell';
+          cell.innerHTML =
+            `<span class="slot__cell-emoji">${item.emoji}</span>` +
+            `<span class="slot__cell-name">${escapeHtml(item.short)}</span>`;
+          strip.appendChild(cell);
+        }
+      }
+      // Elke rol op een andere hoogte starten — anders lijkt de kast bevroren
+      const startAt = Math.floor(Math.random() * slotPool.length);
+      strip.style.transform = `translateY(${-slotOffsetFor(startAt, 1)}px)`;
+    });
+    const firstCell = slotStrips[0].querySelector('.slot__cell');
+    if (firstCell) slotCellH = firstCell.offsetHeight || 78;
+  }
+
+  /** Positie zodat pool-index p in het midden van het venster staat. */
+  function slotOffsetFor(poolIndex, repeat) {
+    const j = repeat * slotPool.length + poolIndex;
+    return (j - 1) * slotCellH;
+  }
+
+  function slotClack(pitch = 1) {
+    try {
+      if (!wheelAudioCtx) {
+        wheelAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (wheelAudioCtx.state === 'suspended') wheelAudioCtx.resume().catch(() => {});
+      const t = wheelAudioCtx.currentTime;
+      const osc = wheelAudioCtx.createOscillator();
+      const gain = wheelAudioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150 * pitch, t);
+      osc.frequency.exponentialRampToValueAtTime(70 * pitch, t + 0.05);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.07, t + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+      osc.connect(gain);
+      gain.connect(wheelAudioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.09);
+    } catch {
+      /* geen audio, geen drama */
+    }
+  }
+
+  function slotFanfare() {
+    try {
+      if (!wheelAudioCtx) {
+        wheelAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const t = wheelAudioCtx.currentTime;
+      [523, 659, 784, 1047].forEach((f, i) => {
+        const osc = wheelAudioCtx.createOscillator();
+        const gain = wheelAudioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(f, t + i * 0.09);
+        gain.gain.setValueAtTime(0.0001, t + i * 0.09);
+        gain.gain.exponentialRampToValueAtTime(0.12, t + i * 0.09 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.3);
+        osc.connect(gain);
+        gain.connect(wheelAudioCtx.destination);
+        osc.start(t + i * 0.09);
+        osc.stop(t + i * 0.09 + 0.32);
+      });
+    } catch {
+      /* stil is ook goed */
+    }
+  }
+
+  /** Eén rol laten draaien en op poolIndex landen. */
+  function spinOneReel(reelIdx, poolIndex, duration) {
+    return new Promise((resolve) => {
+      const strip = slotStrips[reelIdx];
+      const from = slotOffsetFor(0, 1);
+      const to = slotOffsetFor(poolIndex, SREPEAT_TARGET);
+      const start = performance.now();
+      let lastCell = -1;
+
+      if (prefersReducedMotion) {
+        strip.style.transform = `translateY(${-to}px)`;
+        resolve();
+        return;
+      }
+
+      const frame = (now) => {
+        const t = Math.min(1, (now - start) / duration);
+        // Sterke uitloop: snel weg, traag vast
+        const eased = 1 - Math.pow(1 - t, 4);
+        const pos = from + (to - from) * eased;
+        strip.style.transform = `translateY(${-pos}px)`;
+
+        const speed = (1 - eased) * 40;
+        strip.style.filter = speed > 6 ? `blur(${Math.min(6, speed / 5).toFixed(1)}px)` : 'none';
+
+        const cell = Math.floor(pos / slotCellH);
+        if (cell !== lastCell) {
+          lastCell = cell;
+          if (t > 0.35) slotClack(1 + reelIdx * 0.12);
+        }
+
+        if (t < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          strip.style.filter = 'none';
+          slotClack(0.7);
+          if (navigator.vibrate) navigator.vibrate(14);
+          resolve();
+        }
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function setSlotButtons({ take = false, again = false, water = false } = {}) {
+    slotTakeBtn.hidden = !take;
+    slotAgainBtn.hidden = !again;
+    slotWaterBtn.hidden = !water;
+  }
+
+  async function spinSlot() {
+    if (slotSpinning || slotPool.length < 3) return;
+    slotSpinning = true;
+    slotWinner = null;
+    slotBox.classList.remove('slot--win', 'slot--jackpot');
+    slotResult.textContent = '';
+    setSlotButtons({});
+    if (slotHint) slotHint.hidden = true;
+
+    const n = slotPool.length;
+    const roll = Math.random();
+    let idx;
+
+    if (roll < JACKPOT_CHANCE) {
+      const p = Math.floor(Math.random() * n);
+      idx = [p, p, p]; // drie gelijk
+    } else if (roll < JACKPOT_CHANCE + NEARMISS_CHANCE) {
+      // Bijna-jackpot: twee gelijk, de derde één plek ernaast
+      const p = Math.floor(Math.random() * n);
+      const off = (p + (Math.random() < 0.5 ? 1 : n - 1)) % n;
+      idx = Math.random() < 0.5 ? [p, p, off] : [off, p, p];
+    } else {
+      idx = [0, 1, 2].map(() => Math.floor(Math.random() * n));
+    }
+
+    await Promise.all([
+      spinOneReel(0, idx[0], 1500),
+      spinOneReel(1, idx[1], 2100),
+      spinOneReel(2, idx[2], 2800),
+    ]);
+
+    const picked = slotPool[idx[1]];
+    slotWinner = picked;
+    const jackpot = idx[0] === idx[1] && idx[1] === idx[2];
+    const nearMiss = !jackpot && (idx[0] === idx[1] || idx[1] === idx[2] || idx[0] === idx[2]);
+
+    slotBox.classList.add('slot--win');
+    if (jackpot) {
+      slotBox.classList.add('slot--jackpot');
+      slotFanfare();
+      celebrateOrderSuccess();
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40, 60, 80]);
+      slotResult.innerHTML =
+        `🎰 JACKPOT — 3× ${escapeHtml(picked.short)}!` +
+        `<span class="slot__result-sub">Het toestel eist dat je dit drinkt. En het water wil je spreken.</span>`;
+      setSlotButtons({ take: true, again: true, water: true });
+    } else {
+      burstConfetti();
+      slotResult.innerHTML =
+        `${picked.emoji} ${escapeHtml(picked.name)} · ${formatEuro(picked.price)}` +
+        `<span class="slot__result-sub">${escapeHtml(
+          nearMiss ? pick(SLOT_NEARMISS_LINES) : pick(SLOT_LINES)
+        )}</span>`;
+      setSlotButtons({ take: true, again: true });
+    }
+
+    slotSpinning = false;
+  }
+
+  /* De hendel: naar beneden slepen en loslaten */
+  if (slotLever && slotArm) {
+    const MAX_TRAVEL = 92;
+    let dragging = false;
+    let startY = 0;
+    let travel = 0;
+
+    const setArm = (y) => {
+      slotArm.style.transform = `translateY(${y}px)`;
+    };
+
+    const release = () => {
+      if (!dragging) return;
+      dragging = false;
+      slotArm.style.transition = 'transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      setArm(0);
+      setTimeout(() => {
+        slotArm.style.transition = '';
+      }, 460);
+      if (travel > MAX_TRAVEL * 0.55) spinSlot();
+      travel = 0;
+    };
+
+    slotLever.addEventListener('pointerdown', (ev) => {
+      if (slotSpinning) return;
+      dragging = true;
+      startY = ev.clientY;
+      slotArm.style.transition = '';
+      slotLever.setPointerCapture(ev.pointerId);
+    });
+
+    slotLever.addEventListener('pointermove', (ev) => {
+      if (!dragging) return;
+      travel = Math.max(0, Math.min(MAX_TRAVEL, ev.clientY - startY));
+      setArm(travel);
+      if (travel > MAX_TRAVEL * 0.55 && !slotLever.dataset.armed) {
+        slotLever.dataset.armed = '1';
+        if (navigator.vibrate) navigator.vibrate(8);
+      }
+    });
+
+    slotLever.addEventListener('pointerup', () => {
+      delete slotLever.dataset.armed;
+      release();
+    });
+    slotLever.addEventListener('pointercancel', () => {
+      delete slotLever.dataset.armed;
+      release();
+    });
+
+    // Tikken of toetsenbord mag ook — niemand blijft in het ongewisse
+    slotLever.addEventListener('click', () => {
+      if (!slotSpinning && travel === 0) spinSlot();
+    });
+    slotLever.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        spinSlot();
+      }
+    });
+  }
+
+  function openSlot() {
+    slotPool = buildSlotPool();
+    if (slotPool.length < 3) {
+      showToast('Te weinig op voorraad voor een gokje 🍾', true, 2600);
+      return;
+    }
+    renderSlotStrips();
+    slotBox.classList.remove('slot--win', 'slot--jackpot');
+    slotResult.textContent = '';
+    slotSub.textContent = 'Trek aan de hendel — het toestel beslist';
+    setSlotButtons({});
+    if (slotHint) slotHint.hidden = false;
+    slotOverlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSlot() {
+    slotOverlay.hidden = true;
+    slotSpinning = false;
+    if (!drawer.classList.contains('open')) document.body.style.overflow = '';
+  }
+
+  if (slotOverlay) {
+    slotCloseBtn.addEventListener('click', closeSlot);
+    slotOverlay.addEventListener('click', (e) => {
+      if (e.target === slotOverlay) closeSlot();
+    });
+    slotAgainBtn.addEventListener('click', spinSlot);
+    slotTakeBtn.addEventListener('click', () => {
+      if (!slotWinner) return;
+      const { name, price, category, btn } = slotWinner;
+      // Eerst sluiten: anders speelt de vonk naar het mandje achter de overlay
+      closeSlot();
+      closeDrawer();
+      addItem(name, price, category);
+      revealOnMenu(btn);
+      sparkToFab(btn);
+    });
+    slotWaterBtn.addEventListener('click', () => {
+      closeSlot();
+      openWaterArena();
+    });
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && !slotOverlay.hidden) {
+          closeSlot();
+          e.stopPropagation();
+        }
+      },
+      true
+    );
+  }
+
   if (diceBtn) {
     diceBtn.addEventListener('click', () => {
       if (!prefersReducedMotion) {
@@ -2185,10 +2542,9 @@
         void diceBtn.offsetWidth;
         diceBtn.classList.add('search-bar__dice--rolling');
       }
-      openWheel('fate');
+      openSlot();
     });
   }
-  if (whoPaysBtn) whoPaysBtn.addEventListener('click', () => openWheel('whopays'));
 
   // Rotate hero badge vibes every so often
   const badgeTextEl = document.getElementById('hero-badge-text');

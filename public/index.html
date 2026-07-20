@@ -63,9 +63,9 @@
         type="button"
         class="search-bar__dice"
         id="menu-dice"
-        aria-label="Verras me — het lot kiest iets van het menu"
-        title="Verras me"
-      >🎲</button>
+        aria-label="Drankautomaat — laat de kast kiezen wat je drinkt"
+        title="Drankautomaat"
+      >🎰</button>
     </div>
   </div>
 
@@ -705,6 +705,47 @@
     </div>
   </div>
 
+  <div class="slot-overlay" id="slot-overlay" hidden>
+    <div class="slot" role="dialog" aria-modal="true" aria-labelledby="slot-title">
+      <button type="button" class="slot__close" id="slot-close" aria-label="Sluit de drankautomaat">×</button>
+
+      <div class="slot__marquee">
+        <span class="slot__bulbs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <h2 class="slot__title" id="slot-title">DRANKAUTOMAAT</h2>
+        <p class="slot__sub" id="slot-sub">Trek aan de hendel — het toestel beslist</p>
+      </div>
+
+      <div class="slot__body">
+        <div class="slot__cabinet">
+          <div class="slot__window">
+            <div class="slot__reel"><div class="slot__strip" id="strip-0"></div></div>
+            <div class="slot__reel"><div class="slot__strip" id="strip-1"></div></div>
+            <div class="slot__reel"><div class="slot__strip" id="strip-2"></div></div>
+            <div class="slot__payline" aria-hidden="true">
+              <span class="slot__arrow slot__arrow--l">▶</span>
+              <span class="slot__arrow slot__arrow--r">◀</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="slot__lever" id="slot-lever" role="button" tabindex="0"
+             aria-label="Trek aan de hendel om te draaien">
+          <div class="slot__lever-track"></div>
+          <div class="slot__lever-arm" id="slot-arm"><span class="slot__lever-knob"></span></div>
+          <span class="slot__lever-hint" id="slot-hint">trek ↓</span>
+        </div>
+      </div>
+
+      <p class="slot__result" id="slot-result" role="status" aria-live="polite"></p>
+
+      <div class="slot__actions">
+        <button type="button" class="slot__btn slot__btn--primary" id="slot-take" hidden>Zet op mijn bestelling</button>
+        <button type="button" class="slot__btn slot__btn--water" id="slot-water" hidden>Vang het water 💧</button>
+        <button type="button" class="slot__btn slot__btn--ghost" id="slot-again" hidden>Nog eens</button>
+      </div>
+    </div>
+  </div>
+
   <div class="wheel-overlay" id="wheel-overlay" hidden>
     <div class="wheel-modal" role="dialog" aria-modal="true" aria-labelledby="wheel-title">
       <button type="button" class="wheel__close" id="wheel-close" aria-label="Sluit het rad">×</button>
@@ -717,7 +758,6 @@
       <p class="wheel__result" id="wheel-result" role="status" aria-live="polite" hidden></p>
       <div class="wheel__actions">
         <button type="button" class="wheel__btn wheel__btn--primary" id="wheel-spin">Draai</button>
-        <button type="button" class="wheel__btn wheel__btn--ghost" id="wheel-goto" hidden>Breng me erheen</button>
       </div>
     </div>
   </div>
