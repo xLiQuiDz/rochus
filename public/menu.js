@@ -1831,22 +1831,22 @@
 
   // Cards-against-humanity-vibes: kort op het rad, de dolk in de toelichting
   const WHO_PAYS_CARDS = [
-    { label: 'De ex-checker 📱', line: 'Wie z’n ex vannacht nog gecheckt heeft, betaalt. Geen oordeel. (Beetje wel.)' },
-    { label: 'Teleurstelling 🏆', line: 'De grootste teleurstelling van de familie betaalt. Jullie weten allemaal wie.' },
-    { label: 'Woont nog thuis 🏠', line: 'Wie nog bij mama woont, betaalt. Je spaart toch huur uit.' },
-    { label: 'Huilde deze week 😭', line: 'Wie deze week al geweend heeft, betaalt. Tranen drogen, portefeuille boven.' },
-    { label: 'Therapie geskipt 🛋️', line: 'Wie therapie heeft afgezegd voor dit café, betaalt. Dit ís nu je therapie.' },
-    { label: 'Droevigste lovelife 💔', line: 'Degene met het droevigste liefdesleven betaalt. Overleg gerust even.' },
-    { label: 'Rode vlaggen 🚩', line: 'De persoon met de meeste rode vlaggen betaalt. Ja, iedereen kijkt nu naar jou.' },
-    { label: 'LinkedIn-poster 💼', line: 'Wie ooit “excited to announce” heeft gepost, betaalt. Terecht.' },
-    { label: 'Kater incoming 🧟', line: 'Wie morgen “nooit meer alcohol” gaat zeggen, betaalt vanavond alvast.' },
-    { label: 'Jij. Gewoon jij. 🫵', line: 'Het rad heeft jou gekozen. Het universum ook. Aanvaard het.' },
-    { label: 'Splitsen 🧮', line: 'Niemand wint: splitsen. Jullie sterven toch ook allemaal alleen.' },
-    { label: 'De stilste 👀', line: 'De stilste aan tafel betaalt. Die spaart woorden én geld — tijd om te delen.' },
-    { label: 'Hoogste schermtijd 📵', line: 'Wie de hoogste schermtijd heeft, betaalt. Toon maar. Lafaards verliezen dubbel.' },
-    { label: 'Gym-abonnement 🏋️', line: 'Wie een ongebruikt gymabonnement heeft, betaalt — geld weggooien kan je al.' },
-    { label: 'Situationship 🥀', line: 'Wie in een situationship zit, betaalt. Onduidelijkheid kost geld.' },
-    { label: '“Gestopt” met vapen 💨', line: 'Wie “gestopt is met vapen” maar er eentje op zak heeft: betalen.' },
+    { label: 'Nog single 💀', line: 'Wie single is, betaalt. Je spaart al genoeg op emotionele schade.' },
+    { label: 'Studentenschuld 📚', line: 'Wie nog studieleningen aflost, betaalt. Je bent toch al gewend om te bloeden.' },
+    { label: '“Ik drink niet meer” 🍷', line: 'Wie dat zei en hier zit: jij trakteert. Liegen was gratis, drinken niet.' },
+    { label: 'Ghosting royalty 👻', line: 'Wie dit jaar iemand liet verdwijnen zonder uitleg, betaalt. Karma stuurt een factuur.' },
+    { label: 'Situationship 🥀', line: 'Wie “het is complicated” nog steeds gebruikt: jij. Onduidelijkheid is een luxeproduct.' },
+    { label: 'Ex stalker lite 📱', line: 'Wie z’n ex z’n stories nog bekijkt: betaal. Obsessief én arm is te veel.' },
+    { label: 'Sunday scaries 😰', line: 'Wie al paniek heeft over maandag, betaalt. Je burnout sponsort de ronde.' },
+    { label: '“Ik ga vroeg” 😴', line: 'Wie dat beloofde en bleef: jij. Consistency is voor losers én voor betalen.' },
+    { label: 'LinkedIn clown 💼', line: 'Wie “grateful for this journey” postte terwijl-ie haatte: betalen. Performative gratitude tax.' },
+    { label: 'Therapy cancelled 🛋️', line: 'Wie therapie skipte voor dit café: jij. Je trauma bestelt mee.' },
+    { label: 'Gym-schuld 🏋️', line: 'Wie betaalt om níet te sporten: jij hier ook. Zelfsabotage als businessmodel.' },
+    { label: 'Vape-leugenaar 💨', line: 'Wie “gestopt” is met een stick in de zak: betalen. Je longen zijn al failliet.' },
+    { label: 'Main character delusion 🎬', line: 'Wie denkt dat vanavond over hen gaat: trakteer de extras. Spoiler: niemand kijkt.' },
+    { label: 'Soft launch crush 📸', line: 'Wie een crush soft-launchte en daarna ghostte: jij. Content zonder commitment is duur.' },
+    { label: 'Collectieve armoede 🧮', line: 'Splitsen. Jullie zijn allemaal broke, maar op verschillende levels van ontkenning.' },
+    { label: 'Jij. Punt. 🫵', line: 'Het rad koos jou. Protesteer en we draaien nog eens — tot het erger wordt.' },
   ];
 
   const FATE_LINES = [
