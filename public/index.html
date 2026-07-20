@@ -42,16 +42,25 @@
   </nav>
 
   <div class="search-bar">
-    <div class="search-bar__input-wrap">
-      <span class="search-bar__icon" aria-hidden="true">⌕</span>
-      <input
-        type="search"
-        class="search-bar__input"
-        id="menu-search"
-        placeholder="Zoek in het menu…"
-        autocomplete="off"
-        aria-label="Zoek in het menu"
-      />
+    <div class="search-bar__row">
+      <div class="search-bar__input-wrap">
+        <span class="search-bar__icon" aria-hidden="true">⌕</span>
+        <input
+          type="search"
+          class="search-bar__input"
+          id="menu-search"
+          placeholder="Zoek in het menu…"
+          autocomplete="off"
+          aria-label="Zoek in het menu"
+        />
+      </div>
+      <button
+        type="button"
+        class="search-bar__dice"
+        id="menu-dice"
+        aria-label="Verras me — het lot kiest iets van het menu"
+        title="Verras me"
+      >🎲</button>
     </div>
   </div>
 
@@ -608,6 +617,9 @@
         placeholder="bv. zonder ijs / met drama"
         autocomplete="off"
       />
+      <button type="button" class="order-drawer__whopays" id="who-pays">
+        🎡 Wie betaalt deze ronde?
+      </button>
       <p class="order-drawer__cash">Nog niet verstuurd · cash bij levering</p>
       <p class="order-drawer__table-hint" id="order-table-hint"></p>
       <button type="button" class="order-drawer__submit" id="order-submit">

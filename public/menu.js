@@ -1418,6 +1418,122 @@
     });
   }
 
+  /* ------------------------------------------------------------------ */
+  /* Menu-roulette: het lot kiest je volgende drankje                   */
+  /* ------------------------------------------------------------------ */
+  const diceBtn = document.getElementById('menu-dice');
+  let diceRolling = false;
+  let diceRolls = 0;
+
+  function rollDice() {
+    if (diceRolling) return;
+    // Water doet niet mee — dat moet je zelf vangen
+    const candidates = [...document.querySelectorAll('[data-add]')].filter((btn) => {
+      const name = btn.dataset.name || '';
+      return name && name !== 'Water' && !btn.disabled && !outOfStock.has(name);
+    });
+    if (candidates.length === 0) {
+      showToast('Alles is op?! Legendarische avond 🍾', true, 2600);
+      return;
+    }
+
+    diceRolling = true;
+    diceRolls += 1;
+    diceBtn.classList.remove('search-bar__dice--rolling');
+    void diceBtn.offsetWidth;
+    diceBtn.classList.add('search-bar__dice--rolling');
+
+    if (searchInput.value) searchInput.value = '';
+    applyCategoryFilter('all');
+
+    const target = pick(candidates);
+    const name = target.dataset.name;
+
+    setTimeout(() => {
+      diceBtn.classList.remove('search-bar__dice--rolling');
+      diceRolling = false;
+
+      const card = target.closest('.menu-card, .daily-special');
+      if (card) {
+        spyPaused = true;
+        card.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
+        setTimeout(() => {
+          spyPaused = false;
+        }, 900);
+        if (!prefersReducedMotion) {
+          card.classList.remove('gag-wobble');
+          void card.offsetWidth;
+          card.classList.add('gag-wobble');
+          setTimeout(() => card.classList.remove('gag-wobble'), 900);
+          triggerCardShimmer(card);
+          spawnFloatingSticker(card, 'het lot');
+        }
+      }
+      showToast(`Het lot zegt: ${name} 🎲`, false, 3200);
+      if (diceRolls > 0 && diceRolls % 4 === 0) {
+        setTimeout(() => showToast('Het lot begint zich zorgen te maken 😅', false, 2200), 3400);
+      }
+    }, prefersReducedMotion ? 0 : 650);
+  }
+
+  if (diceBtn) diceBtn.addEventListener('click', rollDice);
+
+  /* ------------------------------------------------------------------ */
+  /* Wie betaalt? — het rad beslist, geen discussie                     */
+  /* ------------------------------------------------------------------ */
+  const whoPaysBtn = document.getElementById('who-pays');
+  const WHO_PAYS_DEFAULT = '🎡 Wie betaalt deze ronde?';
+  const WHO_PAYS_OUTCOMES = [
+    'Degene met de minste batterij 🔋',
+    'De persoon rechts van jou 👉',
+    'Jij. Gewoon jij. 🫵',
+    'Wie het laatst “proost!” zei 🥂',
+    'De oudste aan tafel 🧓',
+    'Degene met de beste schoenen 👟',
+    'Wie het laatst op z’n telefoon zat 📱',
+    'Niemand — jullie splitten 🧮',
+    'Degene die dit knopje indrukte 😈',
+    'Wie morgen moet werken 💼',
+  ];
+  let whoPaysSpinning = false;
+
+  if (whoPaysBtn) {
+    whoPaysBtn.addEventListener('click', () => {
+      if (whoPaysSpinning) return;
+      whoPaysSpinning = true;
+      const finalPick = pick(WHO_PAYS_OUTCOMES);
+
+      const land = () => {
+        whoPaysBtn.classList.remove('order-drawer__whopays--spinning');
+        whoPaysBtn.classList.add('order-drawer__whopays--landed');
+        whoPaysBtn.textContent = finalPick;
+        burstConfetti();
+        showToast('Het rad heeft gesproken 🎡 Geen discussie.', false, 2600);
+        setTimeout(() => {
+          whoPaysBtn.classList.remove('order-drawer__whopays--landed');
+          whoPaysBtn.textContent = WHO_PAYS_DEFAULT;
+          whoPaysSpinning = false;
+        }, 6000);
+      };
+
+      if (prefersReducedMotion) {
+        land();
+        return;
+      }
+
+      whoPaysBtn.classList.add('order-drawer__whopays--spinning');
+      let ticks = 0;
+      const spin = setInterval(() => {
+        whoPaysBtn.textContent = pick(WHO_PAYS_OUTCOMES);
+        ticks += 1;
+        if (ticks >= 14) {
+          clearInterval(spin);
+          land();
+        }
+      }, 90);
+    });
+  }
+
   // Rotate hero badge vibes every so often
   const badgeTextEl = document.getElementById('hero-badge-text');
   if (badgeTextEl && !prefersReducedMotion) {
