@@ -1575,6 +1575,145 @@ h1, h2, h3, h4 {
   border-color: var(--amber-500);
 }
 
+/* Betaalwijze-keuze in het bevestigscherm */
+.confirm-modal__pay {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.pay-option {
+  flex: 1;
+  padding: 11px 10px;
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pay-option--active {
+  border-color: var(--amber-500);
+  background: var(--amber-glow);
+  color: var(--amber-400);
+}
+
+/* Bancontact/Payconiq betaalscherm na bestelling */
+.pay-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 620;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(6, 5, 4, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.pay-overlay[hidden] {
+  display: none !important;
+}
+
+.pay-modal {
+  position: relative;
+  width: min(calc(100vw - 40px), 380px);
+  padding: 30px 24px 24px;
+  background:
+    linear-gradient(180deg, var(--glass-highlight) 0%, transparent 14px),
+    var(--bg-surface);
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card), 0 0 40px rgba(96, 165, 250, 0.15);
+  text-align: center;
+}
+
+.pay-modal__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pay-modal__close:hover {
+  color: var(--text-primary);
+}
+
+.pay-modal__title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.35rem;
+  color: var(--text-primary);
+}
+
+.pay-modal__amount-label {
+  margin-top: 12px;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pay-modal__amount {
+  font-family: 'Cinzel', serif;
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: #93c5fd;
+  line-height: 1.2;
+}
+
+.pay-modal__btn {
+  display: block;
+  margin: 14px auto 0;
+  padding: 14px 22px;
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  border-radius: var(--radius-full);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  box-shadow: 0 6px 24px rgba(37, 99, 235, 0.4);
+  transition: transform var(--transition-fast);
+}
+
+.pay-modal__btn:hover {
+  transform: translateY(-1px);
+}
+
+.pay-modal__or {
+  margin-top: 14px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.pay-modal__qr {
+  display: block;
+  margin: 10px auto 0;
+  width: 170px;
+  height: 170px;
+  border-radius: var(--radius-md);
+  border: 4px solid #fffaf2;
+  background: #fffaf2;
+}
+
+.pay-modal__hint {
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
 /* Live order tracking chip */
 .order-track {
   position: fixed;

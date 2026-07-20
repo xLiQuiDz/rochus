@@ -1,6 +1,6 @@
 # Rochus — Summer Pop-Up Bar
 
-QR table ordering with a live staff dashboard. Guests pay **cash on delivery**.
+QR table ordering with a live staff dashboard. Guests pay **cash of Bancontact/Payconiq** bij levering.
 
 ## Architecture
 
@@ -39,7 +39,8 @@ npm test   # catalog & pricing unit tests (no DB needed)
 1. Scan table QR → menu with **Tafel N** locked
 2. Add drinks/food (+ buttons) — or let the 🎲 dice pick for you
 3. Open cart (🛒) → **Controleer bestelling** (optioneel: 🎡 *Wie betaalt?*)
-4. Confirmation modal → **Bevestigen & versturen**
+4. Confirmation modal → kies **Cash** of **Bancontact** → **Bevestigen & versturen**
+   (Bancontact: betaalscherm met bedrag, app-link en QR verschijnt na versturen)
 5. Order lands on staff dashboard; guest follows progress via the status chip
    (bij de bar → wordt gemaakt → geserveerd 🥂 met confetti)
 
@@ -55,7 +56,8 @@ npm test   # catalog & pricing unit tests (no DB needed)
 - Tickets **oudste eerst** met live leeftijd-badge (oranje ≥ 5 min, rood ≥ 10 min)
 - Nieuw ticket: chime + flash; herinnering elke minuut zolang er iets open staat
 - **Ongedaan maken**-toast na Geserveerd/Annuleren (6 s)
-- Dagstats in de header: aantal bestellingen, omzet, top 3 items
+- Betaal-badge per ticket (💶 cash innen of 📱 Payconiq-vinkje checken)
+- Dagstats in de header: aantal bestellingen, omzet (incl. Payconiq-aandeel), top 3 items
 - Voorraadpaneel: producten uitverkocht zetten (gasten zien het meteen)
 - Menukaart printen in twee formaten: A4 tafelkaart én klemkaart 140×190 mm
   voor de houten klemborden (2 per A4 liggend, knippen op de stippellijn)
@@ -75,6 +77,7 @@ npm test   # catalog & pricing unit tests (no DB needed)
 | `GET /api/stats/today` | staff | Dagtotalen + top items (Europe/Brussels) |
 | `GET /api/menu/print` | staff | Printklare menukaart-data |
 | `GET /api/qr/:table` | — | PNG QR-sticker voor tafel N |
+| `GET /api/qr/payconiq.png` | — | PNG QR met de Bancontact-betaallink |
 
 Login is rate-limited (max 10 foute PIN-pogingen per kwartier per IP).
 
@@ -88,6 +91,7 @@ Login is rate-limited (max 10 foute PIN-pogingen per kwartier per IP).
 | `PUBLIC_URL` | Public base URL for QR codes |
 | `PORT` | HTTP port (Railway injects this) |
 | `PGSSL` | Set `true` if SSL is required for Postgres |
+| `PAYCONIQ_URL` | Bancontact/Payconiq betaallink voor de betaal-QR |
 
 ## Production (Railway)
 

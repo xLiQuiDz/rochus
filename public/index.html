@@ -622,7 +622,7 @@
       <button type="button" class="order-drawer__whopays" id="who-pays">
         🎡 Wie betaalt deze ronde?
       </button>
-      <p class="order-drawer__cash">Nog niet verstuurd · cash bij levering</p>
+      <p class="order-drawer__cash">Nog niet verstuurd · cash of Bancontact bij levering</p>
       <p class="order-drawer__table-hint" id="order-table-hint"></p>
       <button type="button" class="order-drawer__submit" id="order-submit">
         Verder naar bevestiging
@@ -648,7 +648,15 @@
         <span id="confirm-total">€0</span>
       </div>
     </div>
-    <p class="confirm-modal__cash">Pas na bevestiging gaat dit naar de bar · cash bij levering</p>
+    <div class="confirm-modal__pay" role="radiogroup" aria-label="Hoe wil je betalen?">
+      <button type="button" class="pay-option pay-option--active" data-pay="cash" aria-pressed="true">
+        <span aria-hidden="true">💶</span> Cash
+      </button>
+      <button type="button" class="pay-option" data-pay="payconiq" aria-pressed="false">
+        <span aria-hidden="true">📱</span> Bancontact
+      </button>
+    </div>
+    <p class="confirm-modal__cash" id="confirm-pay-hint">Pas na bevestiging gaat dit naar de bar · cash bij levering</p>
     <div class="confirm-modal__actions">
       <button type="button" class="confirm-modal__btn confirm-modal__btn--ghost" id="confirm-cancel">
         Terug naar mandje
@@ -656,6 +664,21 @@
       <button type="button" class="confirm-modal__btn confirm-modal__btn--primary" id="confirm-send">
         Ja, verstuur naar de bar
       </button>
+    </div>
+  </div>
+
+  <div class="pay-overlay" id="pay-overlay" hidden>
+    <div class="pay-modal" role="dialog" aria-modal="true" aria-labelledby="pay-title">
+      <button type="button" class="pay-modal__close" id="pay-close" aria-label="Sluit betaalscherm">×</button>
+      <h2 class="pay-modal__title" id="pay-title">Betalen met Bancontact</h2>
+      <p class="pay-modal__amount-label">Typ dit bedrag in de app</p>
+      <p class="pay-modal__amount" id="pay-amount">€0</p>
+      <a class="pay-modal__btn" id="pay-link" href="#" target="_blank" rel="noopener">
+        Open Bancontact / bank-app
+      </a>
+      <p class="pay-modal__or">of laat iemand anders scannen</p>
+      <img class="pay-modal__qr" id="pay-qr" src="/api/qr/payconiq.png" alt="Bancontact betaal-QR" width="180" height="180" loading="lazy" />
+      <p class="pay-modal__hint">Betaald? Toon het vinkje even als we je bestelling brengen 🙌</p>
     </div>
   </div>
 

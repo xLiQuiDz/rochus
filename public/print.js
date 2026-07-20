@@ -119,7 +119,7 @@
         <div class="sheet__footer-row">
           <span>Scan de QR om te bestellen</span>
           <span class="sheet__footer-sep" aria-hidden="true">✦</span>
-          <span>Cash bij levering</span>
+          <span>Cash of Bancontact bij levering</span>
         </div>
       </footer>
     </article>`;

@@ -12,12 +12,14 @@ const pool = new Pool({
 });
 
 const VALID_STATUSES = new Set(['new', 'preparing', 'served', 'cancelled']);
+const VALID_PAYMENT_METHODS = new Set(['cash', 'payconiq']);
 
 function mapOrder(row, items = []) {
   return {
     id: Number(row.id),
     table_number: Number(row.table_number),
     status: row.status,
+    payment_method: row.payment_method || 'cash',
     subtotal_cents: Number(row.subtotal_cents),
     discount_cents: Number(row.discount_cents),
     total_cents: Number(row.total_cents),
@@ -46,6 +48,8 @@ async function initDb() {
       table_number INTEGER NOT NULL,
       status TEXT NOT NULL DEFAULT 'new'
         CHECK (status IN ('new', 'preparing', 'served', 'cancelled')),
+      payment_method TEXT NOT NULL DEFAULT 'cash'
+        CHECK (payment_method IN ('cash', 'payconiq')),
       subtotal_cents INTEGER NOT NULL,
       discount_cents INTEGER NOT NULL DEFAULT 0,
       total_cents INTEGER NOT NULL,
@@ -54,6 +58,9 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'cash'
+      CHECK (payment_method IN ('cash', 'payconiq'));
 
     CREATE TABLE IF NOT EXISTS order_items (
       id BIGSERIAL PRIMARY KEY,
@@ -158,7 +165,8 @@ async function getOrderPublicStatus(id) {
   };
 }
 
-async function createOrder({ table_number, note, priced, client_request_id }) {
+async function createOrder({ table_number, note, priced, client_request_id, payment_method }) {
+  const method = VALID_PAYMENT_METHODS.has(payment_method) ? payment_method : 'cash';
   if (client_request_id) {
     const existing = await pool.query(
       'SELECT id FROM orders WHERE client_request_id = $1',
@@ -175,11 +183,12 @@ async function createOrder({ table_number, note, priced, client_request_id }) {
 
     const orderResult = await client.query(
       `INSERT INTO orders
-        (table_number, status, subtotal_cents, discount_cents, total_cents, note, client_request_id)
-       VALUES ($1, 'new', $2, $3, $4, $5, $6)
+        (table_number, status, payment_method, subtotal_cents, discount_cents, total_cents, note, client_request_id)
+       VALUES ($1, 'new', $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
         table_number,
+        method,
         priced.subtotal_cents,
         priced.discount_cents,
         priced.total_cents,
@@ -282,7 +291,9 @@ async function updateOrderStatus(id, status) {
 async function getTodayStats() {
   const totals = await pool.query(
     `SELECT COUNT(*)::int AS orders,
-            COALESCE(SUM(total_cents), 0)::int AS revenue_cents
+            COALESCE(SUM(total_cents), 0)::int AS revenue_cents,
+            COALESCE(SUM(total_cents) FILTER (WHERE payment_method = 'payconiq'), 0)::int
+              AS payconiq_cents
      FROM orders
      WHERE status <> 'cancelled'
        AND (created_at AT TIME ZONE 'Europe/Brussels')::date =
@@ -302,6 +313,7 @@ async function getTodayStats() {
   return {
     orders: totals.rows[0].orders,
     revenue_cents: totals.rows[0].revenue_cents,
+    payconiq_cents: totals.rows[0].payconiq_cents,
     top: top.rows.map((r) => ({ name: r.name, qty: Number(r.qty) })),
   };
 }

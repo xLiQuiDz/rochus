@@ -262,6 +262,9 @@
         <div class="ticket__body">
           <div class="ticket__meta">
             <span class="ticket__status ticket__status--${order.status}">${statusLabel(order.status)}</span>
+            <span class="ticket__pay${
+              order.payment_method === 'payconiq' ? ' ticket__pay--payconiq' : ''
+            }">${order.payment_method === 'payconiq' ? '📱 Payconiq' : '💶 Cash'}</span>
             <span class="ticket__time">#${order.id} · ${formatTime(order.created_at)}</span>
             <span class="ticket__age">${ageLabel(mins)}</span>
           </div>
@@ -336,8 +339,9 @@
       if (!res.ok) return;
       const s = await res.json();
       const top = (s.top || []).map((t) => `${t.name} ×${t.qty}`).join(' · ');
+      const payconiq = s.payconiq_cents > 0 ? ` (waarvan 📱 ${formatEuroCents(s.payconiq_cents)})` : '';
       statsEl.textContent =
-        `Vandaag: ${s.orders} bestellingen · ${formatEuroCents(s.revenue_cents)}` +
+        `Vandaag: ${s.orders} bestellingen · ${formatEuroCents(s.revenue_cents)}${payconiq}` +
         (top ? ` · Top: ${top}` : '');
       statsEl.hidden = false;
     } catch {

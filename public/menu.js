@@ -617,6 +617,75 @@
     confirmSend.textContent = 'Ja, verstuur naar de bar';
   }
 
+  /* ---------------- Betaalwijze: cash of Bancontact/Payconiq ---------------- */
+  const PAY_KEY = 'rochus-pay-method';
+  const payButtons = [...document.querySelectorAll('.pay-option')];
+  const payHint = document.getElementById('confirm-pay-hint');
+  const payOverlay = document.getElementById('pay-overlay');
+  const payAmountEl = document.getElementById('pay-amount');
+  const payLinkEl = document.getElementById('pay-link');
+  const payCloseBtn = document.getElementById('pay-close');
+  let payMethod = 'cash';
+  let payconiqUrl = '';
+  try {
+    if (localStorage.getItem(PAY_KEY) === 'payconiq') payMethod = 'payconiq';
+  } catch {
+    /* private mode */
+  }
+
+  const PAY_HINTS = {
+    cash: 'Pas na bevestiging gaat dit naar de bar · cash bij levering',
+    payconiq: 'Pas na bevestiging gaat dit naar de bar · daarna betaal je met de app',
+  };
+
+  function applyPayMethod(method) {
+    payMethod = method === 'payconiq' ? 'payconiq' : 'cash';
+    payButtons.forEach((btn) => {
+      const on = btn.dataset.pay === payMethod;
+      btn.classList.toggle('pay-option--active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    if (payHint) payHint.textContent = PAY_HINTS[payMethod];
+    try {
+      localStorage.setItem(PAY_KEY, payMethod);
+    } catch {
+      /* private mode */
+    }
+  }
+
+  payButtons.forEach((btn) => {
+    btn.addEventListener('click', () => applyPayMethod(btn.dataset.pay));
+  });
+  applyPayMethod(payMethod);
+
+  function openPayOverlay(totalCents) {
+    if (!payOverlay) return;
+    payAmountEl.textContent = formatEuro(totalCents / 100);
+    if (payconiqUrl) payLinkEl.href = payconiqUrl;
+    payOverlay.hidden = false;
+  }
+
+  function closePayOverlay() {
+    if (payOverlay) payOverlay.hidden = true;
+  }
+
+  if (payOverlay) {
+    payCloseBtn.addEventListener('click', closePayOverlay);
+    payOverlay.addEventListener('click', (e) => {
+      if (e.target === payOverlay) closePayOverlay();
+    });
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && !payOverlay.hidden) {
+          closePayOverlay();
+          e.stopPropagation();
+        }
+      },
+      true
+    );
+  }
+
   async function submitOrder() {
     // Hard gate: never POST unless the confirm dialog is open
     if (!confirmReady || submitting || !tableNumber || order.size === 0) return;
@@ -645,6 +714,7 @@
           items,
           note: (noteInput.value || '').trim(),
           client_request_id: clientRequestId,
+          payment_method: payMethod,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -664,6 +734,9 @@
       showToast(pick(SENT_TOASTS).replace('{n}', String(tableNumber)), false, 4200);
       celebrateOrderSuccess();
       if (data && data.id) trackOrder(data.id);
+      if (payMethod === 'payconiq' && data && data.total_cents) {
+        setTimeout(() => openPayOverlay(data.total_cents), 600);
+      }
     } catch (err) {
       showToast(err.message || 'Bestelling mislukt', true, 4200);
       confirmSend.disabled = false;
@@ -1040,6 +1113,7 @@
       if (res.ok) {
         const cfg = await res.json();
         if (cfg.tableCount) tableCount = cfg.tableCount;
+        if (cfg.payconiqUrl) payconiqUrl = cfg.payconiqUrl;
       }
     } catch {
       /* offline / static preview */

@@ -25,6 +25,10 @@ const PORT = Number(process.env.PORT) || 3000;
 const STAFF_PIN = process.env.STAFF_PIN || '4321';
 const TABLE_COUNT = Math.max(1, Number(process.env.TABLE_COUNT) || 30);
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+// Bancontact/Payconiq betaallink van de bar (statische QR — gast typt zelf het bedrag)
+const PAYCONIQ_URL =
+  process.env.PAYCONIQ_URL ||
+  'https://pay.bancontact.net/t/1/6a5e23900444c2c061bab505?D=Drink%2C+chill+%26+have+fun&R=Afterfive+Summerbar';
 const SESSION_COOKIE = 'rochus_staff';
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
@@ -123,7 +127,7 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.get('/api/config', (_req, res) => {
-  res.json({ tableCount: TABLE_COUNT, publicUrl: PUBLIC_URL });
+  res.json({ tableCount: TABLE_COUNT, publicUrl: PUBLIC_URL, payconiqUrl: PAYCONIQ_URL });
 });
 
 /** Public: which items are currently out of stock */
@@ -193,6 +197,27 @@ app.get('/api/stats/today', requireStaff, async (_req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Kon statistieken niet laden' });
+  }
+});
+
+/** PNG QR that opens the bar's Bancontact/Payconiq payment link */
+app.get(['/api/qr/payconiq', '/api/qr/payconiq.png'], async (_req, res) => {
+  try {
+    const png = await QRCode.toBuffer(PAYCONIQ_URL, {
+      type: 'png',
+      width: 440,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#1a1208', light: '#fffaf2' },
+    });
+    res.set({
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=86400',
+    });
+    res.send(png);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('QR-fout');
   }
 });
 
@@ -285,6 +310,8 @@ app.post('/api/orders', async (req, res) => {
       .trim()
       .slice(0, 64);
 
+    const paymentMethod = req.body?.payment_method === 'payconiq' ? 'payconiq' : 'cash';
+
     const priced = validateAndPrice(req.body?.items || []);
     const oos = await getOutOfStockSet();
     const blocked = priced.items.find((item) => oos.has(item.name));
@@ -300,6 +327,7 @@ app.post('/api/orders', async (req, res) => {
       note,
       priced,
       client_request_id: clientRequestId || null,
+      payment_method: paymentMethod,
     });
     broadcast('order', order);
     res.status(201).json(order);
