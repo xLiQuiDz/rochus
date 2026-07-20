@@ -49,7 +49,9 @@ npm test   # catalog & pricing unit tests (no DB needed)
 
 - **Water chase**: gratis water probeert te ontsnappen — 10× vangen = verdiend
 - **Menu-roulette (🎲)**: random suggestie uit alles wat op voorraad is
-- **Wie betaalt? (🎡)**: het rad wijst een betaler aan, geen discussie
+- **Wie betaalt? (🖐️)**: iedereen legt een vinger op het scherm, het toestel
+  telt af en kiest er één (verliezer betaalt óf winnaar vrijuit). In je eentje?
+  Dan valt het terug op het rad met donkere-humor-kaarten.
 - Easter eggs op de titel, footer en tafel-chip
 
 ## Staff dashboard (/bar)

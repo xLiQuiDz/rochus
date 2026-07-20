@@ -705,6 +705,36 @@
     </div>
   </div>
 
+  <div class="pick-overlay" id="pick-overlay" hidden>
+    <div class="pick" role="dialog" aria-modal="true" aria-labelledby="pick-title">
+      <div class="pick__head">
+        <button type="button" class="pick__close" id="pick-close" aria-label="Sluit">×</button>
+        <h2 class="pick__title" id="pick-title">Wie betaalt?</h2>
+        <div class="pick__modes" role="group" aria-label="Modus">
+          <button type="button" class="pick__mode pick__mode--on" data-pickmode="loser">Verliezer betaalt</button>
+          <button type="button" class="pick__mode" data-pickmode="winner">Winnaar vrijuit</button>
+        </div>
+      </div>
+
+      <div class="pick__surface" id="pick-surface">
+        <div class="pick__hint" id="pick-hint">
+          <span class="pick__hint-emoji" aria-hidden="true">🖐️</span>
+          <span class="pick__hint-text" id="pick-hint-text">Leg allemaal een vinger op het scherm</span>
+        </div>
+        <div class="pick__count" id="pick-count" hidden></div>
+        <div class="pick__rings" id="pick-rings" aria-hidden="true"></div>
+        <div class="pick__reveal" id="pick-reveal" hidden>
+          <p class="pick__reveal-line" id="pick-reveal-line"></p>
+          <button type="button" class="pick__again" id="pick-again">Nog een ronde 🔁</button>
+        </div>
+      </div>
+
+      <div class="pick__foot">
+        <button type="button" class="pick__solo" id="pick-solo">In je eentje? Draai het rad →</button>
+      </div>
+    </div>
+  </div>
+
   <div class="slot-overlay" id="slot-overlay" hidden>
     <div class="slot" role="dialog" aria-modal="true" aria-labelledby="slot-title">
       <button type="button" class="slot__close" id="slot-close" aria-label="Sluit de drankautomaat">×</button>

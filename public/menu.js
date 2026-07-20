@@ -2139,7 +2139,302 @@
     true
   );
 
-  if (whoPaysBtn) whoPaysBtn.addEventListener('click', () => openWheel());
+  /* ------------------------------------------------------------------ */
+  /* WIE BETAALT — vingers op het scherm                                */
+  /* ------------------------------------------------------------------ */
+  const pickOverlay = document.getElementById('pick-overlay');
+  const pickSurface = document.getElementById('pick-surface');
+  const pickHint = document.getElementById('pick-hint');
+  const pickHintText = document.getElementById('pick-hint-text');
+  const pickCount = document.getElementById('pick-count');
+  const pickRings = document.getElementById('pick-rings');
+  const pickReveal = document.getElementById('pick-reveal');
+  const pickRevealLine = document.getElementById('pick-reveal-line');
+  const pickAgainBtn = document.getElementById('pick-again');
+  const pickCloseBtn = document.getElementById('pick-close');
+  const pickSoloBtn = document.getElementById('pick-solo');
+  const pickModeBtns = [...document.querySelectorAll('[data-pickmode]')];
+
+  const FINGER_COLORS = [
+    '#f0d9a8', '#6aa9f5', '#e8b4a0', '#8fd4a8', '#e89ac0', '#d4af70', '#b8a0e8', '#f5b969',
+  ];
+
+  const PICK_LOSER_LINES = [
+    'Jij. Het scherm heeft je aangewezen 💸',
+    'Deze vinger betaalt de hele ronde. Geen beroep mogelijk.',
+    'Het toestel koos jou. Het universum knikt instemmend.',
+    'Gefeliciteerd — sponsor van de avond 🎉',
+    'Deze duim gaat pinnen.',
+    'De telefoon liegt niet. Jij trakteert.',
+    'Aangewezen. Aanvaard je lot met waardigheid (en cash).',
+  ];
+  const PICK_WINNER_LINES = [
+    'Jij bent vrij! De rest mag splitsen 😇',
+    'Deze vinger ontsnapt. De anderen: succes met de rekening.',
+    'Immuun verklaard. De rest draait op voor de ronde.',
+    'Jij drinkt gratis. De tafel haat je nu een beetje.',
+    'Vrijgesteld door het toestel. Doe er niet moeilijk over.',
+  ];
+
+  let pickMode = 'loser';
+  let pickState = 'idle'; // idle | waiting | counting | picking | revealed
+  /** @type {Map<number, {x:number,y:number,el:HTMLElement,color:string}>} */
+  const fingers = new Map();
+  let pickStabilizeTimer = 0;
+  let pickCountTimer = 0;
+  let pickColorIdx = 0;
+
+  function pickTone(freq, dur, type = 'sine', peak = 0.14) {
+    try {
+      if (!wheelAudioCtx) wheelAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (wheelAudioCtx.state === 'suspended') wheelAudioCtx.resume().catch(() => {});
+      const t = wheelAudioCtx.currentTime;
+      const osc = wheelAudioCtx.createOscillator();
+      const gain = wheelAudioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(peak, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(gain);
+      gain.connect(wheelAudioCtx.destination);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    } catch {
+      /* stil mag ook */
+    }
+  }
+
+  function positionRing(finger) {
+    finger.el.style.transform = `translate(${finger.x}px, ${finger.y}px)`;
+  }
+
+  function updateHint() {
+    if (pickState === 'counting' || pickState === 'picking' || pickState === 'revealed') {
+      pickHint.hidden = true;
+      return;
+    }
+    const n = fingers.size;
+    pickHint.hidden = false;
+    // Bij vingers op het scherm krimpt de hint tot een balkje bovenaan
+    pickHint.classList.toggle('pick__hint--compact', n > 0);
+    if (n === 0) {
+      pickHintText.textContent = 'Leg allemaal een vinger op het scherm';
+    } else if (n === 1) {
+      pickHintText.textContent = 'Nog minstens één vinger erbij… 🖐️';
+    } else {
+      pickHintText.textContent = `${n} vingers — stil blijven liggen, aftellen begint…`;
+    }
+  }
+
+  function clearPickTimers() {
+    clearTimeout(pickStabilizeTimer);
+    clearInterval(pickCountTimer);
+    pickStabilizeTimer = 0;
+    pickCountTimer = 0;
+  }
+
+  function showCount(n) {
+    pickCount.hidden = false;
+    pickCount.textContent = String(n);
+    pickCount.classList.remove('pick__count--pop');
+    void pickCount.offsetWidth;
+    pickCount.classList.add('pick__count--pop');
+  }
+
+  /** Set van vingers is veranderd — telt opnieuw af of wacht. */
+  function onFingerSetChanged() {
+    if (pickState === 'revealed' || pickState === 'picking') return;
+    clearPickTimers();
+    pickCount.hidden = true;
+    if (fingers.size >= 2) {
+      pickState = 'waiting';
+      updateHint();
+      pickStabilizeTimer = setTimeout(startPickCountdown, 1300);
+    } else {
+      pickState = 'waiting';
+      updateHint();
+    }
+  }
+
+  function startPickCountdown() {
+    if (fingers.size < 2) return;
+    pickState = 'counting';
+    pickHint.hidden = true;
+    let n = 3;
+    showCount(n);
+    pickTone(660, 0.15);
+    if (navigator.vibrate) navigator.vibrate(10);
+    pickCountTimer = setInterval(() => {
+      n -= 1;
+      if (n > 0) {
+        showCount(n);
+        pickTone(660, 0.15);
+        if (navigator.vibrate) navigator.vibrate(10);
+      } else {
+        clearInterval(pickCountTimer);
+        pickCount.hidden = true;
+        doPick();
+      }
+    }, 720);
+  }
+
+  function doPick() {
+    const ids = [...fingers.keys()];
+    if (ids.length < 2) {
+      onFingerSetChanged();
+      return;
+    }
+    pickState = 'picking';
+    pickHint.hidden = true;
+    const loserId = ids[Math.floor(Math.random() * ids.length)];
+
+    // Fake-out: spotlight springt rond, vertraagt, en klikt vast op de verliezer
+    const hops = 14 + Math.floor(Math.random() * 6);
+    let step = 0;
+    const hop = () => {
+      fingers.forEach((f) => f.el.classList.remove('pick__ring--chosen'));
+      const isLast = step >= hops;
+      const id = isLast ? loserId : ids[Math.floor(Math.random() * ids.length)];
+      const f = fingers.get(id);
+      if (f) f.el.classList.add('pick__ring--chosen');
+      pickTone(isLast ? 300 : 520 + Math.random() * 240, 0.06, 'square', 0.08);
+      if (isLast) {
+        revealPick(loserId);
+        return;
+      }
+      step += 1;
+      // Traag uitlopen richting het einde
+      const t = step / hops;
+      const delay = 60 + Math.pow(t, 3) * 260;
+      setTimeout(hop, prefersReducedMotion ? 0 : delay);
+    };
+    hop();
+  }
+
+  function revealPick(loserId) {
+    pickState = 'revealed';
+    fingers.forEach((f, id) => {
+      f.el.classList.remove('pick__ring--chosen');
+      if (id === loserId) f.el.classList.add('pick__ring--chosen');
+      else f.el.classList.add('pick__ring--dimmed');
+    });
+    pickRevealLine.textContent = pick(pickMode === 'winner' ? PICK_WINNER_LINES : PICK_LOSER_LINES);
+    pickReveal.hidden = false;
+    // Gong
+    pickTone(180, 0.6, 'sine', 0.2);
+    pickTone(360, 0.5, 'triangle', 0.1);
+    if (navigator.vibrate) navigator.vibrate([40, 60, 120]);
+    celebrateOrderSuccess();
+  }
+
+  function resetPickRound() {
+    clearPickTimers();
+    pickReveal.hidden = true;
+    pickCount.hidden = true;
+    fingers.forEach((f) => f.el.remove());
+    fingers.clear();
+    pickColorIdx = 0;
+    pickState = 'waiting';
+    updateHint();
+  }
+
+  function addFinger(ev) {
+    if (pickState === 'revealed' || pickState === 'picking') return;
+    const rect = pickSurface.getBoundingClientRect();
+    const color = FINGER_COLORS[pickColorIdx % FINGER_COLORS.length];
+    pickColorIdx += 1;
+    const el = document.createElement('div');
+    el.className = 'pick__ring';
+    el.style.setProperty('--c', color);
+    el.innerHTML = `<span class="pick__ring-num">${fingers.size + 1}</span>`;
+    const finger = { x: ev.clientX - rect.left, y: ev.clientY - rect.top, el, color };
+    pickRings.appendChild(el);
+    positionRing(finger);
+    fingers.set(ev.pointerId, finger);
+    onFingerSetChanged();
+  }
+
+  function moveFinger(ev) {
+    const finger = fingers.get(ev.pointerId);
+    if (!finger) return;
+    const rect = pickSurface.getBoundingClientRect();
+    finger.x = ev.clientX - rect.left;
+    finger.y = ev.clientY - rect.top;
+    positionRing(finger);
+  }
+
+  function removeFinger(ev) {
+    const finger = fingers.get(ev.pointerId);
+    if (!finger) return;
+    // Tijdens de onthulling laten we de ringen staan
+    if (pickState === 'revealed' || pickState === 'picking') return;
+    finger.el.remove();
+    fingers.delete(ev.pointerId);
+    // Nummers hernummeren
+    let i = 1;
+    fingers.forEach((f) => {
+      const num = f.el.querySelector('.pick__ring-num');
+      if (num) num.textContent = String(i++);
+    });
+    onFingerSetChanged();
+  }
+
+  if (pickSurface) {
+    pickSurface.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      addFinger(ev);
+    });
+    pickSurface.addEventListener('pointermove', moveFinger, { passive: true });
+    pickSurface.addEventListener('pointerup', removeFinger);
+    pickSurface.addEventListener('pointercancel', removeFinger);
+  }
+
+  pickModeBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      pickMode = btn.dataset.pickmode;
+      pickModeBtns.forEach((b) => b.classList.toggle('pick__mode--on', b === btn));
+    });
+  });
+
+  function openPick() {
+    pickMode = 'loser';
+    pickModeBtns.forEach((b) => b.classList.toggle('pick__mode--on', b.dataset.pickmode === 'loser'));
+    resetPickRound();
+    pickState = 'waiting';
+    updateHint();
+    pickOverlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePick() {
+    clearPickTimers();
+    resetPickRound();
+    pickState = 'idle';
+    pickOverlay.hidden = true;
+    if (!drawer.classList.contains('open')) document.body.style.overflow = '';
+  }
+
+  if (pickOverlay) {
+    pickAgainBtn.addEventListener('click', resetPickRound);
+    pickCloseBtn.addEventListener('click', closePick);
+    pickSoloBtn.addEventListener('click', () => {
+      closePick();
+      openWheel();
+    });
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && !pickOverlay.hidden) {
+          closePick();
+          e.stopPropagation();
+        }
+      },
+      true
+    );
+  }
+
+  if (whoPaysBtn) whoPaysBtn.addEventListener('click', openPick);
 
   /* ------------------------------------------------------------------ */
   /* DRANKAUTOMAAT — gokkast met hendel                                 */
