@@ -17,6 +17,8 @@ const MENU_ITEMS = [
   { name: 'Chaudfontaine Plat', price: 3, category: 'fris' },
   { name: 'Chaudfontaine Bruis', price: 3, category: 'fris' },
   { name: 'Royal Bliss Tonic', price: 3, category: 'fris' },
+  // Prijs 0 is bewust: gratis, maar alleen bestelbaar wie het water-spel wint
+  { name: 'Water', price: 0, category: 'fris' },
   { name: 'Aperol Spritz', price: 8, category: 'cocktails' },
   { name: 'Gin Tonic Bulldog', price: 9, category: 'cocktails' },
   { name: 'Rum Captain Morgan', price: 9, category: 'cocktails' },
@@ -133,6 +135,7 @@ const PRINT_CATEGORY_LABELS = {
 const PRINT_NOTES = {
   Corona: '4+2 op Corona Bucket',
   'Zak Chips': 'Paprika',
+  Water: 'gratis — als je hem kan vangen',
 };
 
 /**
