@@ -56,12 +56,17 @@
         const note = item.note
           ? `<span class="sheet__note">${escapeHtml(item.note)}</span>`
           : '';
+        const sig = item.signature
+          ? '<span class="sheet__sig">✦ signature</span>'
+          : '';
+        const priceText = item.price === 0 ? 'gratis' : formatEuro(item.price);
         return `<li class="sheet__row">
           <span class="sheet__name">
             <span class="sheet__name-text">${escapeHtml(item.name)}</span>
-            ${note}
+            ${sig}${note}
           </span>
-          <span class="sheet__price">${formatEuro(item.price)}</span>
+          <span class="sheet__leader" aria-hidden="true"></span>
+          <span class="sheet__price">${priceText}</span>
         </li>`;
       })
       .join('');

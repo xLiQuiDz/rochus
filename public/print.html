@@ -62,14 +62,20 @@
 
     <main class="sheet" id="menu-sheet" aria-label="Printbare menukaart">
       <header class="sheet__header">
+        <p class="sheet__ornament" aria-hidden="true">✦</p>
         <p class="sheet__brand" id="sheet-brand">ROCHUS</p>
         <p class="sheet__subtitle" id="sheet-subtitle">Summer pop-up bar</p>
-        <div class="sheet__rule" aria-hidden="true"></div>
+        <div class="sheet__rule" aria-hidden="true"><span></span>✦<span></span></div>
+        <p class="sheet__tagline">golden hour · cold drinks · questionable decisions</p>
       </header>
       <div class="sheet__columns" id="sheet-columns"></div>
       <footer class="sheet__footer">
-        <span>Scan de QR op je tafel om te bestellen</span>
-        <span>Cash bij levering</span>
+        <div class="sheet__footer-row">
+          <span>Scan de QR op je tafel om te bestellen</span>
+          <span class="sheet__footer-sep" aria-hidden="true">✦</span>
+          <span>Cash bij levering</span>
+        </div>
+        <p class="sheet__footer-note">sip slow · deel je snacks · wees lief voor de bar</p>
       </footer>
     </main>
   </div>

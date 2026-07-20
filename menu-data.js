@@ -135,8 +135,10 @@ const PRINT_CATEGORY_LABELS = {
 const PRINT_NOTES = {
   Corona: '4+2 op Corona Bucket',
   'Zak Chips': 'Paprika',
-  Water: 'gratis — als je hem kan vangen',
+  Water: 'als je hem kan vangen',
 };
+
+const PRINT_SIGNATURES = new Set(["Tripel Karmeliet van 't vat"]);
 
 /**
  * Group catalog into print-ready sections (wines collapsed to glas/fles).
@@ -176,6 +178,7 @@ function getPrintMenu() {
       name: item.name,
       price: item.price,
       note: PRINT_NOTES[item.name] || null,
+      signature: PRINT_SIGNATURES.has(item.name) || undefined,
     });
   }
 
