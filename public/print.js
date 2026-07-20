@@ -82,21 +82,97 @@
     </section>`;
   }
 
-  function renderMenu(data) {
-    sheetBrand.textContent = data.brand || 'ROCHUS';
-    sheetSubtitle.textContent = data.subtitle || 'Summer pop-up bar';
-
+  function splitColumns(data) {
     const sections = Array.isArray(data.sections) ? data.sections : [];
     const left = sections.filter((s) => LEFT_IDS.has(s.id));
     const right = sections.filter((s) => RIGHT_IDS.has(s.id));
     const leftovers = sections.filter((s) => !LEFT_IDS.has(s.id) && !RIGHT_IDS.has(s.id));
     right.push(...leftovers);
+    return { left, right };
+  }
 
+  function renderA4(data) {
+    sheetBrand.textContent = data.brand || 'ROCHUS';
+    sheetSubtitle.textContent = data.subtitle || 'Summer pop-up bar';
+
+    const { left, right } = splitColumns(data);
     sheetColumns.innerHTML = `
       <div class="sheet__col">${left.map(renderSection).join('')}</div>
       <div class="sheet__col">${right.map(renderSection).join('')}</div>
     `;
   }
+
+  /** Smalle kaart voor het houten klembord — 2 identieke per vel, liggend */
+  function clipCardHtml(data) {
+    const { left, right } = splitColumns(data);
+    return `<article class="sheet sheet--clip">
+      <header class="sheet__header">
+        <p class="sheet__brand">${escapeHtml(data.brand || 'ROCHUS')}</p>
+        <p class="sheet__subtitle">${escapeHtml(data.subtitle || 'Summer pop-up bar')}</p>
+        <div class="sheet__rule" aria-hidden="true"><span></span>✦<span></span></div>
+      </header>
+      <div class="sheet__columns">
+        <div class="sheet__col">${left.map(renderSection).join('')}</div>
+        <div class="sheet__col">${right.map(renderSection).join('')}</div>
+      </div>
+      <footer class="sheet__footer">
+        <div class="sheet__footer-row">
+          <span>Scan de QR om te bestellen</span>
+          <span class="sheet__footer-sep" aria-hidden="true">✦</span>
+          <span>Cash bij levering</span>
+        </div>
+      </footer>
+    </article>`;
+  }
+
+  function renderDuo(data) {
+    const duo = document.getElementById('duo-sheet');
+    if (!duo) return;
+    const card = clipCardHtml(data);
+    duo.innerHTML = card + card;
+  }
+
+  function renderMenu(data) {
+    renderA4(data);
+    renderDuo(data);
+  }
+
+  /* Formaatkeuze: A4 tafelkaart of klemkaart (2 per liggend vel) */
+  const FORMAT_KEY = 'rochus-print-format';
+  const formatBtns = [...document.querySelectorAll('.format-btn')];
+  const pageStyle = document.createElement('style');
+  document.head.appendChild(pageStyle);
+
+  function applyFormat(format) {
+    const clip = format === 'clip';
+    const a4Sheet = document.getElementById('menu-sheet');
+    const duo = document.getElementById('duo-sheet');
+    if (a4Sheet) a4Sheet.hidden = clip;
+    if (duo) duo.hidden = !clip;
+    formatBtns.forEach((btn) => {
+      btn.classList.toggle('format-btn--active', btn.dataset.format === format);
+    });
+    pageStyle.textContent = clip
+      ? '@page { size: A4 landscape; margin: 8mm; }'
+      : '@page { size: A4 portrait; margin: 8mm; }';
+    try {
+      localStorage.setItem(FORMAT_KEY, format);
+    } catch {
+      /* private mode */
+    }
+  }
+
+  formatBtns.forEach((btn) => {
+    btn.addEventListener('click', () => applyFormat(btn.dataset.format));
+  });
+
+  let savedFormat = 'a4';
+  try {
+    savedFormat = localStorage.getItem(FORMAT_KEY) === 'clip' ? 'clip' : 'a4';
+  } catch {
+    /* private mode */
+  }
+  applyFormat(savedFormat);
 
   async function loadMenu() {
     const res = await fetch('/api/menu/print', { credentials: 'include' });

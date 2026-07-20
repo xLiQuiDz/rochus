@@ -538,3 +538,164 @@ body {
     text-decoration: none;
   }
 }
+
+/* ---- Formaatkeuze ---- */
+.format-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(245, 230, 200, 0.18);
+  border-radius: 999px;
+}
+
+.format-btn {
+  border: none;
+  background: transparent;
+  color: #8a7f72;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.2s var(--ease);
+}
+
+.format-btn:hover {
+  color: #f7f1e8;
+}
+
+.format-btn--active {
+  background: linear-gradient(135deg, #f0d9a8, var(--gold-soft));
+  color: #0a0908;
+}
+
+/* ---- Klemkaart: 140×190mm voor het houten klembord, 2 per liggend vel ---- */
+.duo {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.duo[hidden] {
+  display: none !important;
+}
+
+.sheet.sheet--clip {
+  width: 140mm;
+  height: 190mm;
+  min-height: 0;
+  /* Extra ruimte bovenaan: daar zit de kroon-klem over het papier */
+  padding: 15mm 8mm 7mm;
+  margin: 0;
+  /* Kniplijn — exact op de kaartrand */
+  border: 1px dashed rgba(26, 18, 8, 0.35);
+  overflow: hidden;
+}
+
+.sheet.sheet--clip::before {
+  inset: 3.5mm;
+  border-width: 1px;
+}
+
+.sheet.sheet--clip::after {
+  inset: 4.7mm;
+}
+
+.sheet--clip .sheet__header {
+  margin-bottom: 3.5mm;
+}
+
+.sheet--clip .sheet__brand {
+  font-size: 1.35rem;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+}
+
+.sheet--clip .sheet__subtitle {
+  font-size: 0.85rem;
+  margin-top: 0.5mm;
+}
+
+.sheet--clip .sheet__rule {
+  width: 34mm;
+  margin-top: 1.5mm;
+  font-size: 0.5rem;
+}
+
+.sheet--clip .sheet__columns {
+  gap: 3mm 5mm;
+}
+
+.sheet--clip .sheet__col {
+  gap: 3mm;
+}
+
+.sheet--clip .sheet__section-title {
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  gap: 2mm;
+  margin-bottom: 1.6mm;
+}
+
+.sheet--clip .sheet__row {
+  font-size: 0.62rem;
+  padding: 0.55mm 0;
+  gap: 1.5mm;
+  line-height: 1.25;
+}
+
+.sheet--clip .sheet__row--wine {
+  grid-template-columns: minmax(0, 1fr) 9mm 9mm;
+  gap: 2px 5px;
+}
+
+.sheet--clip .sheet__leader {
+  min-width: 3mm;
+  transform: translateY(-0.3em);
+}
+
+.sheet--clip .sheet__sig {
+  font-size: 0.46rem;
+  margin-left: 4px;
+}
+
+.sheet--clip .sheet__note {
+  font-size: 0.52rem;
+  margin-left: 4px;
+}
+
+.sheet--clip .sheet__wine-head {
+  grid-template-columns: minmax(0, 1fr) 9mm 9mm;
+  gap: 2px 5px;
+  font-size: 0.46rem;
+}
+
+.sheet--clip .sheet__footer {
+  margin-top: 3mm;
+  padding-top: 2mm;
+}
+
+.sheet--clip .sheet__footer-row {
+  font-size: 0.56rem;
+  gap: 2mm;
+}
+
+@media (max-width: 720px) {
+  .sheet.sheet--clip {
+    width: 140mm;
+    max-width: none;
+  }
+}
+
+@media print {
+  .duo {
+    gap: 0;
+    flex-wrap: nowrap;
+  }
+
+  .sheet.sheet--clip {
+    box-shadow: none;
+  }
+}

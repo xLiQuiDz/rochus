@@ -45,6 +45,10 @@
         </p>
       </div>
       <div class="print-toolbar__actions">
+        <div class="format-toggle" role="group" aria-label="Kies formaat">
+          <button type="button" class="format-btn" data-format="a4">A4 tafelkaart</button>
+          <button type="button" class="format-btn" data-format="clip">Klemkaart ×2</button>
+        </div>
         <button type="button" class="print-btn" id="print-btn">Printen</button>
         <a class="print-btn print-btn--ghost" href="/bar">Bar</a>
         <button type="button" class="print-btn print-btn--ghost" id="logout-btn">Uitloggen</button>
@@ -54,9 +58,9 @@
     <aside class="print-tips no-print">
       <strong>Tips</strong>
       <ul>
-        <li>Papier: A4 160–200g indien mogelijk</li>
-        <li>Print: kleur of zwart-wit, marges “standaard” of minimaal</li>
-        <li>Lamineren: A4-hoes, ~2–3 mm vrije rand; anders A3-hoes en bijknippen</li>
+        <li>Papier: A4 160–200g indien mogelijk · altijd 100% schaal (niet “aanpassen aan pagina”)</li>
+        <li>A4 tafelkaart: staand printen, lamineren in A4-hoes</li>
+        <li>Klemkaart: <em>liggend</em> printen → 2 kaarten per vel, knippen op de stippellijn, A5-hoes; bovenaan is ruimte vrijgehouden voor de kroon-klem</li>
       </ul>
     </aside>
 
@@ -78,6 +82,8 @@
         <p class="sheet__footer-note">sip slow · deel je snacks · wees lief voor de bar</p>
       </footer>
     </main>
+
+    <section class="duo" id="duo-sheet" aria-label="Printbare klemkaarten (2 per vel)" hidden></section>
   </div>
 
   <script src="print.js" defer></script>

@@ -57,7 +57,9 @@ npm test   # catalog & pricing unit tests (no DB needed)
 - **Ongedaan maken**-toast na Geserveerd/Annuleren (6 s)
 - Dagstats in de header: aantal bestellingen, omzet, top 3 items
 - Voorraadpaneel: producten uitverkocht zetten (gasten zien het meteen)
-- Menukaart printen (A4, lamineerbaar) en QR-stickers per tafel
+- Menukaart printen in twee formaten: A4 tafelkaart én klemkaart 140×190 mm
+  voor de houten klemborden (2 per A4 liggend, knippen op de stippellijn)
+- QR-stickers per tafel
 
 ## API overview
 
