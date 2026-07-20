@@ -1855,27 +1855,6 @@ h1, h2, h3, h4 {
   box-shadow: 0 6px 24px rgba(212, 175, 112, 0.35);
 }
 
-.pick__foot {
-  flex: 0 0 auto;
-  text-align: center;
-  padding-top: 12px;
-}
-
-.pick__solo {
-  padding: 10px 18px;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.pick__solo:hover { color: var(--text-secondary); }
-
 /* ============================================================
    DOBBELSTEEN — schud & drink
    ============================================================ */

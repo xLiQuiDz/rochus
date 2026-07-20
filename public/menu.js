@@ -2152,7 +2152,6 @@
   const pickRevealLine = document.getElementById('pick-reveal-line');
   const pickAgainBtn = document.getElementById('pick-again');
   const pickCloseBtn = document.getElementById('pick-close');
-  const pickSoloBtn = document.getElementById('pick-solo');
   const pickModeBtns = [...document.querySelectorAll('[data-pickmode]')];
 
   const FINGER_COLORS = [
@@ -2560,10 +2559,6 @@
   if (pickOverlay) {
     pickAgainBtn.addEventListener('click', resetPickRound);
     pickCloseBtn.addEventListener('click', closePick);
-    pickSoloBtn.addEventListener('click', () => {
-      closePick();
-      openWheel();
-    });
     document.addEventListener(
       'keydown',
       (e) => {
