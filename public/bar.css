@@ -300,7 +300,10 @@ body::before {
 
 .stock__list {
   display: grid;
-  gap: 18px;
+  /* Categorieën in kolommen i.p.v. één lange sliert */
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 22px 28px;
+  align-items: start;
 }
 
 .stock__category-title {
@@ -309,6 +312,8 @@ body::before {
   text-transform: uppercase;
   color: var(--gold);
   margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
 
 .stock__items {
@@ -322,7 +327,7 @@ body::before {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid transparent;
@@ -385,9 +390,13 @@ body::before {
 .board {
   display: grid;
   gap: 16px;
+  /* Tickets als kaarten naast elkaar — geen paginabrede slierten */
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  align-items: start;
 }
 
 .board__empty {
+  grid-column: 1 / -1;
   text-align: center;
   color: var(--muted);
   padding: 64px 16px;
