@@ -1973,20 +1973,27 @@ h1, h2, h3, h4 {
 
 .water-arena__meter-fill {
   height: 100%;
-  width: 100%;
+  width: 0%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #9ed0e0, #3b82c4);
-  transition: width 0.2s linear;
+  background: linear-gradient(90deg, #6b7f8a, #3b82c4);
+  transition: width 0.12s linear;
 }
 
-.water-arena__meter-fill--low {
-  background: linear-gradient(90deg, #fca5a5, #ef4444);
-  animation: meterPanic 0.7s ease-in-out infinite;
+/* Het enige moment dat hij te pakken is */
+.water-arena__meter-fill--hot {
+  background: linear-gradient(90deg, #86efac, #22c55e);
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.75);
+  animation: meterHot 0.4s ease-in-out infinite;
 }
 
-@keyframes meterPanic {
+@keyframes meterHot {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
+  50% { opacity: 0.65; }
+}
+
+.water-arena__meter-label--hot {
+  color: #86efac !important;
+  font-weight: 800;
 }
 
 .water-arena__stats {
@@ -2083,7 +2090,9 @@ h1, h2, h3, h4 {
   position: absolute;
   z-index: 2;
   transform: translate(-50%, -100%);
-  max-width: 220px;
+  /* max-content: anders knijpt de bubbel dicht vlak bij de schermrand */
+  width: max-content;
+  max-width: min(230px, 74vw);
   padding: 8px 13px;
   background: rgba(247, 241, 232, 0.96);
   color: #1a1208;

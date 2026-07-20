@@ -211,7 +211,7 @@
   const arenaEl = document.getElementById('water-arena');
   const dropEl = document.getElementById('water-drop');
   const dropFaceEl = document.getElementById('water-face');
-  const staminaFillEl = document.getElementById('water-stamina');
+  const chanceFillEl = document.getElementById('water-chance');
   const arenaStatsEl = document.getElementById('water-stats');
   const arenaTauntEl = document.getElementById('water-taunt');
   const splashLayerEl = document.getElementById('water-splash-layer');
@@ -225,25 +225,44 @@
     'Catch me outside 💅',
     'Ik deed cardio. Jij scrolt menu’s.',
     'Zelfs de Aperol lacht nu met je.',
-    'Dichtbij! Maar nee.',
     'Woesh 💨',
     'Ik zwem hier al heel de zomer, schat.',
+    'Ik zie waar je vinger naartoe gaat, hé.',
+    'Dit is mijn arena. Jij bent te gast.',
   ];
-  const WATER_TIRED_LINES = [
-    'oké… oké… even… pauze 🫁',
-    'niet… tegen mijn moeder… zeggen',
-    'jij wint… bijna…',
+  const WATER_NEARMISS_LINES = [
+    'DAT WAS 2 MILLIMETER 😭',
+    'oeioeioei — bijna, echt bijna',
+    'mijn leven flitste voorbij 💀',
+    'nog eens zo dichtbij en ik bel de politie',
+    'ik voelde de wind van je vinger',
+  ];
+  const WATER_DASH_LINES = [
+    'NOPE 💨',
+    'WOEP',
+    'doei!',
+    'ciao bella 🏃',
+    'weg is ie',
+  ];
+  const WATER_GLOAT_LINES = [
+    'even uitrusten, jij haalt me toch niet 😎',
+    'ik pauzeer. uit medelijden.',
+    'kijk, ik sta zelfs stil…',
+    'moment, ik check mijn stories 📱',
+    'ik ben zo snel dat ik even mag chillen',
   ];
   const WATER_ARENA_TAUNTS = [
-    'hij is sneller dan je ex ging lopen',
-    'tip: water wordt moe. jij ook, maar hij eerst.',
-    'gratis water. je moet er alleen voor werken.',
-    'de bar kijkt mee en geniet',
+    'moeilijkheidsgraad: belachelijk',
+    'hij ziet je vinger aankomen — mik waar hij zál zijn',
+    'wacht op het groene balkje. dat is je enige kans.',
+    'niemand heeft dit ooit gehaald. bijna niemand.',
+    'de bar kijkt mee en geniet enorm',
   ];
   const WATER_QUIT_LINES = [
     'Het water wint. Alweer. 💧🏆',
     'Opgegeven. Het water vertelt dit door aan iederéén.',
     'Geen zorgen, spritz loopt niet weg. 🍹',
+    'Verstandig. Dat ding is niet normaal.',
   ];
 
   const DROP_SIZE = 76;
@@ -254,17 +273,48 @@
     y: 0,
     vx: 0,
     vy: 0,
-    stamina: 1,
     finger: { x: 0, y: 0, active: false },
+    fvx: 0,
+    fvy: 0,
+    fLastT: 0,
+    heading: 0,
+    headingUntil: 0,
+    dashCd: 0,
+    gloatUntil: 0,
+    nextGloatAt: 0,
+    rage: 0,
+    mercy: 0,
+    seed: 0,
     attempts: 0,
+    nearMisses: 0,
     startAt: 0,
     lastT: 0,
     raf: 0,
     speechUntil: 0,
-    tiredSaid: false,
     statsTick: 0,
     tauntTimer: 0,
   };
+
+  const meterLabelEl = document.getElementById('water-meter-label');
+
+  function isGloating(now) {
+    return waterGame.gloatUntil > (now || performance.now());
+  }
+
+  /** Explosieve ontsnapping — weg van de vinger, met een willekeurige knik. */
+  function dashAway(power = 1) {
+    const g = waterGame;
+    const dx = g.x - g.finger.x;
+    const dy = g.y - g.finger.y;
+    const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 1.1;
+    const impulse = 1500 * power;
+    g.vx = Math.cos(angle) * impulse;
+    g.vy = Math.sin(angle) * impulse;
+    g.dashCd = 0.5;
+    spawnSplash(g.x, g.y, '💨');
+    if (Math.random() < 0.55) waterSpeech(pick(WATER_DASH_LINES), 900);
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
 
   function arenaBounds() {
     return {
@@ -323,99 +373,153 @@
       `rotate(${angle}rad) scale(${stretch}, ${squash}) rotate(${-angle}rad)`;
 
     if (speechEl && !speechEl.hidden) {
-      speechEl.style.left = `${waterGame.x}px`;
-      speechEl.style.top = `${waterGame.y - DROP_SIZE / 2 - 14}px`;
+      // Binnen beeld houden, ook als het water tegen de rand plakt
+      const half = Math.min(125, window.innerWidth * 0.4);
+      const sx = Math.max(half, Math.min(window.innerWidth - half, waterGame.x));
+      speechEl.style.left = `${sx}px`;
+      speechEl.style.top = `${Math.max(58, waterGame.y - DROP_SIZE / 2 - 14)}px`;
     }
   }
 
   function waterFace() {
-    const d = waterGame.finger.active
-      ? Math.hypot(waterGame.x - waterGame.finger.x, waterGame.y - waterGame.finger.y)
-      : Infinity;
-    if (waterGame.stamina < 0.32) return '🥵';
-    if (d < 130) return '😱';
-    if (d < 220) return '😬';
+    const g = waterGame;
+    if (isGloating()) return '😎';
+    const d = g.finger.active ? Math.hypot(g.x - g.finger.x, g.y - g.finger.y) : Infinity;
+    if (d < 110) return '😱';
+    if (g.rage > 2) return '😤';
+    if (d < 200) return '😬';
     return '😏';
   }
 
   function waterFrame(now) {
     if (!waterGame.running) return;
-    const dt = Math.min(0.033, (now - waterGame.lastT) / 1000 || 0.016);
-    waterGame.lastT = now;
     const g = waterGame;
+    const dt = Math.min(0.033, (now - g.lastT) / 1000 || 0.016);
+    g.lastT = now;
     const b = arenaBounds();
+    const t = now / 1000;
 
-    // Vluchten: kracht weg van de vinger, zwakker naarmate hij moe wordt
-    if (g.finger.active) {
-      const dx = g.x - g.finger.x;
-      const dy = g.y - g.finger.y;
-      const d = Math.hypot(dx, dy) || 1;
-      if (d < 190) {
-        const speedFactor = 0.3 + 0.7 * g.stamina;
-        const force = ((190 - d) / 190) * 5200 * speedFactor;
-        g.vx += (dx / d) * force * dt;
-        g.vy += (dy / d) * force * dt;
-        if (Math.random() < 0.12) spawnSplash(g.x, g.y);
-        if (Math.random() < 0.02) waterSpeech(pick(WATER_TRASH_TALK));
+    const fingerDist = g.finger.active
+      ? Math.hypot(g.x - g.finger.x, g.y - g.finger.y)
+      : Infinity;
+
+    if (isGloating(now)) {
+      // Het opschep-moment: hij vertraagt, maar blijft glijden. Enige echte kans.
+      g.vx *= 0.9;
+      g.vy *= 0.9;
+      if (g.finger.active && fingerDist < 150) {
+        // Betrapt tijdens het opscheppen — meteen weg
+        g.gloatUntil = 0;
+        g.nextGloatAt = now + 5000 + Math.random() * 4000;
+        dashAway(1.2);
       }
-    } else if (Math.random() < 0.008) {
-      // Nerveus rondkijken als er niks gebeurt
-      g.vx += (Math.random() - 0.5) * 260;
-      g.vy += (Math.random() - 0.5) * 260;
+    } else {
+      if (g.finger.active) {
+        // Vlucht van waar de vinger NAARTOE gaat, niet waar hij nu is
+        const px = g.finger.x + g.fvx * 0.17;
+        const py = g.finger.y + g.fvy * 0.17;
+        const dx = g.x - px;
+        const dy = g.y - py;
+        const d = Math.hypot(dx, dy) || 1;
+        const R = 330;
+        if (d < R) {
+          // Zijwaartse knik zodat hij nooit in een rechte lijn vlucht
+          const juke = Math.sin(t * 4.6 + g.seed) * 0.75;
+          const ca = Math.cos(juke);
+          const sa = Math.sin(juke);
+          const jx = (dx * ca - dy * sa) / d;
+          const jy = (dx * sa + dy * ca) / d;
+          const force = Math.pow((R - d) / R, 1.4) * 17000;
+          g.vx += jx * force * dt;
+          g.vy += jy * force * dt;
+          if (Math.random() < 0.14) spawnSplash(g.x, g.y);
+          if (Math.random() < 0.012) waterSpeech(pick(WATER_TRASH_TALK));
+        }
+        if (fingerDist < 125 && g.dashCd <= 0) dashAway(1.25);
+      }
+
+      // Ook zonder vinger constant in beweging, met wisselende koers
+      if (now > g.headingUntil) {
+        g.heading = Math.random() * Math.PI * 2;
+        g.headingUntil = now + 360 + Math.random() * 680;
+      }
+      const cruise = (880 + g.rage * 90) * (1 - g.mercy * 0.3);
+      g.vx += Math.cos(g.heading) * cruise * 2.3 * dt;
+      g.vy += Math.sin(g.heading) * cruise * 2.3 * dt;
     }
 
-    // Wrijving + snelheidslimiet op basis van conditie
-    const drag = Math.max(0, 1 - 2.6 * dt);
+    // Muren afstoten — zo laat hij zich niet in een hoek drijven
+    const WALL = 130;
+    if (g.x - b.minX < WALL) g.vx += (WALL - (g.x - b.minX)) * 26 * dt;
+    if (b.maxX - g.x < WALL) g.vx -= (WALL - (b.maxX - g.x)) * 26 * dt;
+    if (g.y - b.minY < WALL) g.vy += (WALL - (g.y - b.minY)) * 26 * dt;
+    if (b.maxY - g.y < WALL) g.vy -= (WALL - (b.maxY - g.y)) * 26 * dt;
+
+    g.dashCd = Math.max(0, g.dashCd - dt);
+
+    const drag = Math.max(0, 1 - 1.9 * dt);
     g.vx *= drag;
     g.vy *= drag;
-    const maxSpeed = 260 + 1150 * g.stamina;
-    const speed = Math.hypot(g.vx, g.vy);
+
+    const maxSpeed = isGloating(now)
+      ? 240
+      : (1250 + g.rage * 110) * (1 - g.mercy * 0.24);
+    let speed = Math.hypot(g.vx, g.vy);
     if (speed > maxSpeed) {
       g.vx = (g.vx / speed) * maxSpeed;
       g.vy = (g.vy / speed) * maxSpeed;
+      speed = maxSpeed;
     }
 
     g.x += g.vx * dt;
     g.y += g.vy * dt;
 
-    // Muren: stuiteren
-    if (g.x < b.minX) { g.x = b.minX; g.vx = Math.abs(g.vx) * 0.75; }
-    if (g.x > b.maxX) { g.x = b.maxX; g.vx = -Math.abs(g.vx) * 0.75; }
-    if (g.y < b.minY) { g.y = b.minY; g.vy = Math.abs(g.vy) * 0.75; }
-    if (g.y > b.maxY) { g.y = b.maxY; g.vy = -Math.abs(g.vy) * 0.75; }
+    if (g.x < b.minX) { g.x = b.minX; g.vx = Math.abs(g.vx) * 0.8; }
+    if (g.x > b.maxX) { g.x = b.maxX; g.vx = -Math.abs(g.vx) * 0.8; }
+    if (g.y < b.minY) { g.y = b.minY; g.vy = Math.abs(g.vy) * 0.8; }
+    if (g.y > b.maxY) { g.y = b.maxY; g.vy = -Math.abs(g.vy) * 0.8; }
 
-    // Conditie: sprinten put uit, stilstaan herstelt héél traag
-    if (speed > 240) g.stamina = Math.max(0, g.stamina - 0.085 * dt * (speed / 900));
-    else g.stamina = Math.min(1, g.stamina + 0.015 * dt);
-
-    if (g.stamina < 0.32) {
-      if (!g.tiredSaid) {
-        g.tiredSaid = true;
-        waterSpeech(pick(WATER_TIRED_LINES), 2000);
-      }
-      if (Math.random() < 0.06) spawnSplash(g.x, g.y - DROP_SIZE / 2, '💦');
-    } else if (g.stamina > 0.55) {
-      g.tiredSaid = false;
+    // Volgende opschep-pauze inplannen (alleen als je niet vlakbij staat)
+    if (!isGloating(now) && now > g.nextGloatAt && fingerDist > 200) {
+      g.gloatUntil = now + 230 + Math.random() * 220 + g.mercy * 520;
+      g.nextGloatAt = g.gloatUntil + 8000 + Math.random() * 6000 - g.mercy * 4000;
+      waterSpeech(pick(WATER_GLOAT_LINES), 900);
     }
 
-    staminaFillEl.style.width = `${Math.round(g.stamina * 100)}%`;
-    staminaFillEl.classList.toggle('water-arena__meter-fill--low', g.stamina < 0.32);
+    // Genade groeit pas na een lange lijdensweg, en blijft klein
+    const elapsed = (now - g.startAt) / 1000;
+    g.mercy = Math.min(1, Math.max(0, (elapsed - 70) / 90));
+    g.rage = Math.max(0, g.rage - 0.12 * dt);
+
+    // Vangkans-meter: groen = nu of nooit
+    const vuln = isGloating(now) ? 1 : Math.max(0, 1 - speed / 1000) * 0.3;
+    const hot = vuln > 0.6;
+    chanceFillEl.style.width = `${Math.round(vuln * 100)}%`;
+    chanceFillEl.classList.toggle('water-arena__meter-fill--hot', hot);
+    if (meterLabelEl) {
+      meterLabelEl.textContent = hot ? 'NU! 🫵' : 'vangkans';
+      meterLabelEl.classList.toggle('water-arena__meter-label--hot', hot);
+    }
+
     dropFaceEl.textContent = waterFace();
     updateDropDom();
 
     g.statsTick += dt;
     if (g.statsTick > 0.25) {
       g.statsTick = 0;
-      const t = ((performance.now() - g.startAt) / 1000).toFixed(1);
-      arenaStatsEl.textContent = `⏱ ${t}s · 👆 ${g.attempts}`;
+      const secs = ((now - g.startAt) / 1000).toFixed(1);
+      arenaStatsEl.textContent = `⏱ ${secs}s · 👆 ${g.attempts}${
+        g.nearMisses ? ` · 😤 ${g.nearMisses}` : ''
+      }`;
     }
 
     g.raf = requestAnimationFrame(waterFrame);
   }
 
   function catchRadius() {
-    // Hoe vermoeider het water, hoe makkelijker te vangen
-    return DROP_SIZE / 2 + 14 + (1 - waterGame.stamina) * 34;
+    // Tijdens het opscheppen ruim; anders moet je hem écht op de kop tikken
+    if (isGloating()) return DROP_SIZE / 2 + 4 + waterGame.mercy * 22;
+    return DROP_SIZE * 0.25 + waterGame.mercy * 12;
   }
 
   function winWaterGame() {
@@ -431,11 +535,13 @@
 
     const elapsed = (performance.now() - g.startAt) / 1000;
     const line =
-      elapsed < 10
-        ? `GEVANGEN in ${elapsed.toFixed(1)}s. Olympisch niveau 🥇`
-        : elapsed < 25
-          ? `Gevangen in ${elapsed.toFixed(1)}s. Het water is onder de indruk 💧`
-          : `Gevangen in ${elapsed.toFixed(1)}s. Het water had ondertussen een hypotheek 🏠`;
+      elapsed < 15
+        ? `GEVANGEN in ${elapsed.toFixed(1)}s?! Dat is niet menselijk 🏆`
+        : elapsed < 45
+          ? `Gevangen in ${elapsed.toFixed(1)}s na ${g.attempts} pogingen. Legende 🥇`
+          : elapsed < 120
+            ? `Gevangen in ${elapsed.toFixed(1)}s. Het water accepteert zijn nederlaag 💧`
+            : `${elapsed.toFixed(0)}s en ${g.attempts} pogingen. Dit water gaat in therapie 🛋️`;
 
     setTimeout(() => {
       closeWaterArena();
@@ -453,6 +559,9 @@
     g.finger.x = ev.clientX;
     g.finger.y = ev.clientY;
     g.finger.active = true;
+    g.fvx = 0;
+    g.fvy = 0;
+    g.fLastT = performance.now();
     g.attempts += 1;
 
     const d = Math.hypot(g.x - ev.clientX, g.y - ev.clientY);
@@ -460,16 +569,34 @@
       winWaterGame();
       return;
     }
+
+    // Mis: hij schrikt, wordt bozer en dus sneller
     spawnRing(ev.clientX, ev.clientY);
-    if (d < 120 && navigator.vibrate) navigator.vibrate(12);
-    if (d < 120 && Math.random() < 0.5) waterSpeech(pick(WATER_TRASH_TALK));
+    g.rage = Math.min(4, g.rage + 0.55);
+    if (d < 85) {
+      g.nearMisses += 1;
+      waterSpeech(pick(WATER_NEARMISS_LINES), 1400);
+      if (navigator.vibrate) navigator.vibrate(18);
+    } else if (Math.random() < 0.3) {
+      waterSpeech(pick(WATER_TRASH_TALK));
+    }
+    if (g.dashCd <= 0) dashAway(1);
   }
 
   function onArenaPointerMove(ev) {
-    if (!waterGame.running) return;
-    waterGame.finger.x = ev.clientX;
-    waterGame.finger.y = ev.clientY;
-    waterGame.finger.active = true;
+    const g = waterGame;
+    if (!g.running) return;
+    const now = performance.now();
+    const dt = (now - g.fLastT) / 1000;
+    if (dt > 0.004) {
+      // Vingersnelheid — hierop voorspelt hij waar je naartoe mikt
+      g.fvx = Math.max(-2500, Math.min(2500, (ev.clientX - g.finger.x) / dt));
+      g.fvy = Math.max(-2500, Math.min(2500, (ev.clientY - g.finger.y) / dt));
+      g.fLastT = now;
+    }
+    g.finger.x = ev.clientX;
+    g.finger.y = ev.clientY;
+    g.finger.active = true;
   }
 
   function onArenaPointerUp() {
@@ -481,22 +608,34 @@
     const g = waterGame;
     const b = arenaBounds();
     g.running = true;
-    g.stamina = 1;
     g.attempts = 0;
-    g.tiredSaid = false;
+    g.nearMisses = 0;
+    g.rage = 0;
+    g.mercy = 0;
+    g.dashCd = 0;
+    g.gloatUntil = 0;
+    g.seed = Math.random() * 100;
+    g.heading = Math.random() * Math.PI * 2;
     g.vx = 0;
     g.vy = 0;
+    g.fvx = 0;
+    g.fvy = 0;
     g.x = b.minX + Math.random() * (b.maxX - b.minX);
     g.y = b.minY + Math.random() * (b.maxY - b.minY);
     g.finger.active = false;
     g.startAt = performance.now();
     g.lastT = g.startAt;
+    g.fLastT = g.startAt;
+    g.headingUntil = g.startAt + 400;
+    // Eerste opschep-moment na een paar seconden
+    g.nextGloatAt = g.startAt + 4000 + Math.random() * 3000;
     dropEl.classList.remove('water-drop--caught');
     dropFaceEl.textContent = '😏';
     speechEl.hidden = true;
     arenaStatsEl.textContent = '⏱ 0.0s · 👆 0';
     arenaTauntEl.textContent = pick(WATER_ARENA_TAUNTS);
-    staminaFillEl.style.width = '100%';
+    chanceFillEl.style.width = '0%';
+    chanceFillEl.classList.remove('water-arena__meter-fill--hot');
     arenaEl.hidden = false;
     document.body.style.overflow = 'hidden';
     updateDropDom();
