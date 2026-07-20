@@ -106,25 +106,6 @@
     Water: { toast: 'Eindelijk water. Hydratatie legend 💧', className: 'gag-bounce', sticker: 'hydrate' },
   };
 
-  const WATER_ESCAPE_TOASTS = [
-    'Water zegt nee 💧',
-    'Te gezond. Probeer een spritz.',
-    'Water is gaan joggen',
-    'Nice try, hydration warrior',
-    'Het water is sneller dan jij',
-    'Plot twist: water wil jou niet',
-    'Catch me if you can 💦',
-    'De bar keurt water af (grapje… half)',
-    'Bijna! Maar nee.',
-    'Water left the chat',
-  ];
-
-  let waterEscapes = 0;
-  let waterCooldown = false;
-  let waterAllowOrder = false;
-  let waterPlaceholder = null;
-  const WATER_CATCH_AFTER = 10;
-
   function pickItemGag(name, category) {
     if (ITEM_GAGS[name]) return { ...ITEM_GAGS[name] };
 
@@ -224,135 +205,339 @@
     });
   }
 
-  function isWaterChase() {
-    return document.body.classList.contains('water-chase');
+  /* ------------------------------------------------------------------ */
+  /* VANG HET WATER — arena met fysica, conditie en een grote mond      */
+  /* ------------------------------------------------------------------ */
+  const arenaEl = document.getElementById('water-arena');
+  const dropEl = document.getElementById('water-drop');
+  const dropFaceEl = document.getElementById('water-face');
+  const staminaFillEl = document.getElementById('water-stamina');
+  const arenaStatsEl = document.getElementById('water-stats');
+  const arenaTauntEl = document.getElementById('water-taunt');
+  const splashLayerEl = document.getElementById('water-splash-layer');
+  const speechEl = document.getElementById('water-speech');
+  const quitBtn = document.getElementById('water-quit');
+
+  const WATER_TRASH_TALK = [
+    'Te traag. Zoals de wifi hier.',
+    'Ik ben 0 calorieën, waarom wil je mij?!',
+    'Mijn moeder is een gletsjer. Respect.',
+    'Catch me outside 💅',
+    'Ik deed cardio. Jij scrolt menu’s.',
+    'Zelfs de Aperol lacht nu met je.',
+    'Dichtbij! Maar nee.',
+    'Woesh 💨',
+    'Ik zwem hier al heel de zomer, schat.',
+  ];
+  const WATER_TIRED_LINES = [
+    'oké… oké… even… pauze 🫁',
+    'niet… tegen mijn moeder… zeggen',
+    'jij wint… bijna…',
+  ];
+  const WATER_ARENA_TAUNTS = [
+    'hij is sneller dan je ex ging lopen',
+    'tip: water wordt moe. jij ook, maar hij eerst.',
+    'gratis water. je moet er alleen voor werken.',
+    'de bar kijkt mee en geniet',
+  ];
+  const WATER_QUIT_LINES = [
+    'Het water wint. Alweer. 💧🏆',
+    'Opgegeven. Het water vertelt dit door aan iederéén.',
+    'Geen zorgen, spritz loopt niet weg. 🍹',
+  ];
+
+  const DROP_SIZE = 76;
+
+  const waterGame = {
+    running: false,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    stamina: 1,
+    finger: { x: 0, y: 0, active: false },
+    attempts: 0,
+    startAt: 0,
+    lastT: 0,
+    raf: 0,
+    speechUntil: 0,
+    tiredSaid: false,
+    statsTick: 0,
+    tauntTimer: 0,
+  };
+
+  function arenaBounds() {
+    return {
+      minX: 12 + DROP_SIZE / 2,
+      maxX: window.innerWidth - 12 - DROP_SIZE / 2,
+      minY: 96 + DROP_SIZE / 2,
+      maxY: window.innerHeight - 20 - DROP_SIZE / 2,
+    };
   }
 
-  /** Blank the menu so water can run on an empty canvas. */
-  function enterWaterChase(card) {
-    if (isWaterChase() || !card) return;
-
-    const rect = card.getBoundingClientRect();
-    if (!waterPlaceholder) {
-      waterPlaceholder = document.createElement('div');
-      waterPlaceholder.className = 'water-placeholder';
-      waterPlaceholder.setAttribute('aria-hidden', 'true');
-    }
-    waterPlaceholder.style.height = `${Math.round(rect.height)}px`;
-    if (card.parentNode && card.parentNode !== document.body) {
-      card.parentNode.insertBefore(waterPlaceholder, card);
-    }
-    card.style.width = `${Math.min(rect.width, window.innerWidth - 32)}px`;
-    document.body.appendChild(card);
-    document.body.classList.add('water-chase');
-    card.classList.add('menu-card--fleeing');
+  function waterSpeech(text, ms = 1500) {
+    const now = performance.now();
+    if (now < waterGame.speechUntil) return;
+    waterGame.speechUntil = now + ms + 1600;
+    speechEl.textContent = text;
+    speechEl.hidden = false;
+    clearTimeout(waterSpeech._t);
+    waterSpeech._t = setTimeout(() => {
+      speechEl.hidden = true;
+    }, ms);
   }
 
-  function restoreWaterToSlot(card) {
-    document.body.classList.remove('water-chase');
-    card.classList.remove('menu-card--fleeing', 'water-vanish', 'water-zip');
-    card.style.left = '';
-    card.style.top = '';
-    card.style.width = '';
-    if (waterPlaceholder && waterPlaceholder.parentNode) {
-      waterPlaceholder.parentNode.insertBefore(card, waterPlaceholder);
-      waterPlaceholder.remove();
-    } else if (!card.parentNode || card.parentNode === document.body) {
-      const grid = document.querySelector('#fris .menu-grid');
-      if (grid) grid.appendChild(card);
+  function spawnSplash(x, y, emoji = '💦') {
+    if (!splashLayerEl) return;
+    const el = document.createElement('span');
+    el.className = 'water-splash';
+    el.textContent = emoji;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.setProperty('--sx', `${(Math.random() - 0.5) * 90}px`);
+    el.style.setProperty('--sy', `${-30 - Math.random() * 70}px`);
+    splashLayerEl.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+    setTimeout(() => el.remove(), 900);
+  }
+
+  function spawnRing(x, y) {
+    if (!splashLayerEl) return;
+    const el = document.createElement('span');
+    el.className = 'water-ring';
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    splashLayerEl.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+    setTimeout(() => el.remove(), 700);
+  }
+
+  function updateDropDom() {
+    const speed = Math.hypot(waterGame.vx, waterGame.vy);
+    const s = Math.min(1, speed / 1200);
+    const stretch = 1 + s * 0.18;
+    const squash = 1 - s * 0.14;
+    const angle = speed > 40 ? Math.atan2(waterGame.vy, waterGame.vx) : 0;
+    dropEl.style.transform =
+      `translate3d(${waterGame.x - DROP_SIZE / 2}px, ${waterGame.y - DROP_SIZE / 2}px, 0) ` +
+      `rotate(${angle}rad) scale(${stretch}, ${squash}) rotate(${-angle}rad)`;
+
+    if (speechEl && !speechEl.hidden) {
+      speechEl.style.left = `${waterGame.x}px`;
+      speechEl.style.top = `${waterGame.y - DROP_SIZE / 2 - 14}px`;
     }
   }
 
-  /** Restore menu and put water back in its slot. */
-  function endWaterChase(card, { toast = true, instant = false } = {}) {
-    if (!card) card = document.getElementById('water-card');
-    if (!card) return;
+  function waterFace() {
+    const d = waterGame.finger.active
+      ? Math.hypot(waterGame.x - waterGame.finger.x, waterGame.y - waterGame.finger.y)
+      : Infinity;
+    if (waterGame.stamina < 0.32) return '🥵';
+    if (d < 130) return '😱';
+    if (d < 220) return '😬';
+    return '😏';
+  }
 
-    const wasChasing = isWaterChase() || card.classList.contains('menu-card--fleeing');
-    if (!wasChasing && !waterPlaceholder) return;
-    if (card.classList.contains('water-vanish')) return;
+  function waterFrame(now) {
+    if (!waterGame.running) return;
+    const dt = Math.min(0.033, (now - waterGame.lastT) / 1000 || 0.016);
+    waterGame.lastT = now;
+    const g = waterGame;
+    const b = arenaBounds();
 
-    waterCooldown = true;
-    if (toast && wasChasing) {
-      showToast(pick(['Water is weggezwommen 💧', 'Splash — water gone', 'Te laat, water scrollde weg']), false, 1400);
+    // Vluchten: kracht weg van de vinger, zwakker naarmate hij moe wordt
+    if (g.finger.active) {
+      const dx = g.x - g.finger.x;
+      const dy = g.y - g.finger.y;
+      const d = Math.hypot(dx, dy) || 1;
+      if (d < 190) {
+        const speedFactor = 0.3 + 0.7 * g.stamina;
+        const force = ((190 - d) / 190) * 5200 * speedFactor;
+        g.vx += (dx / d) * force * dt;
+        g.vy += (dy / d) * force * dt;
+        if (Math.random() < 0.12) spawnSplash(g.x, g.y);
+        if (Math.random() < 0.02) waterSpeech(pick(WATER_TRASH_TALK));
+      }
+    } else if (Math.random() < 0.008) {
+      // Nerveus rondkijken als er niks gebeurt
+      g.vx += (Math.random() - 0.5) * 260;
+      g.vy += (Math.random() - 0.5) * 260;
     }
 
-    if (instant) {
-      restoreWaterToSlot(card);
-      waterCooldown = false;
+    // Wrijving + snelheidslimiet op basis van conditie
+    const drag = Math.max(0, 1 - 2.6 * dt);
+    g.vx *= drag;
+    g.vy *= drag;
+    const maxSpeed = 260 + 1150 * g.stamina;
+    const speed = Math.hypot(g.vx, g.vy);
+    if (speed > maxSpeed) {
+      g.vx = (g.vx / speed) * maxSpeed;
+      g.vy = (g.vy / speed) * maxSpeed;
+    }
+
+    g.x += g.vx * dt;
+    g.y += g.vy * dt;
+
+    // Muren: stuiteren
+    if (g.x < b.minX) { g.x = b.minX; g.vx = Math.abs(g.vx) * 0.75; }
+    if (g.x > b.maxX) { g.x = b.maxX; g.vx = -Math.abs(g.vx) * 0.75; }
+    if (g.y < b.minY) { g.y = b.minY; g.vy = Math.abs(g.vy) * 0.75; }
+    if (g.y > b.maxY) { g.y = b.maxY; g.vy = -Math.abs(g.vy) * 0.75; }
+
+    // Conditie: sprinten put uit, stilstaan herstelt héél traag
+    if (speed > 240) g.stamina = Math.max(0, g.stamina - 0.085 * dt * (speed / 900));
+    else g.stamina = Math.min(1, g.stamina + 0.015 * dt);
+
+    if (g.stamina < 0.32) {
+      if (!g.tiredSaid) {
+        g.tiredSaid = true;
+        waterSpeech(pick(WATER_TIRED_LINES), 2000);
+      }
+      if (Math.random() < 0.06) spawnSplash(g.x, g.y - DROP_SIZE / 2, '💦');
+    } else if (g.stamina > 0.55) {
+      g.tiredSaid = false;
+    }
+
+    staminaFillEl.style.width = `${Math.round(g.stamina * 100)}%`;
+    staminaFillEl.classList.toggle('water-arena__meter-fill--low', g.stamina < 0.32);
+    dropFaceEl.textContent = waterFace();
+    updateDropDom();
+
+    g.statsTick += dt;
+    if (g.statsTick > 0.25) {
+      g.statsTick = 0;
+      const t = ((performance.now() - g.startAt) / 1000).toFixed(1);
+      arenaStatsEl.textContent = `⏱ ${t}s · 👆 ${g.attempts}`;
+    }
+
+    g.raf = requestAnimationFrame(waterFrame);
+  }
+
+  function catchRadius() {
+    // Hoe vermoeider het water, hoe makkelijker te vangen
+    return DROP_SIZE / 2 + 14 + (1 - waterGame.stamina) * 34;
+  }
+
+  function winWaterGame() {
+    const g = waterGame;
+    g.running = false;
+    cancelAnimationFrame(g.raf);
+    dropFaceEl.textContent = '🫠';
+    dropEl.classList.add('water-drop--caught');
+    for (let i = 0; i < 12; i++) {
+      spawnSplash(g.x + (Math.random() - 0.5) * 40, g.y + (Math.random() - 0.5) * 40);
+    }
+    if (navigator.vibrate) navigator.vibrate([30, 50, 40]);
+
+    const elapsed = (performance.now() - g.startAt) / 1000;
+    const line =
+      elapsed < 10
+        ? `GEVANGEN in ${elapsed.toFixed(1)}s. Olympisch niveau 🥇`
+        : elapsed < 25
+          ? `Gevangen in ${elapsed.toFixed(1)}s. Het water is onder de indruk 💧`
+          : `Gevangen in ${elapsed.toFixed(1)}s. Het water had ondertussen een hypotheek 🏠`;
+
+    setTimeout(() => {
+      closeWaterArena();
+      grantWater();
+      showToast(line, false, 4200);
+      burstConfetti();
+    }, 650);
+  }
+
+  function onArenaPointerDown(ev) {
+    const g = waterGame;
+    if (!g.running) return;
+    if (ev.target.closest('.water-arena__quit')) return;
+    ev.preventDefault();
+    g.finger.x = ev.clientX;
+    g.finger.y = ev.clientY;
+    g.finger.active = true;
+    g.attempts += 1;
+
+    const d = Math.hypot(g.x - ev.clientX, g.y - ev.clientY);
+    if (d < catchRadius()) {
+      winWaterGame();
       return;
     }
-
-    card.classList.remove('water-zip');
-    card.classList.add('water-vanish');
-    setTimeout(() => {
-      restoreWaterToSlot(card);
-      setTimeout(() => {
-        waterCooldown = false;
-      }, 400);
-    }, 260);
+    spawnRing(ev.clientX, ev.clientY);
+    if (d < 120 && navigator.vibrate) navigator.vibrate(12);
+    if (d < 120 && Math.random() < 0.5) waterSpeech(pick(WATER_TRASH_TALK));
   }
 
-  /**
-   * Teleport the water card somewhere else on screen.
-   * @returns {boolean} true if it fled (block add), false if client finally caught it
-   */
-  function fleeWater(card) {
-    if (prefersReducedMotion || waterAllowOrder) return false;
-    if (waterCooldown) return true;
-
-    waterEscapes += 1;
-    if (waterEscapes >= WATER_CATCH_AFTER) {
-      waterEscapes = 0;
-      waterAllowOrder = true;
-      endWaterChase(card, { toast: false, instant: true });
-      showToast('Oké oké… je hebt water verdiend 💧', false, 2400);
-      return false;
-    }
-
-    waterCooldown = true;
-    setTimeout(() => {
-      waterCooldown = false;
-    }, 380);
-
-    enterWaterChase(card);
-    showToast(pick(WATER_ESCAPE_TOASTS), false, 1500);
-
-    const rect = card.getBoundingClientRect();
-    const pad = 16;
-    const w = card.offsetWidth || 280;
-    const h = card.offsetHeight || 72;
-    const maxX = Math.max(pad, window.innerWidth - w - pad);
-    const maxY = Math.max(pad + 24, window.innerHeight - h - pad - 24);
-
-    let x = pad + Math.random() * Math.max(1, maxX - pad);
-    let y = pad + Math.random() * Math.max(1, maxY - pad);
-
-    const cx = rect.left;
-    const cy = rect.top;
-    let tries = 0;
-    while (tries < 8 && Math.hypot(x - cx, y - cy) < 140) {
-      x = pad + Math.random() * Math.max(1, maxX - pad);
-      y = pad + Math.random() * Math.max(1, maxY - pad);
-      tries += 1;
-    }
-
-    card.classList.remove('water-zip');
-    void card.offsetWidth;
-    card.classList.add('water-zip');
-    card.style.left = `${Math.round(x)}px`;
-    card.style.top = `${Math.round(y)}px`;
-
-    if (Math.random() < 0.4) {
-      spawnFloatingSticker(card, pick(['te sober', 'hydrate later', 'nah', 'splash', 'run']));
-    }
-    return true;
+  function onArenaPointerMove(ev) {
+    if (!waterGame.running) return;
+    waterGame.finger.x = ev.clientX;
+    waterGame.finger.y = ev.clientY;
+    waterGame.finger.active = true;
   }
 
-  /** Scroll / swipe ends the blank-canvas chase. */
-  function vanishFleeingWater(card) {
-    if (!isWaterChase() && !(card && card.classList.contains('menu-card--fleeing'))) return;
-    endWaterChase(card);
+  function onArenaPointerUp() {
+    waterGame.finger.active = false;
+  }
+
+  function openWaterArena() {
+    if (!arenaEl || waterGame.running) return;
+    const g = waterGame;
+    const b = arenaBounds();
+    g.running = true;
+    g.stamina = 1;
+    g.attempts = 0;
+    g.tiredSaid = false;
+    g.vx = 0;
+    g.vy = 0;
+    g.x = b.minX + Math.random() * (b.maxX - b.minX);
+    g.y = b.minY + Math.random() * (b.maxY - b.minY);
+    g.finger.active = false;
+    g.startAt = performance.now();
+    g.lastT = g.startAt;
+    dropEl.classList.remove('water-drop--caught');
+    dropFaceEl.textContent = '😏';
+    speechEl.hidden = true;
+    arenaStatsEl.textContent = '⏱ 0.0s · 👆 0';
+    arenaTauntEl.textContent = pick(WATER_ARENA_TAUNTS);
+    staminaFillEl.style.width = '100%';
+    arenaEl.hidden = false;
+    document.body.style.overflow = 'hidden';
+    updateDropDom();
+    waterSpeech('kom dan 💧', 1400);
+    g.raf = requestAnimationFrame(waterFrame);
+
+    clearInterval(g.tauntTimer);
+    g.tauntTimer = setInterval(() => {
+      arenaTauntEl.textContent = pick(WATER_ARENA_TAUNTS);
+    }, 5000);
+  }
+
+  function closeWaterArena() {
+    const g = waterGame;
+    g.running = false;
+    cancelAnimationFrame(g.raf);
+    clearInterval(g.tauntTimer);
+    arenaEl.hidden = true;
+    if (!drawer.classList.contains('open')) document.body.style.overflow = '';
+  }
+
+  if (arenaEl) {
+    arenaEl.addEventListener('pointerdown', onArenaPointerDown);
+    arenaEl.addEventListener('pointermove', onArenaPointerMove);
+    arenaEl.addEventListener('pointerup', onArenaPointerUp);
+    arenaEl.addEventListener('pointercancel', onArenaPointerUp);
+    quitBtn.addEventListener('click', () => {
+      closeWaterArena();
+      showToast(pick(WATER_QUIT_LINES), false, 2800);
+    });
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && !arenaEl.hidden) {
+          closeWaterArena();
+          showToast(pick(WATER_QUIT_LINES), false, 2800);
+          e.stopPropagation();
+        }
+      },
+      true
+    );
   }
 
   /* ------------------------------------------------------------------ */
@@ -518,6 +703,19 @@
       badge.classList.add('show');
     } else {
       badge.classList.remove('show');
+    }
+
+    // De kar krijgt stemmingen naarmate hij voller raakt
+    const fabIcon = fab.querySelector('.order-fab__icon');
+    const mood =
+      totalQty === 0 ? '🛒' : totalQty <= 3 ? '🍹' : totalQty <= 7 ? '🥂' : totalQty <= 11 ? '🥴' : '🚨';
+    if (fabIcon && fabIcon.textContent !== mood) {
+      fabIcon.textContent = mood;
+      if (!prefersReducedMotion) {
+        fabIcon.classList.remove('order-fab__icon--pop');
+        void fabIcon.offsetWidth;
+        fabIcon.classList.add('order-fab__icon--pop');
+      }
     }
 
     // Clear previous item rows (keep empty state node)
@@ -797,6 +995,7 @@
       order.set(name, { name, price, category, qty: 1 });
     }
     renderOrder();
+    if (navigator.vibrate) navigator.vibrate(10);
     // Cart only — never submits to the bar
     const gag = pickItemGag(name, category);
     showToast(gag.toast, false, 1800);
@@ -823,30 +1022,30 @@
     renderOrder();
   }
 
+  /** Add water to the cart with full celebration — the game's prize. */
+  function grantWater() {
+    const waterCard = document.getElementById('water-card');
+    const btn = waterCard && waterCard.querySelector('[data-add]');
+    if (!btn) return;
+    const gag = addItem(btn.dataset.name, 0, 'fris');
+    sparkToFab(btn);
+    if (!prefersReducedMotion && waterCard && gag.className) {
+      waterCard.classList.add(gag.className);
+      setTimeout(() => waterCard.classList.remove(gag.className), 700);
+    }
+  }
+
   document.addEventListener('click', (e) => {
     const waterCard = e.target.closest('[data-water-dodge]');
     if (waterCard) {
       e.preventDefault();
       e.stopPropagation();
-      // Keyboard / reduced-motion users can order; mouse/touch must catch it
+      // Keyboard / reduced-motion users get their water without the chase
       const viaKeyboard = e.detail === 0;
-      if (!viaKeyboard && fleeWater(waterCard)) return;
-      // Fall through: treat as successful add of water
-      const btn = waterCard.querySelector('[data-add]');
-      if (btn) {
-        const name = btn.dataset.name;
-        const price = parseFloat(btn.dataset.price);
-        const category = btn.dataset.category || 'fris';
-        if (name && Number.isFinite(price)) {
-          const gag = addItem(name, price, category);
-          waterAllowOrder = false;
-          waterEscapes = 0;
-          sparkToFab(btn);
-          if (!prefersReducedMotion && gag.className) {
-            waterCard.classList.add(gag.className);
-            setTimeout(() => waterCard.classList.remove(gag.className), 700);
-          }
-        }
+      if (viaKeyboard || prefersReducedMotion) {
+        grantWater();
+      } else {
+        openWaterArena();
       }
       return;
     }
@@ -902,27 +1101,11 @@
       return;
     }
 
+    const tappedCard = e.target.closest('.menu-card, .daily-special');
+    if (tappedCard && !e.target.closest('button')) {
+      handleCardDoubleTap(tappedCard, e);
+    }
   });
-
-  // Water chase: click starts blank-canvas mode; during chase, hover still teleports
-  const waterEl = document.getElementById('water-card');
-  if (waterEl && !prefersReducedMotion) {
-    waterEl.addEventListener(
-      'pointerenter',
-      () => {
-        if (isWaterChase()) fleeWater(waterEl);
-      },
-      { passive: true }
-    );
-
-    // Scroll / swipe ends chase and restores the menu
-    const onBrowseAway = () => {
-      if (isWaterChase()) vanishFleeingWater(waterEl);
-    };
-    window.addEventListener('scroll', onBrowseAway, { passive: true });
-    window.addEventListener('wheel', onBrowseAway, { passive: true });
-    window.addEventListener('touchmove', onBrowseAway, { passive: true });
-  }
 
   fab.addEventListener('click', openDrawer);
   overlay.addEventListener('click', closeDrawer);
@@ -1875,6 +2058,187 @@
       if (document.hidden) return;
       badgeTextEl.textContent = pick(HERO_BADGE_LINES);
     }, 9000);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Telefoon-juice: jelly-scroll, dubbeltik-bursts, drink-lore         */
+  /* ------------------------------------------------------------------ */
+  const CATEGORY_EMOJI = {
+    bieren: '🍺',
+    flessen: '🍻',
+    fris: '🥤',
+    cocktails: '🍹',
+    wijnen: '🍷',
+    shots: '🥃',
+    warme: '☕',
+    fingerfood: '🍟',
+  };
+
+  const DOUBLE_TAP_TOASTS = [
+    'Dubbeltik gezien. Dorstniveau: gevaarlijk.',
+    'Deze kaart is nu emotioneel aan je gehecht.',
+    'Bestellen doe je met de +, schat. Maar leuk.',
+    'Oké, je meent het. Respect.',
+  ];
+
+  let lastTapCard = null;
+  let lastTapAt = 0;
+  let dblToastCount = 0;
+
+  function emojiBurst(x, y, emoji, count = 8) {
+    const layer = document.getElementById('chaos-layer');
+    if (!layer) return;
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('span');
+      el.className = 'emoji-burst';
+      el.textContent = emoji;
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      el.style.setProperty('--bx', `${(Math.random() - 0.5) * 190}px`);
+      el.style.setProperty('--by', `${-40 - Math.random() * 150}px`);
+      el.style.setProperty('--br', `${(Math.random() - 0.5) * 80}deg`);
+      el.style.animationDelay = `${i * 18}ms`;
+      layer.appendChild(el);
+      el.addEventListener('animationend', () => el.remove(), { once: true });
+      setTimeout(() => el.remove(), 1300);
+    }
+  }
+
+  function handleCardDoubleTap(card, e) {
+    if (prefersReducedMotion) return;
+    const now = performance.now();
+    if (lastTapCard === card && now - lastTapAt < 380) {
+      lastTapCard = null;
+      lastTapAt = 0;
+      const cat =
+        card.closest('[data-category]')?.dataset.category ||
+        card.querySelector('[data-add]')?.dataset.category ||
+        'cocktails';
+      emojiBurst(e.clientX, e.clientY, CATEGORY_EMOJI[cat] || '✨');
+      if (navigator.vibrate) navigator.vibrate(10);
+      dblToastCount += 1;
+      if (dblToastCount % 2 === 1) showToast(pick(DOUBLE_TAP_TOASTS), false, 2000);
+    } else {
+      lastTapCard = card;
+      lastTapAt = now;
+    }
+  }
+
+  /* Langdrukken op een kaart → drink-lore */
+  const DRINK_LORE = {
+    Duvel: 'Duvel betekent “duivel”. Toeval? Absoluut niet.',
+    Tequila: 'Tequila: eerst lachen, dan lore.',
+    'Aperol Spritz': 'Smaakt bewezen beter in golden hour. Bron: wij.',
+    Corona: 'Mét limoentje. Zonder de rest.',
+    Water: 'Heeft trust issues. Logisch, na vanavond.',
+    Koffie: 'Koffie op een zomerbar? Iemand heeft morgen een meeting.',
+    "Sharing Nacho's": '“Sharing” is juridisch niet bindend.',
+    Champagne: 'Voor als de groepschat “GROOT NIEUWS” zegt.',
+    Kaasballetjes: 'Volgorde: kaasballetje, slokje, levensverhaal.',
+    'Friet 105 Burger': 'Genoemd naar nummer 105. De burger woont daar nu.',
+    'Hugo Spritz': 'Hugo is de enige man die iedereen hier vertrouwt.',
+    Bitterballen: 'Binnenkant: lava. Wacht. Echt. Wacht.',
+  };
+  const GENERIC_LORE = [
+    '33% van dit drankje is persoonlijkheid.',
+    'Langdrukken geeft geen korting. Wel lore.',
+    'Deze kaart heeft meer fans dan je story.',
+    'Limited edition sinds vanavond.',
+  ];
+
+  function showLore(card) {
+    const name = card.dataset.name || '';
+    let lore = DRINK_LORE[name];
+    if (!lore) {
+      const key = Object.keys(DRINK_LORE).find((k) => name.toLowerCase().includes(k.toLowerCase()));
+      lore = key ? DRINK_LORE[key] : pick(GENERIC_LORE);
+    }
+    const rect = card.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'lore-bubble';
+    el.textContent = `📜 ${lore}`;
+    el.style.left = `${rect.left + rect.width / 2}px`;
+    el.style.top = `${Math.max(70, rect.top - 10)}px`;
+    document.body.appendChild(el);
+    if (navigator.vibrate) navigator.vibrate(15);
+    if (!prefersReducedMotion) {
+      card.classList.add('gag-tilt');
+      setTimeout(() => card.classList.remove('gag-tilt'), 700);
+    }
+    setTimeout(() => el.classList.add('lore-bubble--out'), 2300);
+    setTimeout(() => el.remove(), 2750);
+  }
+
+  let loreTimer = 0;
+  let loreStart = null;
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      const card = e.target.closest('.menu-card');
+      if (!card || e.target.closest('button')) return;
+      loreStart = { x: e.clientX, y: e.clientY };
+      clearTimeout(loreTimer);
+      loreTimer = setTimeout(() => showLore(card), 550);
+    },
+    { passive: true }
+  );
+  const cancelLore = (e) => {
+    if (
+      loreStart &&
+      e.type === 'pointermove' &&
+      Math.hypot(e.clientX - loreStart.x, e.clientY - loreStart.y) < 12
+    ) {
+      return;
+    }
+    clearTimeout(loreTimer);
+    loreStart = null;
+  };
+  document.addEventListener('pointermove', cancelLore, { passive: true });
+  document.addEventListener('pointerup', cancelLore, { passive: true });
+  document.addEventListener('pointercancel', cancelLore, { passive: true });
+  window.addEventListener('scroll', () => clearTimeout(loreTimer), { passive: true });
+
+  /* Jelly-scroll: het menu leunt heel even mee met je duim */
+  if (!prefersReducedMotion) {
+    const menuContent = document.querySelector('.menu-content');
+    let lastLeanY = window.scrollY;
+    let lastLeanT = performance.now();
+    let leanTarget = 0;
+    let lean = 0;
+    let leanRaf = 0;
+    let fastToastDone = false;
+
+    const leanLoop = () => {
+      lean += (leanTarget - lean) * 0.16;
+      leanTarget *= 0.86;
+      if (Math.abs(lean) < 0.015 && Math.abs(leanTarget) < 0.015) {
+        lean = 0;
+        menuContent.style.transform = '';
+        leanRaf = 0;
+        return;
+      }
+      menuContent.style.transform = `skewY(${lean.toFixed(3)}deg)`;
+      leanRaf = requestAnimationFrame(leanLoop);
+    };
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        const now = performance.now();
+        const dt = now - lastLeanT;
+        if (dt <= 0) return;
+        const v = (window.scrollY - lastLeanY) / dt;
+        lastLeanY = window.scrollY;
+        lastLeanT = now;
+        leanTarget = Math.max(-1.3, Math.min(1.3, v * 0.5));
+        if (!leanRaf && menuContent) leanRaf = requestAnimationFrame(leanLoop);
+        if (!fastToastDone && Math.abs(v) > 4.2) {
+          fastToastDone = true;
+          showToast('Waar is de brand? 🧯 Het menu loopt niet weg.', false, 2600);
+        }
+      },
+      { passive: true }
+    );
   }
 
   // Random idle stickers over the menu (rare)

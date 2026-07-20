@@ -18,6 +18,9 @@
       <img src="assets/hero.jpg" alt="" width="1920" height="1080" />
     </div>
     <div class="hero__overlay"></div>
+    <div class="hero-bubbles" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
     <div class="hero__content">
       <div class="hero__badge" id="hero-badge">
         <span class="dot" aria-hidden="true"></span>
@@ -270,7 +273,7 @@
         >
           <div class="menu-card__info">
             <h3 class="menu-card__name">Water</h3>
-            <p class="menu-card__detail">Te gezond · vangt je niet</p>
+            <p class="menu-card__detail">Gratis · als je hem kan vangen 🏃💨</p>
           </div>
           <div class="menu-card__prices"><span class="menu-card__price">€0</span></div>
           <button
@@ -665,6 +668,26 @@
         Ja, verstuur naar de bar
       </button>
     </div>
+  </div>
+
+  <div class="water-arena" id="water-arena" hidden>
+    <div class="water-arena__hud">
+      <div class="water-arena__meter-wrap">
+        <span class="water-arena__meter-label">conditie van het water</span>
+        <div class="water-arena__meter" aria-hidden="true">
+          <div class="water-arena__meter-fill" id="water-stamina"></div>
+        </div>
+      </div>
+      <p class="water-arena__stats" id="water-stats">⏱ 0.0s · 👆 0</p>
+      <button type="button" class="water-arena__quit" id="water-quit">Opgeven 🏳️</button>
+    </div>
+    <p class="water-arena__title" aria-hidden="true">VANG HET WATER</p>
+    <p class="water-arena__taunt" id="water-taunt"></p>
+    <div class="water-splash-layer" id="water-splash-layer" aria-hidden="true"></div>
+    <div class="water-drop" id="water-drop" aria-hidden="true">
+      <span class="water-drop__face" id="water-face">😏</span>
+    </div>
+    <div class="water-speech" id="water-speech" hidden></div>
   </div>
 
   <div class="pay-overlay" id="pay-overlay" hidden>
