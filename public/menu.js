@@ -2441,15 +2441,12 @@
   /* ------------------------------------------------------------------ */
   const slotOverlay = document.getElementById('slot-overlay');
   const slotBox = slotOverlay ? slotOverlay.querySelector('.slot') : null;
-  const slotStrips = [0, 1, 2].map((i) => document.getElementById(`strip-${i}`));
+  const slotDrums = [0, 1, 2].map((i) => document.getElementById(`drum-${i}`));
   const slotLever = document.getElementById('slot-lever');
   const slotArm = document.getElementById('slot-arm');
   const slotHint = document.getElementById('slot-hint');
-  const slotResult = document.getElementById('slot-result');
+  const slotBon = document.getElementById('slot-bon');
   const slotSub = document.getElementById('slot-sub');
-  const slotTakeBtn = document.getElementById('slot-take');
-  const slotAgainBtn = document.getElementById('slot-again');
-  const slotWaterBtn = document.getElementById('slot-water');
   const slotCloseBtn = document.getElementById('slot-close');
 
   const SLOT_EMOJI = {
@@ -2464,28 +2461,38 @@
   };
 
   const SLOT_LINES = [
-    'Het toestel heeft gesproken.',
-    'De machine kent je beter dan je vrienden.',
-    'Geen bezwaar mogelijk. Dit is techniek.',
+    'Twijfel opgelost. Machinaal.',
+    'De kast kent je dorst beter dan jij.',
+    'Geen keuzestress meer. Alleen dorst.',
     'Drie rollen, één waarheid.',
-    'Zo staat het geschreven in de kast.',
+    'Dit is wat je nodig had. Bewezen met techniek.',
   ];
 
   const SLOT_NEARMISS_LINES = [
     'Zó dicht bij de jackpot. Voel je dat? Dat is pijn.',
     'Twee gelijk. De derde had andere plannen.',
-    'Bijna. En bijna telt nergens.',
+    'Bijna goud. Drink eerst, rouw later.',
   ];
 
-  const SLOT_REPEATS = 12;
-  const SREPEAT_TARGET = SLOT_REPEATS - 2; // in welke herhaling de rol stopt
+  const SLOT_JACKPOT_LINES = [
+    'Dit is geen suggestie meer. Dit is bestemming.',
+    'De kast heeft je uitverkoren. Gedraag je ernaar.',
+    'Drie op een rij — vanavond ben jij de hoofdact.',
+  ];
+
+  const SLOT_FACES = 12; // vlakken per trommel
+  const SLOT_FACE_H = 78;
   const JACKPOT_CHANCE = 0.09;
   const NEARMISS_CHANCE = 0.3;
 
   /** @type {{name:string,price:number,category:string,emoji:string,short:string,btn:Element}[]} */
   let slotPool = [];
   let slotSpinning = false;
-  let slotCellH = 78;
+  /** Huidige rotatie (graden) per trommel */
+  const drumAngle = [0, 0, 0];
+  /** Strip (items per vlak) per trommel van de laatste beurt */
+  const drumStrips = [[], [], []];
+  /** @type {{item:object, jackpot:boolean}|null} */
   let slotWinner = null;
 
   function slotShortName(name) {
@@ -2507,10 +2514,15 @@
   }
 
   function buildSlotPool() {
-    // Water doet niet mee — dat moet je zelf vangen
+    // Alleen drank per glas: geen eten, geen flessen, en geen water
+    // (dat moet je zelf vangen)
     const btns = [...document.querySelectorAll('[data-add]')].filter((btn) => {
       const name = btn.dataset.name || '';
-      return name && name !== 'Water' && !btn.disabled && !outOfStock.has(name);
+      const cat = btn.dataset.category || '';
+      if (!name || name === 'Water' || btn.disabled || outOfStock.has(name)) return false;
+      if (cat === 'fingerfood') return false;
+      if (/\(fles\)$/.test(name)) return false;
+      return true;
     });
     const seen = new Set();
     return btns
@@ -2530,31 +2542,40 @@
       }));
   }
 
-  function renderSlotStrips() {
-    slotStrips.forEach((strip) => {
-      strip.innerHTML = '';
-      for (let r = 0; r < SLOT_REPEATS; r++) {
-        for (const item of slotPool) {
-          const cell = document.createElement('div');
-          cell.className = 'slot__cell';
-          cell.innerHTML =
-            `<span class="slot__cell-emoji">${item.emoji}</span>` +
-            `<span class="slot__cell-name">${escapeHtml(item.short)}</span>`;
-          strip.appendChild(cell);
-        }
-      }
-      // Elke rol op een andere hoogte starten — anders lijkt de kast bevroren
-      const startAt = Math.floor(Math.random() * slotPool.length);
-      strip.style.transform = `translateY(${-slotOffsetFor(startAt, 1)}px)`;
+  const SLOT_FACE_ANGLE = 360 / SLOT_FACES;
+  // Straal zodat de vlakken precies een gesloten cilinder vormen
+  const SLOT_RADIUS = Math.round(SLOT_FACE_H / 2 / Math.tan(Math.PI / SLOT_FACES));
+
+  /**
+   * Bouw één trommel: 12 vlakken met het doelitem op vlak `targetFace`,
+   * de rest is een willekeurige greep uit de pool.
+   */
+  function buildDrum(drumIdx, targetItem, targetFace) {
+    const drum = slotDrums[drumIdx];
+    const others = shuffle(slotPool.filter((i) => i !== targetItem));
+    const strip = [];
+    for (let f = 0; f < SLOT_FACES; f++) {
+      strip.push(f === targetFace ? targetItem : others[f % others.length] || targetItem);
+    }
+    drumStrips[drumIdx] = strip;
+
+    drum.innerHTML = '';
+    strip.forEach((item, f) => {
+      const face = document.createElement('div');
+      face.className = 'slot__face';
+      face.dataset.name = item.name;
+      // Vlak f staat vooraan wanneer de trommel -f·hoek gedraaid is
+      face.style.transform = `rotateX(${f * SLOT_FACE_ANGLE}deg) translateZ(${SLOT_RADIUS}px)`;
+      face.innerHTML =
+        `<span class="slot__cell-emoji">${item.emoji}</span>` +
+        `<span class="slot__cell-name">${escapeHtml(item.short)}</span>`;
+      drum.appendChild(face);
     });
-    const firstCell = slotStrips[0].querySelector('.slot__cell');
-    if (firstCell) slotCellH = firstCell.offsetHeight || 78;
   }
 
-  /** Positie zodat pool-index p in het midden van het venster staat. */
-  function slotOffsetFor(poolIndex, repeat) {
-    const j = repeat * slotPool.length + poolIndex;
-    return (j - 1) * slotCellH;
+  function setDrumAngle(drumIdx, deg) {
+    drumAngle[drumIdx] = deg;
+    slotDrums[drumIdx].style.transform = `rotateX(${deg}deg)`;
   }
 
   function slotClack(pitch = 1) {
@@ -2605,41 +2626,44 @@
     }
   }
 
-  /** Eén rol laten draaien en op poolIndex landen. */
-  function spinOneReel(reelIdx, poolIndex, duration) {
+  /**
+   * Eén trommel meerdere toeren draaien en op targetFace landen,
+   * met een lichte overshoot zodat hij mechanisch "vastklikt".
+   */
+  function spinDrum(drumIdx, targetFace, turns, duration) {
     return new Promise((resolve) => {
-      const strip = slotStrips[reelIdx];
-      const from = slotOffsetFor(0, 1);
-      const to = slotOffsetFor(poolIndex, SREPEAT_TARGET);
-      const start = performance.now();
-      let lastCell = -1;
+      const from = drumAngle[drumIdx];
+      // Negatief = de trommel rolt naar beneden, zoals een echte kast
+      const to = -(turns * 360 + targetFace * SLOT_FACE_ANGLE);
 
       if (prefersReducedMotion) {
-        strip.style.transform = `translateY(${-to}px)`;
+        setDrumAngle(drumIdx, to);
         resolve();
         return;
       }
 
+      const start = performance.now();
+      let lastNotch = Math.floor(Math.abs(from) / SLOT_FACE_ANGLE);
+
       const frame = (now) => {
         const t = Math.min(1, (now - start) / duration);
-        // Sterke uitloop: snel weg, traag vast
-        const eased = 1 - Math.pow(1 - t, 4);
-        const pos = from + (to - from) * eased;
-        strip.style.transform = `translateY(${-pos}px)`;
+        // Ease-out met overshoot: schiet ~een half vlak voorbij en veert terug
+        const s = 1.35;
+        const u = t - 1;
+        const eased = 1 + (s + 1) * u * u * u + s * u * u;
+        const deg = from + (to - from) * eased;
+        setDrumAngle(drumIdx, deg);
 
-        const speed = (1 - eased) * 40;
-        strip.style.filter = speed > 6 ? `blur(${Math.min(6, speed / 5).toFixed(1)}px)` : 'none';
-
-        const cell = Math.floor(pos / slotCellH);
-        if (cell !== lastCell) {
-          lastCell = cell;
-          if (t > 0.35) slotClack(1 + reelIdx * 0.12);
+        const notch = Math.floor(Math.abs(deg) / SLOT_FACE_ANGLE);
+        if (notch !== lastNotch) {
+          lastNotch = notch;
+          if (t > 0.25) slotClack(1 + drumIdx * 0.12);
         }
 
         if (t < 1) {
           requestAnimationFrame(frame);
         } else {
-          strip.style.filter = 'none';
+          setDrumAngle(drumIdx, to);
           slotClack(0.7);
           if (navigator.vibrate) navigator.vibrate(14);
           resolve();
@@ -2649,10 +2673,56 @@
     });
   }
 
-  function setSlotButtons({ take = false, again = false, water = false } = {}) {
-    slotTakeBtn.hidden = !take;
-    slotAgainBtn.hidden = !again;
-    slotWaterBtn.hidden = !water;
+  function coinRain() {
+    if (prefersReducedMotion) return;
+    for (let i = 0; i < 26; i++) {
+      const coin = document.createElement('span');
+      coin.className = 'slot-coin';
+      coin.textContent = Math.random() < 0.3 ? '✨' : '🪙';
+      coin.style.left = `${Math.random() * 100}vw`;
+      coin.style.animationDelay = `${Math.random() * 0.9}s`;
+      coin.style.fontSize = `${20 + Math.random() * 16}px`;
+      coin.style.setProperty('--spin', `${180 + Math.random() * 420}deg`);
+      document.body.appendChild(coin);
+      coin.addEventListener('animationend', () => coin.remove(), { once: true });
+      setTimeout(() => coin.remove(), 3000);
+    }
+  }
+
+  /** Printgeluid: snelle tikjes terwijl de bon uit de gleuf rolt. */
+  function bonPrintSound() {
+    for (let i = 0; i < 9; i++) {
+      setTimeout(() => slotClack(2.4 + (i % 3) * 0.3), i * 70);
+    }
+  }
+
+  function printBon(item, { jackpot, nearMiss }) {
+    const nr = String(Math.floor(1000 + Math.random() * 9000));
+    const line = jackpot
+      ? pick(SLOT_JACKPOT_LINES)
+      : nearMiss
+        ? pick(SLOT_NEARMISS_LINES)
+        : pick(SLOT_LINES);
+
+    slotBon.classList.toggle('slot__bon--jackpot', jackpot);
+    slotBon.innerHTML =
+      `<p class="slot__bon-head">ROCHUS · DRANKAUTOMAAT</p>` +
+      `<p class="slot__bon-meta">bon #${nr} · tafelvermaak inbegrepen</p>` +
+      `<hr class="slot__bon-rule" />` +
+      (jackpot ? `<p class="slot__bon-jackpot">★ JACKPOT ★</p>` : '') +
+      `<p class="slot__bon-emoji" aria-hidden="true">${jackpot ? '🎰' : item.emoji}</p>` +
+      `<p class="slot__bon-name">${escapeHtml(item.name)}</p>` +
+      `<p class="slot__bon-price">${formatEuro(item.price)}</p>` +
+      `<p class="slot__bon-line">${escapeHtml(line)}${
+        jackpot ? ' Bestel hem en de bar weet dat dit een jackpot-drankje is. 🏆' : ''
+      }</p>` +
+      `<div class="slot__bon-barcode" aria-hidden="true"></div>` +
+      `<div class="slot__bon-actions">` +
+      `<button type="button" class="slot__bon-btn slot__bon-btn--take" id="slot-take">Zet op mijn bestelling</button>` +
+      `<button type="button" class="slot__bon-btn slot__bon-btn--again" id="slot-again">Nog eens trekken</button>` +
+      `</div>`;
+    slotBon.hidden = false;
+    bonPrintSound();
   }
 
   async function spinSlot() {
@@ -2660,56 +2730,51 @@
     slotSpinning = true;
     slotWinner = null;
     slotBox.classList.remove('slot--win', 'slot--jackpot');
-    slotResult.textContent = '';
-    setSlotButtons({});
+    slotBon.hidden = true;
     if (slotHint) slotHint.hidden = true;
 
-    const n = slotPool.length;
+    // Kies eerst de uitkomst per item, bouw dan de trommels eromheen
     const roll = Math.random();
-    let idx;
-
+    const randItem = () => slotPool[Math.floor(Math.random() * slotPool.length)];
+    let items;
     if (roll < JACKPOT_CHANCE) {
-      const p = Math.floor(Math.random() * n);
-      idx = [p, p, p]; // drie gelijk
+      const p = randItem();
+      items = [p, p, p];
     } else if (roll < JACKPOT_CHANCE + NEARMISS_CHANCE) {
-      // Bijna-jackpot: twee gelijk, de derde één plek ernaast
-      const p = Math.floor(Math.random() * n);
-      const off = (p + (Math.random() < 0.5 ? 1 : n - 1)) % n;
-      idx = Math.random() < 0.5 ? [p, p, off] : [off, p, p];
+      const p = randItem();
+      let other = randItem();
+      while (other === p && slotPool.length > 1) other = randItem();
+      items = Math.random() < 0.5 ? [p, p, other] : [other, p, p];
     } else {
-      idx = [0, 1, 2].map(() => Math.floor(Math.random() * n));
+      items = [randItem(), randItem(), randItem()];
     }
 
+    const faces = items.map(() => Math.floor(Math.random() * SLOT_FACES));
+    items.forEach((item, i) => buildDrum(i, item, faces[i]));
+    [0, 1, 2].forEach((i) => setDrumAngle(i, 0));
+
     await Promise.all([
-      spinOneReel(0, idx[0], 1500),
-      spinOneReel(1, idx[1], 2100),
-      spinOneReel(2, idx[2], 2800),
+      spinDrum(0, faces[0], 3, 1600),
+      spinDrum(1, faces[1], 4, 2300),
+      spinDrum(2, faces[2], 5, 3100),
     ]);
 
-    const picked = slotPool[idx[1]];
-    slotWinner = picked;
-    const jackpot = idx[0] === idx[1] && idx[1] === idx[2];
-    const nearMiss = !jackpot && (idx[0] === idx[1] || idx[1] === idx[2] || idx[0] === idx[2]);
+    const picked = items[1];
+    const jackpot = items[0] === items[1] && items[1] === items[2];
+    const nearMiss = !jackpot && (items[0] === items[1] || items[1] === items[2] || items[0] === items[2]);
+    slotWinner = { item: picked, jackpot };
 
     slotBox.classList.add('slot--win');
     if (jackpot) {
       slotBox.classList.add('slot--jackpot');
       slotFanfare();
       celebrateOrderSuccess();
+      coinRain();
       if (navigator.vibrate) navigator.vibrate([40, 60, 40, 60, 80]);
-      slotResult.innerHTML =
-        `🎰 JACKPOT — 3× ${escapeHtml(picked.short)}!` +
-        `<span class="slot__result-sub">Het toestel eist dat je dit drinkt. En het water wil je spreken.</span>`;
-      setSlotButtons({ take: true, again: true, water: true });
     } else {
       burstConfetti();
-      slotResult.innerHTML =
-        `${picked.emoji} ${escapeHtml(picked.name)} · ${formatEuro(picked.price)}` +
-        `<span class="slot__result-sub">${escapeHtml(
-          nearMiss ? pick(SLOT_NEARMISS_LINES) : pick(SLOT_LINES)
-        )}</span>`;
-      setSlotButtons({ take: true, again: true });
     }
+    printBon(picked, { jackpot, nearMiss });
 
     slotSpinning = false;
   }
@@ -2779,14 +2844,18 @@
   function openSlot() {
     slotPool = buildSlotPool();
     if (slotPool.length < 3) {
-      showToast('Te weinig op voorraad voor een gokje 🍾', true, 2600);
+      showToast('Te weinig drank op voorraad voor een gokje 🍾', true, 2600);
       return;
     }
-    renderSlotStrips();
+    // Rusttoestand: elke trommel toont alvast een willekeurige greep
+    [0, 1, 2].forEach((i) => {
+      const item = slotPool[Math.floor(Math.random() * slotPool.length)];
+      buildDrum(i, item, 0);
+      setDrumAngle(i, -Math.floor(Math.random() * SLOT_FACES) * SLOT_FACE_ANGLE);
+    });
     slotBox.classList.remove('slot--win', 'slot--jackpot');
-    slotResult.textContent = '';
-    slotSub.textContent = 'Trek aan de hendel — het toestel beslist';
-    setSlotButtons({});
+    slotBon.hidden = true;
+    slotSub.textContent = 'Geen idee wat je wil? Trek. De kast weet het wél.';
     if (slotHint) slotHint.hidden = false;
     slotOverlay.hidden = false;
     document.body.style.overflow = 'hidden';
@@ -2803,20 +2872,31 @@
     slotOverlay.addEventListener('click', (e) => {
       if (e.target === slotOverlay) closeSlot();
     });
-    slotAgainBtn.addEventListener('click', spinSlot);
-    slotTakeBtn.addEventListener('click', () => {
-      if (!slotWinner) return;
-      const { name, price, category, btn } = slotWinner;
-      // Eerst sluiten: anders speelt de vonk naar het mandje achter de overlay
-      closeSlot();
-      closeDrawer();
-      addItem(name, price, category);
-      revealOnMenu(btn);
-      sparkToFab(btn);
-    });
-    slotWaterBtn.addEventListener('click', () => {
-      closeSlot();
-      openWaterArena();
+    // De bon wordt elke beurt opnieuw geprint — dus delegatie i.p.v. vaste refs
+    slotBon.addEventListener('click', (e) => {
+      if (e.target.closest('#slot-again')) {
+        spinSlot();
+        return;
+      }
+      if (e.target.closest('#slot-take')) {
+        if (!slotWinner) return;
+        const { item, jackpot } = slotWinner;
+        // Eerst sluiten: anders speelt de vonk naar het mandje achter de overlay
+        closeSlot();
+        closeDrawer();
+        addItem(item.name, item.price, item.category);
+        // Jackpot? Zet het op de bestelbon — zo weet de bar dat er
+        // gevierd mag worden bij het serveren.
+        if (jackpot && noteInput && !noteInput.value.includes('🎰')) {
+          noteInput.value =
+            (noteInput.value ? `${noteInput.value} · ` : '') + '🎰 jackpot-drankje!';
+        }
+        revealOnMenu(item.btn);
+        sparkToFab(item.btn);
+        if (jackpot) {
+          showToast('Jackpot genoteerd — de bar weet ervan 🏆', false, 3200);
+        }
+      }
     });
     document.addEventListener(
       'keydown',

@@ -38,7 +38,7 @@ npm test   # catalog & pricing unit tests (no DB needed)
 ## Guest flow
 
 1. Scan table QR → menu with **Tafel N** locked
-2. Add drinks/food (+ buttons) — or let the 🎲 dice pick for you
+2. Add drinks/food (+ buttons) — of trek aan de 🎰 drankautomaat als je het niet weet
 3. Open cart (🛒) → **Controleer bestelling** (optioneel: 🎡 *Wie betaalt?*)
 4. Confirmation modal → kies **Cash** of **Bancontact** → **Bevestigen & versturen**
    (Bancontact: betaalscherm met bedrag, app-link en QR verschijnt na versturen)
@@ -48,7 +48,10 @@ npm test   # catalog & pricing unit tests (no DB needed)
 ### Playful extras
 
 - **Water chase**: gratis water probeert te ontsnappen — 10× vangen = verdiend
-- **Menu-roulette (🎲)**: random suggestie uit alles wat op voorraad is
+- **Drankautomaat (🎰)**: gokkast met 3D-trommels en een hendel — alleen drank
+  per glas (geen eten of flessen), resultaat print als kassabon. Drie op een
+  rij = jackpot: muntenregen én een 🎰-notitie op de bestelling zodat de bar
+  het drankje met vertoon serveert
 - **Wie betaalt? (🖐️)**: iedereen legt een vinger op het scherm, het toestel
   telt af en kiest er één (verliezer betaalt óf winnaar vrijuit). In je eentje?
   Dan valt het terug op het rad met donkere-humor-kaarten.

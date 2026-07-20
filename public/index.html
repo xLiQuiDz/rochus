@@ -748,14 +748,16 @@
       <div class="slot__body">
         <div class="slot__cabinet">
           <div class="slot__window">
-            <div class="slot__reel"><div class="slot__strip" id="strip-0"></div></div>
-            <div class="slot__reel"><div class="slot__strip" id="strip-1"></div></div>
-            <div class="slot__reel"><div class="slot__strip" id="strip-2"></div></div>
+            <div class="slot__reel3d"><div class="slot__drum" id="drum-0"></div></div>
+            <div class="slot__reel3d"><div class="slot__drum" id="drum-1"></div></div>
+            <div class="slot__reel3d"><div class="slot__drum" id="drum-2"></div></div>
+            <div class="slot__glass" aria-hidden="true"></div>
             <div class="slot__payline" aria-hidden="true">
               <span class="slot__arrow slot__arrow--l">▶</span>
               <span class="slot__arrow slot__arrow--r">◀</span>
             </div>
           </div>
+          <div class="slot__printer" aria-hidden="true"><i></i></div>
         </div>
 
         <div class="slot__lever" id="slot-lever" role="button" tabindex="0"
@@ -766,12 +768,8 @@
         </div>
       </div>
 
-      <p class="slot__result" id="slot-result" role="status" aria-live="polite"></p>
-
-      <div class="slot__actions">
-        <button type="button" class="slot__btn slot__btn--primary" id="slot-take" hidden>Zet op mijn bestelling</button>
-        <button type="button" class="slot__btn slot__btn--water" id="slot-water" hidden>Vang het water 💧</button>
-        <button type="button" class="slot__btn slot__btn--ghost" id="slot-again" hidden>Nog eens</button>
+      <div class="slot__bonwrap" aria-live="polite">
+        <div class="slot__bon" id="slot-bon" hidden></div>
       </div>
     </div>
   </div>
