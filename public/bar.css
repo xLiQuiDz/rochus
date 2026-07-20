@@ -190,6 +190,17 @@ body::before {
   50% { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
 }
 
+.dash__stats {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.dash__stats[hidden] {
+  display: none !important;
+}
+
 .dash__actions {
   display: flex;
   flex-wrap: wrap;
@@ -546,6 +557,84 @@ body::before {
 .ticket__btn--danger {
   color: var(--danger);
   border-color: rgba(248, 113, 113, 0.35);
+}
+
+/* Age badge — hoe langer open, hoe harder hij roept */
+.ticket__age {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.ticket--age-warn .ticket__age {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.ticket--age-warn {
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.ticket--age-late .ticket__age {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.55);
+  animation: agePulse 1.4s ease-in-out infinite;
+}
+
+.ticket--age-late {
+  border-color: rgba(248, 113, 113, 0.5);
+  box-shadow: 0 0 24px rgba(248, 113, 113, 0.12);
+}
+
+@keyframes agePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.35); }
+  50% { box-shadow: 0 0 0 5px rgba(248, 113, 113, 0); }
+}
+
+/* Undo-toast onderaan het bord */
+.bar-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(92vw, 460px);
+  padding: 12px 18px;
+  background: rgba(18, 16, 14, 0.96);
+  border: 1px solid rgba(212, 175, 112, 0.4);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.bar-toast[hidden] {
+  display: none !important;
+}
+
+.bar-toast__undo {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  color: var(--gold-soft);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s var(--ease);
+}
+
+.bar-toast__undo:hover {
+  background: rgba(212, 175, 112, 0.15);
 }
 
 @media (max-width: 560px) {

@@ -267,6 +267,34 @@ async function updateOrderStatus(id, status) {
   return getOrderById(id);
 }
 
+/** Today's totals (Europe/Brussels day) for the staff dashboard. */
+async function getTodayStats() {
+  const totals = await pool.query(
+    `SELECT COUNT(*)::int AS orders,
+            COALESCE(SUM(total_cents), 0)::int AS revenue_cents
+     FROM orders
+     WHERE status <> 'cancelled'
+       AND (created_at AT TIME ZONE 'Europe/Brussels')::date =
+           (NOW() AT TIME ZONE 'Europe/Brussels')::date`
+  );
+  const top = await pool.query(
+    `SELECT oi.name, SUM(oi.qty)::int AS qty
+     FROM order_items oi
+     JOIN orders o ON o.id = oi.order_id
+     WHERE o.status <> 'cancelled'
+       AND (o.created_at AT TIME ZONE 'Europe/Brussels')::date =
+           (NOW() AT TIME ZONE 'Europe/Brussels')::date
+     GROUP BY oi.name
+     ORDER BY qty DESC, oi.name
+     LIMIT 3`
+  );
+  return {
+    orders: totals.rows[0].orders,
+    revenue_cents: totals.rows[0].revenue_cents,
+    top: top.rows.map((r) => ({ name: r.name, qty: Number(r.qty) })),
+  };
+}
+
 async function createStaffSession(token, expiresAt) {
   await pool.query(
     `INSERT INTO staff_sessions (token, expires_at)
@@ -310,5 +338,6 @@ module.exports = {
   listOutOfStock,
   getOutOfStockSet,
   setItemOutOfStock,
+  getTodayStats,
   VALID_STATUSES,
 };

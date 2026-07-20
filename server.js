@@ -16,6 +16,7 @@ const {
   listOutOfStock,
   getOutOfStockSet,
   setItemOutOfStock,
+  getTodayStats,
 } = require('./db');
 const { MENU_ITEMS, getMenuItem, validateAndPrice, getPrintMenu } = require('./menu-data');
 const QRCode = require('qrcode');
@@ -147,6 +148,17 @@ app.get('/api/menu/print', requireStaff, (_req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Kon printmenu niet laden' });
+  }
+});
+
+/** Staff: today's totals for the dashboard header */
+app.get('/api/stats/today', requireStaff, async (_req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(await getTodayStats());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon statistieken niet laden' });
   }
 });
 

@@ -43,6 +43,7 @@
           <span class="dash__live-dot" aria-hidden="true"></span>
           <span id="live-status-text">Verbinden…</span>
         </p>
+        <p class="dash__stats" id="dash-stats" hidden></p>
       </div>
       <div class="dash__actions">
         <label class="dash__toggle" title="Geluid bij nieuwe tickets én elke minuut zolang er open bestellingen zijn">
@@ -74,6 +75,11 @@
     <main class="board" id="order-board">
       <p class="board__empty" id="board-empty">Nog geen open bestellingen</p>
     </main>
+  </div>
+
+  <div class="bar-toast" id="bar-toast" hidden>
+    <span id="bar-toast-text"></span>
+    <button type="button" class="bar-toast__undo" id="bar-toast-undo" hidden>Ongedaan maken</button>
   </div>
 
   <script src="bar.js" defer></script>

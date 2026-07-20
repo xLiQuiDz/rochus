@@ -17,6 +17,10 @@
   const stockPanel = document.getElementById('stock-panel');
   const stockList = document.getElementById('stock-list');
   const stockCount = document.getElementById('stock-count');
+  const statsEl = document.getElementById('dash-stats');
+  const barToast = document.getElementById('bar-toast');
+  const barToastText = document.getElementById('bar-toast-text');
+  const barToastUndo = document.getElementById('bar-toast-undo');
 
   const CATEGORY_LABELS = {
     bieren: "Bieren van 't vat",
@@ -51,8 +55,17 @@
   let openReminderTimer = null;
   let pollTimer = null;
   let streamRetryTimer = null;
+  let ageTimer = null;
+  let statsTimer = null;
+  let barToastTimer = null;
+  let sseHealthy = false;
   const OPEN_REMINDER_MS = 60 * 1000;
   const POLL_MS = 3000;
+  const POLL_RELAXED_MS = 15000;
+  const AGE_REFRESH_MS = 30 * 1000;
+  const STATS_REFRESH_MS = 60 * 1000;
+  const AGE_WARN_MIN = 5;
+  const AGE_LATE_MIN = 10;
 
   function formatEuro(price) {
     return (
@@ -75,13 +88,33 @@
     );
   }
 
+  function parseOrderDate(iso) {
+    const s = String(iso);
+    return new Date(s + (s.endsWith('Z') || s.includes('+') ? '' : 'Z'));
+  }
+
   function formatTime(iso) {
     try {
-      const d = new Date(iso + (iso.endsWith('Z') || iso.includes('+') ? '' : 'Z'));
-      return d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+      return parseOrderDate(iso).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
     } catch {
       return iso;
     }
+  }
+
+  function ageMinutes(iso) {
+    const t = parseOrderDate(iso).getTime();
+    if (!Number.isFinite(t)) return 0;
+    return Math.max(0, Math.floor((Date.now() - t) / 60000));
+  }
+
+  function ageLabel(mins) {
+    return mins < 1 ? 'zonet' : `${mins} min`;
+  }
+
+  function ageClass(mins) {
+    if (mins >= AGE_LATE_MIN) return 'ticket--age-late';
+    if (mins >= AGE_WARN_MIN) return 'ticket--age-warn';
+    return '';
   }
 
   function statusLabel(status) {
@@ -174,8 +207,9 @@
   }
 
   function renderBoard() {
+    // Oldest first — the ticket bovenaan is altijd de volgende die klaar moet
     const open = getOpenOrders().sort((a, b) =>
-      String(b.created_at).localeCompare(String(a.created_at))
+      String(a.created_at).localeCompare(String(b.created_at))
     );
 
     board.querySelectorAll('.ticket').forEach((el) => el.remove());
@@ -189,7 +223,8 @@
 
     for (const order of open) {
       const ticket = document.createElement('article');
-      ticket.className = `ticket ticket--${order.status}`;
+      const mins = ageMinutes(order.created_at);
+      ticket.className = `ticket ticket--${order.status} ${ageClass(mins)}`.trim();
       ticket.dataset.id = String(order.id);
 
       const itemsHtml = (order.items || [])
@@ -228,6 +263,7 @@
           <div class="ticket__meta">
             <span class="ticket__status ticket__status--${order.status}">${statusLabel(order.status)}</span>
             <span class="ticket__time">#${order.id} · ${formatTime(order.created_at)}</span>
+            <span class="ticket__age">${ageLabel(mins)}</span>
           </div>
           <ul class="ticket__items">${itemsHtml}</ul>
           ${
@@ -259,6 +295,54 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  /** Update age badges in place — no re-render, so taps never miss. */
+  function refreshAges() {
+    board.querySelectorAll('.ticket').forEach((el) => {
+      const order = orders.get(Number(el.dataset.id));
+      if (!order) return;
+      const mins = ageMinutes(order.created_at);
+      const ageEl = el.querySelector('.ticket__age');
+      if (ageEl) ageEl.textContent = ageLabel(mins);
+      el.classList.toggle('ticket--age-warn', mins >= AGE_WARN_MIN && mins < AGE_LATE_MIN);
+      el.classList.toggle('ticket--age-late', mins >= AGE_LATE_MIN);
+    });
+  }
+
+  function hideBarToast() {
+    barToast.hidden = true;
+    barToastUndo.onclick = null;
+  }
+
+  function showBarToast(message, { onUndo } = {}) {
+    barToastText.textContent = message;
+    barToastUndo.hidden = !onUndo;
+    barToastUndo.onclick = onUndo
+      ? () => {
+          hideBarToast();
+          onUndo();
+        }
+      : null;
+    barToast.hidden = false;
+    clearTimeout(barToastTimer);
+    barToastTimer = setTimeout(hideBarToast, 6000);
+  }
+
+  async function loadStats() {
+    if (!statsEl) return;
+    try {
+      const res = await fetch('/api/stats/today', { credentials: 'include' });
+      if (!res.ok) return;
+      const s = await res.json();
+      const top = (s.top || []).map((t) => `${t.name} ×${t.qty}`).join(' · ');
+      statsEl.textContent =
+        `Vandaag: ${s.orders} bestellingen · ${formatEuroCents(s.revenue_cents)}` +
+        (top ? ` · Top: ${top}` : '');
+      statsEl.hidden = false;
+    } catch {
+      /* stats zijn nice-to-have — stil falen */
+    }
   }
 
   function applyAvailability(list) {
@@ -405,11 +489,12 @@
 
   function startPolling() {
     stopPolling();
+    // Met een gezonde live stream is polling enkel vangnet — rustiger aan
     pollTimer = setInterval(() => {
       loadOrders({ announceNew: true }).catch(() => {
         setLiveStatus('warn', 'Verbinding traag — opnieuw proberen…');
       });
-    }, POLL_MS);
+    }, sseHealthy ? POLL_RELAXED_MS : POLL_MS);
   }
 
   function stopPolling() {
@@ -434,6 +519,8 @@
 
     eventSource.addEventListener('connected', () => {
       setLiveStatus('ok', 'Live · nieuwe orders verschijnen meteen');
+      sseHealthy = true;
+      startPolling();
     });
 
     eventSource.addEventListener('order', (ev) => {
@@ -441,6 +528,7 @@
         const order = JSON.parse(ev.data);
         upsertOrder(order, { announce: true });
         setLiveStatus('ok', 'Live · nieuwe orders verschijnen meteen');
+        loadStats();
       } catch {
         /* ignore */
       }
@@ -457,6 +545,10 @@
 
     eventSource.onerror = () => {
       setLiveStatus('warn', 'Live even weg — polling actief');
+      if (sseHealthy) {
+        sseHealthy = false;
+        startPolling();
+      }
       if (eventSource) {
         eventSource.close();
         eventSource = null;
@@ -474,8 +566,19 @@
       clearTimeout(streamRetryTimer);
       streamRetryTimer = null;
     }
+    sseHealthy = false;
     stopPolling();
     stopOpenReminder();
+    if (ageTimer) {
+      clearInterval(ageTimer);
+      ageTimer = null;
+    }
+    if (statsTimer) {
+      clearInterval(statsTimer);
+      statsTimer = null;
+    }
+    hideBarToast();
+    statsEl.hidden = true;
     stockPanel.hidden = true;
     stockToggleBtn.setAttribute('aria-expanded', 'false');
     stockToggleBtn.classList.remove('dash__link--active');
@@ -488,10 +591,12 @@
     dashView.hidden = false;
     ensureAudio();
     setLiveStatus('warn', 'Laden…');
-    await Promise.all([loadOrders({ announceNew: false }), loadMenu()]);
+    await Promise.all([loadOrders({ announceNew: false }), loadMenu(), loadStats()]);
     connectStream();
     startPolling();
     syncOpenReminder();
+    if (!ageTimer) ageTimer = setInterval(refreshAges, AGE_REFRESH_MS);
+    if (!statsTimer) statsTimer = setInterval(loadStats, STATS_REFRESH_MS);
   }
 
   loginForm.addEventListener('submit', async (e) => {
@@ -570,6 +675,23 @@
     }
   });
 
+  async function patchOrderStatus(id, status) {
+    const res = await fetch(`/api/orders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status }),
+    });
+    if (res.status === 401) {
+      showLogin();
+      return null;
+    }
+    const order = await res.json();
+    if (!res.ok) throw new Error(order.error || 'Update mislukt');
+    upsertOrder(order);
+    return order;
+  }
+
   board.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-status]');
     if (!btn) return;
@@ -577,21 +699,22 @@
     const id = Number(wrap?.dataset.orderId);
     const status = btn.dataset.status;
     if (!id || !status) return;
+    const prevStatus = orders.get(id)?.status;
     btn.disabled = true;
     try {
-      const res = await fetch(`/api/orders/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status }),
-      });
-      if (res.status === 401) {
-        showLogin();
-        return;
+      const order = await patchOrderStatus(id, status);
+      if (!order) return;
+      // Geserveerd/geannuleerd verdwijnt van het bord — geef even een terugweg
+      if ((status === 'served' || status === 'cancelled') && prevStatus) {
+        showBarToast(`Tafel ${order.table_number} · #${order.id} → ${statusLabel(status)}`, {
+          onUndo: () => {
+            patchOrderStatus(id, prevStatus).catch((err) => {
+              alert(err.message || 'Terugzetten mislukt');
+            });
+          },
+        });
       }
-      const order = await res.json();
-      if (!res.ok) throw new Error(order.error || 'Update mislukt');
-      upsertOrder(order);
+      loadStats();
     } catch (err) {
       alert(err.message || 'Update mislukt');
       btn.disabled = false;
