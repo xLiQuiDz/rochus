@@ -37,20 +37,15 @@ const MENU_ITEMS = [
   { name: 'Rum', price: 4, category: 'shots' },
   { name: 'Koffie', price: 3, category: 'warme' },
   { name: 'Thee', price: 4, category: 'warme' },
-  { name: 'Zak Chips', price: 2, category: 'fingerfood', promo: false },
-  { name: 'Kaasballetjes (6 stuks)', price: 6, category: 'fingerfood', promo: true },
-  { name: 'Mozzarella Fingers (6 stuks)', price: 6, category: 'fingerfood', promo: true },
-  { name: 'Bitterballen (6 stuks)', price: 6, category: 'fingerfood', promo: true },
-  { name: 'Kippen Nuggets (6 stuks)', price: 6, category: 'fingerfood', promo: true },
-  { name: 'Kipfingers (6 stuks)', price: 6, category: 'fingerfood', promo: true },
-  { name: "Sharing Nacho's", price: 15, category: 'fingerfood', promo: false },
-  { name: '105 Sharing Burger', price: 9, category: 'fingerfood', promo: false },
+  { name: 'Zak Chips', price: 2, category: 'fingerfood' },
+  { name: 'Kaasballetjes (6 stuks)', price: 6, category: 'fingerfood' },
+  { name: 'Mozzarella Fingers (6 stuks)', price: 6, category: 'fingerfood' },
+  { name: 'Bitterballen (6 stuks)', price: 6, category: 'fingerfood' },
+  { name: 'Kippen Nuggets (6 stuks)', price: 6, category: 'fingerfood' },
+  { name: 'Kipfingers (6 stuks)', price: 6, category: 'fingerfood' },
+  { name: "Sharing Nacho's", price: 15, category: 'fingerfood' },
+  { name: '105 Sharing Burger', price: 9, category: 'fingerfood' },
 ];
-
-/** 3+1 applies only to €6 snack packs (not chips, nachos, burger). */
-function isPromoFingerfood(item) {
-  return Boolean(item && item.category === 'fingerfood' && item.promo === true);
-}
 
 const byName = new Map(MENU_ITEMS.map((item) => [item.name, item]));
 
@@ -63,7 +58,7 @@ function toCents(euros) {
 }
 
 /**
- * Validate client line items against catalog and apply 3+1 on promo snacks (€6).
+ * Validate client line items against catalog and price them.
  * @param {{ name: string, qty: number }[]} rawItems
  */
 function validateAndPrice(rawItems) {
@@ -71,7 +66,7 @@ function validateAndPrice(rawItems) {
     throw new Error('Bestelling is leeg');
   }
 
-  /** @type {{ name: string, qty: number, price: number, category: string, unit_price_cents: number, promo: boolean }[]} */
+  /** @type {{ name: string, qty: number, category: string, unit_price_cents: number }[]} */
   const lines = [];
 
   for (const raw of rawItems) {
@@ -87,35 +82,14 @@ function validateAndPrice(rawItems) {
     lines.push({
       name: catalog.name,
       qty,
-      price: catalog.price,
       category: catalog.category,
       unit_price_cents: toCents(catalog.price),
-      promo: catalog.promo === true,
     });
   }
 
   let subtotalCents = 0;
-  const promoUnits = [];
-
   for (const line of lines) {
     subtotalCents += line.unit_price_cents * line.qty;
-    if (isPromoFingerfood(line)) {
-      for (let i = 0; i < line.qty; i++) {
-        promoUnits.push({ name: line.name, unit_price_cents: line.unit_price_cents });
-      }
-    }
-  }
-
-  promoUnits.sort((a, b) => a.unit_price_cents - b.unit_price_cents);
-  const freeCount = Math.floor(promoUnits.length / 4);
-  let discountCents = 0;
-  /** @type {Map<string, number>} */
-  const freeByName = new Map();
-
-  for (let i = 0; i < freeCount; i++) {
-    const unit = promoUnits[i];
-    discountCents += unit.unit_price_cents;
-    freeByName.set(unit.name, (freeByName.get(unit.name) || 0) + 1);
   }
 
   const items = lines.map((line) => ({
@@ -123,14 +97,14 @@ function validateAndPrice(rawItems) {
     qty: line.qty,
     category: line.category,
     unit_price_cents: line.unit_price_cents,
-    free_qty: freeByName.get(line.name) || 0,
+    free_qty: 0,
   }));
 
   return {
     items,
     subtotal_cents: subtotalCents,
-    discount_cents: discountCents,
-    total_cents: subtotalCents - discountCents,
+    discount_cents: 0,
+    total_cents: subtotalCents,
   };
 }
 
@@ -139,5 +113,4 @@ module.exports = {
   getMenuItem,
   toCents,
   validateAndPrice,
-  isPromoFingerfood,
 };

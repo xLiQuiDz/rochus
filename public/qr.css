@@ -292,17 +292,6 @@ body {
   color: var(--ink);
 }
 
-.qr-sticker__promo {
-  margin-top: 6px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #8a6428;
-  background: rgba(212, 175, 112, 0.22);
-  border-radius: 999px;
-  padding: 4px 8px;
-  display: inline-block;
-}
-
 .qr-sticker__cash {
   margin-top: 6px;
   font-size: 0.68rem;

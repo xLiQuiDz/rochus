@@ -573,49 +573,6 @@ h1, h2, h3, h4 {
   letter-spacing: 0.08em;
 }
 
-.menu-section__promo {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-top: var(--space-md);
-  margin-bottom: var(--space-lg);
-  padding: var(--space-md) var(--space-lg);
-  background: linear-gradient(135deg, rgba(212, 175, 112, 0.12), rgba(232, 180, 160, 0.06));
-  border: 1px solid var(--border-amber);
-  border-radius: var(--radius-md);
-  font-size: 0.88rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--amber-400);
-  animation: subtle-glow 3s ease-in-out infinite alternate;
-}
-
-.menu-section__promo em {
-  display: block;
-  margin-top: 0.2em;
-  font-style: italic;
-  font-weight: 400;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  opacity: 0.95;
-}
-
-.menu-card__promo-tag {
-  display: inline-block;
-  margin-left: 0.35em;
-  padding: 0.12em 0.4em;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.62rem;
-  font-weight: 700;
-  font-style: normal;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  vertical-align: middle;
-  color: var(--bg-deep, #0c0a08);
-  background: var(--amber-400, #d4af70);
-  border-radius: 3px;
-}
-
 /* --- Menu Grid --- */
 .menu-grid {
   display: grid;
@@ -927,8 +884,8 @@ h1, h2, h3, h4 {
 }
 
 .menu-card--oos {
-  opacity: 0.55;
-  filter: grayscale(0.25);
+  opacity: 0.72;
+  filter: grayscale(0.15);
 }
 
 .menu-card--oos .menu-card__add-btn,
@@ -949,26 +906,42 @@ h1, h2, h3, h4 {
   text-decoration: line-through;
 }
 
+/* Police-tape ribbon across out-of-stock cards */
 .menu-card__oos-badge {
   position: absolute;
-  top: 10px;
-  right: 12px;
-  z-index: 3;
-  font-family: 'Cinzel', 'Playfair Display', serif;
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #f7f1e8;
-  background: rgba(60, 28, 28, 0.88);
-  border: 1px solid rgba(248, 113, 113, 0.45);
-  border-radius: 999px;
-  padding: 5px 10px;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  width: 160%;
+  transform: translate(-50%, -50%) rotate(-22deg);
+  margin: 0;
+  padding: 0.48em 0;
+  border: none;
+  border-radius: 0;
   pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: center;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: clamp(0.68rem, 2.2vw, 0.78rem);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #111;
+  background: #f5d547;
+  border-top: 3px solid #111;
+  border-bottom: 3px solid #111;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+
+.menu-card__oos-badge-text {
+  display: inline-block;
+  padding: 0 0.5em;
 }
 
 .daily-special--oos {
-  opacity: 0.6;
+  opacity: 0.72;
+  filter: grayscale(0.15);
 }
 
 .daily-special--oos .menu-card__add-btn {
@@ -2135,8 +2108,7 @@ body.water-chase #water-card {
   .hero__subtitle,
   .order-fab,
   .daily-special,
-  .menu-card--featured,
-  .menu-section__promo {
+  .menu-card--featured {
     animation: none !important;
   }
 

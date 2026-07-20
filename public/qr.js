@@ -71,7 +71,6 @@
           </div>
           <p class="qr-sticker__fun">${fun}</p>
           <p class="qr-sticker__cta">Scan &amp; bestel</p>
-          <p class="qr-sticker__promo">Actie 3+1 op snacks van €6</p>
           <p class="qr-sticker__cash">Cash bij levering</p>
         </div>
       `;

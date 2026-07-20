@@ -368,8 +368,6 @@
   const bodyEl = document.getElementById('order-body');
   const emptyEl = document.getElementById('order-empty');
   const footerEl = document.getElementById('order-footer');
-  const discountEl = document.getElementById('order-discount');
-  const discountAmountEl = document.getElementById('order-discount-amount');
   const totalEl = document.getElementById('order-total');
   const clearBtn = document.getElementById('order-clear');
   const submitBtn = document.getElementById('order-submit');
@@ -382,8 +380,6 @@
   const confirmModal = document.getElementById('confirm-modal');
   const confirmLead = document.getElementById('confirm-lead');
   const confirmList = document.getElementById('confirm-list');
-  const confirmDiscountRow = document.getElementById('confirm-discount-row');
-  const confirmDiscount = document.getElementById('confirm-discount');
   const confirmTotal = document.getElementById('confirm-total');
   const confirmCancel = document.getElementById('confirm-cancel');
   const confirmSend = document.getElementById('confirm-send');
@@ -432,7 +428,9 @@
         if (!badge) {
           badge = document.createElement('span');
           badge.className = 'menu-card__oos-badge';
-          badge.textContent = 'Uitverkocht';
+          badge.setAttribute('aria-label', 'Uitverkocht');
+          badge.innerHTML =
+            '<span class="menu-card__oos-badge-text" aria-hidden="true">UITVERKOCHT · UITVERKOCHT · UITVERKOCHT · UITVERKOCHT · UITVERKOCHT ·</span>';
           card.appendChild(badge);
         }
       } else if (badge) {
@@ -504,28 +502,11 @@
   }
 
   function getTotals() {
-    let subtotal = 0;
-    const promoUnits = [];
-
+    let total = 0;
     for (const item of order.values()) {
-      const line = item.price * item.qty;
-      subtotal += line;
-      // 3+1 only on €6 snack packs (promo flag)
-      if (item.promo) {
-        for (let i = 0; i < item.qty; i++) {
-          promoUnits.push(item.price);
-        }
-      }
+      total += item.price * item.qty;
     }
-
-    promoUnits.sort((a, b) => a - b);
-    let discount = 0;
-    const freeCount = Math.floor(promoUnits.length / 4);
-    for (let i = 0; i < freeCount; i++) {
-      discount += promoUnits[i];
-    }
-
-    return { subtotal, discount, total: subtotal - discount, freeCount };
+    return { total };
   }
 
   function renderOrder() {
@@ -556,49 +537,22 @@
     emptyEl.hidden = true;
     footerEl.hidden = false;
 
-    const { discount, total, freeCount } = getTotals();
-
-    // Distribute free tags across promo snack lines only
-    let remainingFree = freeCount;
-    const promoSorted = items
-      .filter((i) => i.promo)
-      .slice()
-      .sort((a, b) => a.price - b.price);
-
-    /** @type {Map<string, number>} */
-    const freeByKey = new Map();
-    for (const item of promoSorted) {
-      if (remainingFree <= 0) break;
-      const freeHere = Math.min(item.qty, remainingFree);
-      freeByKey.set(item.name, freeHere);
-      remainingFree -= freeHere;
-    }
+    const { total } = getTotals();
 
     for (const item of items) {
-      const freeHere = freeByKey.get(item.name) || 0;
-      const paidQty = item.qty - freeHere;
-      const lineTotal = paidQty * item.price;
-
+      const lineTotal = item.qty * item.price;
       const row = document.createElement('div');
       row.className = 'order-item';
       row.innerHTML = `
         <span class="order-item__name">${escapeHtml(item.name)}</span>
-        ${freeHere > 0 ? `<span class="order-item__free-tag">${freeHere} gratis</span>` : ''}
         <div class="order-item__controls">
           <button type="button" class="order-item__qty-btn" data-dec="${escapeAttr(item.name)}" aria-label="Verminder">−</button>
           <span class="order-item__qty">${item.qty}</span>
           <button type="button" class="order-item__qty-btn" data-inc="${escapeAttr(item.name)}" aria-label="Verhoog">+</button>
         </div>
-        <span class="order-item__price${freeHere === item.qty ? ' order-item__price--free' : ''}">${formatEuro(lineTotal)}</span>
+        <span class="order-item__price">${formatEuro(lineTotal)}</span>
       `;
       bodyEl.appendChild(row);
-    }
-
-    if (discount > 0) {
-      discountEl.hidden = false;
-      discountAmountEl.textContent = `−${formatEuro(discount)}`;
-    } else {
-      discountEl.hidden = true;
     }
 
     totalEl.textContent = formatEuro(total);
@@ -634,42 +588,20 @@
     if (!tableNumber || order.size === 0 || submitting) return;
 
     const items = [...order.values()];
-    const { discount, total, freeCount } = getTotals();
-
-    let remainingFree = freeCount;
-    const promoSorted = items
-      .filter((i) => i.promo)
-      .slice()
-      .sort((a, b) => a.price - b.price);
-    const freeByKey = new Map();
-    for (const item of promoSorted) {
-      if (remainingFree <= 0) break;
-      const freeHere = Math.min(item.qty, remainingFree);
-      freeByKey.set(item.name, freeHere);
-      remainingFree -= freeHere;
-    }
+    const { total } = getTotals();
 
     const confirmTitle = document.getElementById('confirm-title');
     if (confirmTitle) confirmTitle.textContent = pick(CONFIRM_TITLES);
     confirmLead.textContent = pick(CONFIRM_LEADS).replace('{n}', String(tableNumber));
     confirmList.innerHTML = items
       .map((item) => {
-        const freeHere = freeByKey.get(item.name) || 0;
-        const line = (item.qty - freeHere) * item.price;
-        const freeTag =
-          freeHere > 0 ? ` <small style="color:#22c55e">(${freeHere} gratis)</small>` : '';
+        const line = item.qty * item.price;
         return `<li><span><span class="qty">${item.qty}×</span>${escapeHtml(
           item.name
-        )}${freeTag}</span><span>${formatEuro(line)}</span></li>`;
+        )}</span><span>${formatEuro(line)}</span></li>`;
       })
       .join('');
 
-    if (discount > 0) {
-      confirmDiscountRow.hidden = false;
-      confirmDiscount.textContent = `−${formatEuro(discount)}`;
-    } else {
-      confirmDiscountRow.hidden = true;
-    }
     confirmTotal.textContent = formatEuro(total);
 
     confirmReady = true;
@@ -779,7 +711,7 @@
     }
   }
 
-  function addItem(name, price, category, promo = false) {
+  function addItem(name, price, category) {
     if (outOfStock.has(name)) {
       showToast('Uitverkocht', true, 2000);
       return { toast: 'Uitverkocht', className: '' };
@@ -788,7 +720,7 @@
     if (existing) {
       existing.qty += 1;
     } else {
-      order.set(name, { name, price, category, qty: 1, promo: Boolean(promo) });
+      order.set(name, { name, price, category, qty: 1 });
     }
     renderOrder();
     // Cart only — never submits to the bar
@@ -831,9 +763,8 @@
         const name = btn.dataset.name;
         const price = parseFloat(btn.dataset.price);
         const category = btn.dataset.category || 'fris';
-        const promo = btn.dataset.promo === 'true';
         if (name && Number.isFinite(price)) {
-          const gag = addItem(name, price, category, promo);
+          const gag = addItem(name, price, category);
           waterAllowOrder = false;
           waterEscapes = 0;
           sparkToFab(btn);
@@ -855,9 +786,8 @@
       const name = addBtn.dataset.name;
       const price = parseFloat(addBtn.dataset.price);
       const category = addBtn.dataset.category || 'other';
-      const promo = addBtn.dataset.promo === 'true';
       if (!name || !Number.isFinite(price)) return;
-      const gag = addItem(name, price, category, promo);
+      const gag = addItem(name, price, category);
       sparkToFab(addBtn);
       if (!prefersReducedMotion) {
         addBtn.classList.remove('btn-twirl');
@@ -1159,9 +1089,7 @@
       });
 
       const header = section.querySelector('.menu-section__header');
-      const promo = section.querySelector('.menu-section__promo');
       if (header) header.hidden = q && !sectionHasMatch;
-      if (promo) promo.hidden = q && !sectionHasMatch;
       section.style.display = sectionHasMatch || !q ? '' : 'none';
       if (sectionHasMatch) anyVisible = true;
     });
