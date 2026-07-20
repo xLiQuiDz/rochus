@@ -108,9 +108,97 @@ function validateAndPrice(rawItems) {
   };
 }
 
+const PRINT_CATEGORY_ORDER = [
+  'bieren',
+  'flessen',
+  'fris',
+  'cocktails',
+  'wijnen',
+  'shots',
+  'warme',
+  'fingerfood',
+];
+
+const PRINT_CATEGORY_LABELS = {
+  bieren: "Bieren van 't vat",
+  flessen: 'Flessenbier',
+  fris: 'Frisdranken',
+  cocktails: 'Cocktails',
+  wijnen: 'Wijnen & bubbels',
+  shots: 'Shots',
+  warme: 'Warme dranken',
+  fingerfood: 'Fingerfood & snacks',
+};
+
+const PRINT_NOTES = {
+  Corona: '4+2 op Corona Bucket',
+  'Zak Chips': 'Paprika',
+};
+
+/**
+ * Group catalog into print-ready sections (wines collapsed to glas/fles).
+ */
+function getPrintMenu() {
+  /** @type {Map<string, { id: string, title: string, items: object[] }>} */
+  const sections = new Map();
+  for (const id of PRINT_CATEGORY_ORDER) {
+    sections.set(id, {
+      id,
+      title: PRINT_CATEGORY_LABELS[id] || id,
+      items: [],
+    });
+  }
+
+  /** @type {Map<string, { name: string, glass: number|null, bottle: number|null }>} */
+  const wines = new Map();
+
+  for (const item of MENU_ITEMS) {
+    if (item.category === 'wijnen') {
+      const glassMatch = item.name.match(/^(.*) \(glas\)$/);
+      const bottleMatch = item.name.match(/^(.*) \(fles\)$/);
+      const base = (glassMatch || bottleMatch)?.[1] || item.name;
+      if (!wines.has(base)) {
+        wines.set(base, { name: base, glass: null, bottle: null });
+      }
+      const row = wines.get(base);
+      if (glassMatch) row.glass = item.price;
+      else if (bottleMatch) row.bottle = item.price;
+      else row.bottle = item.price;
+      continue;
+    }
+
+    const section = sections.get(item.category);
+    if (!section) continue;
+    section.items.push({
+      name: item.name,
+      price: item.price,
+      note: PRINT_NOTES[item.name] || null,
+    });
+  }
+
+  const wineSection = sections.get('wijnen');
+  for (const wine of wines.values()) {
+    wineSection.items.push({
+      name: wine.name,
+      glass: wine.glass,
+      bottle: wine.bottle,
+      note: null,
+    });
+  }
+
+  return {
+    brand: 'ROCHUS',
+    subtitle: 'Summer pop-up bar',
+    sections: PRINT_CATEGORY_ORDER.map((id) => sections.get(id)).filter(
+      (s) => s && s.items.length > 0
+    ),
+  };
+}
+
 module.exports = {
   MENU_ITEMS,
   getMenuItem,
   toCents,
   validateAndPrice,
+  getPrintMenu,
 };

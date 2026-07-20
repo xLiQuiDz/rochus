@@ -16,7 +16,7 @@ const {
   getOutOfStockSet,
   setItemOutOfStock,
 } = require('./db');
-const { MENU_ITEMS, getMenuItem, validateAndPrice } = require('./menu-data');
+const { MENU_ITEMS, getMenuItem, validateAndPrice, getPrintMenu } = require('./menu-data');
 const QRCode = require('qrcode');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -135,6 +135,17 @@ app.patch('/api/menu/availability', requireStaff, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(400).json({ error: err.message || 'Voorraad-update mislukt' });
+  }
+});
+
+/** Staff: print-ready catalog (wines collapsed to glas/fles) */
+app.get('/api/menu/print', requireStaff, (_req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(getPrintMenu());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon printmenu niet laden' });
   }
 });
 
@@ -325,6 +336,10 @@ app.get('/bar', (_req, res) => {
 
 app.get('/qr', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'qr.html'));
+});
+
+app.get('/print', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'print.html'));
 });
 
 async function start() {
