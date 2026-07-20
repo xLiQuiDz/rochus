@@ -2296,7 +2296,9 @@
   }
 
   function positionRing(finger) {
-    finger.el.style.transform = `translate(${finger.x}px, ${finger.y}px)`;
+    // Losse translate-property: schaal-effecten (suspect/safe) rekken de
+    // verplaatsing dan niet mee uit — de ring blijft exact onder de vinger.
+    finger.el.style.translate = `${finger.x}px ${finger.y}px`;
   }
 
   function updateHint() {
@@ -2534,7 +2536,7 @@
     const ghost = document.createElement('div');
     ghost.className = 'pick__ghost';
     ghost.style.setProperty('--c', finger.color);
-    ghost.style.transform = `translate(${finger.x}px, ${finger.y}px)`;
+    ghost.style.translate = `${finger.x}px ${finger.y}px`;
     pickRings.appendChild(ghost);
     ghost.addEventListener('animationend', () => ghost.remove(), { once: true });
     setTimeout(() => ghost.remove(), 700);
@@ -2546,7 +2548,7 @@
       const wave = document.createElement('div');
       wave.className = 'pick__wave';
       wave.style.setProperty('--c', finger.color);
-      wave.style.transform = `translate(${finger.x}px, ${finger.y}px)`;
+      wave.style.translate = `${finger.x}px ${finger.y}px`;
       wave.style.animationDelay = `${i * 0.18}s`;
       pickRings.appendChild(wave);
       wave.addEventListener('animationend', () => wave.remove(), { once: true });
