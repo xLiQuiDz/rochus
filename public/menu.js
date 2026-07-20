@@ -2061,7 +2061,7 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* Telefoon-juice: jelly-scroll, dubbeltik-bursts, drink-lore         */
+  /* Telefoon-juice: dubbeltik-bursts, drink-lore                       */
   /* ------------------------------------------------------------------ */
   const CATEGORY_EMOJI = {
     bieren: '🍺',
@@ -2197,49 +2197,6 @@
   document.addEventListener('pointerup', cancelLore, { passive: true });
   document.addEventListener('pointercancel', cancelLore, { passive: true });
   window.addEventListener('scroll', () => clearTimeout(loreTimer), { passive: true });
-
-  /* Jelly-scroll: het menu leunt heel even mee met je duim */
-  if (!prefersReducedMotion) {
-    const menuContent = document.querySelector('.menu-content');
-    let lastLeanY = window.scrollY;
-    let lastLeanT = performance.now();
-    let leanTarget = 0;
-    let lean = 0;
-    let leanRaf = 0;
-    let fastToastDone = false;
-
-    const leanLoop = () => {
-      lean += (leanTarget - lean) * 0.16;
-      leanTarget *= 0.86;
-      if (Math.abs(lean) < 0.015 && Math.abs(leanTarget) < 0.015) {
-        lean = 0;
-        menuContent.style.transform = '';
-        leanRaf = 0;
-        return;
-      }
-      menuContent.style.transform = `skewY(${lean.toFixed(3)}deg)`;
-      leanRaf = requestAnimationFrame(leanLoop);
-    };
-
-    window.addEventListener(
-      'scroll',
-      () => {
-        const now = performance.now();
-        const dt = now - lastLeanT;
-        if (dt <= 0) return;
-        const v = (window.scrollY - lastLeanY) / dt;
-        lastLeanY = window.scrollY;
-        lastLeanT = now;
-        leanTarget = Math.max(-1.3, Math.min(1.3, v * 0.5));
-        if (!leanRaf && menuContent) leanRaf = requestAnimationFrame(leanLoop);
-        if (!fastToastDone && Math.abs(v) > 4.2) {
-          fastToastDone = true;
-          showToast('Waar is de brand? 🧯 Het menu loopt niet weg.', false, 2600);
-        }
-      },
-      { passive: true }
-    );
-  }
 
   // Random idle stickers over the menu (rare)
   if (!prefersReducedMotion) {

@@ -244,13 +244,13 @@
       let actions = '';
       if (order.status === 'new') {
         actions = `
-          <button type="button" class="ticket__btn ticket__btn--primary" data-status="preparing">Bezig</button>
-          <button type="button" class="ticket__btn ticket__btn--danger" data-status="cancelled">Annuleren</button>
+          <button type="button" class="ticket__btn ticket__btn--danger" data-status="cancelled" aria-label="Annuleer bestelling">✕</button>
+          <button type="button" class="ticket__btn ticket__btn--primary" data-status="preparing">Start bereiding →</button>
         `;
       } else if (order.status === 'preparing') {
         actions = `
-          <button type="button" class="ticket__btn ticket__btn--primary" data-status="served">Geserveerd</button>
-          <button type="button" class="ticket__btn ticket__btn--danger" data-status="cancelled">Annuleren</button>
+          <button type="button" class="ticket__btn ticket__btn--danger" data-status="cancelled" aria-label="Annuleer bestelling">✕</button>
+          <button type="button" class="ticket__btn ticket__btn--primary" data-status="served">✓ Geserveerd</button>
         `;
       }
 
@@ -724,6 +724,64 @@
       btn.disabled = false;
     }
   });
+
+  /* Scherm-wake-lock: de bar-tablet mag niet in slaap vallen tijdens de shift */
+  const wakeToggle = document.getElementById('wake-toggle');
+  let wakeLock = null;
+  let wakeWanted = false;
+  try {
+    wakeWanted = localStorage.getItem('rochus-bar-wake') === '1';
+  } catch {
+    /* private mode */
+  }
+
+  function syncWakeUI() {
+    if (!wakeToggle) return;
+    wakeToggle.classList.toggle('dash__link--active', Boolean(wakeLock));
+    wakeToggle.textContent = wakeLock ? '💡 Scherm blijft aan' : '💡 Scherm aan';
+  }
+
+  async function acquireWake() {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => {
+        wakeLock = null;
+        syncWakeUI();
+      });
+    } catch {
+      wakeLock = null;
+    }
+    syncWakeUI();
+  }
+
+  if (wakeToggle && 'wakeLock' in navigator) {
+    wakeToggle.hidden = false;
+    syncWakeUI();
+    wakeToggle.addEventListener('click', async () => {
+      if (wakeLock) {
+        wakeWanted = false;
+        try {
+          await wakeLock.release();
+        } catch {
+          /* al vrijgegeven */
+        }
+        wakeLock = null;
+        syncWakeUI();
+      } else {
+        wakeWanted = true;
+        await acquireWake();
+      }
+      try {
+        localStorage.setItem('rochus-bar-wake', wakeWanted ? '1' : '0');
+      } catch {
+        /* private mode */
+      }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && wakeWanted && !wakeLock) acquireWake();
+    });
+    if (wakeWanted) acquireWake();
+  }
 
   (async () => {
     try {

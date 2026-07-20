@@ -2,8 +2,11 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Rochus Bar" />
   <title>Rochus · Bar</title>
   <meta name="theme-color" content="#0a0908" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍻</text></svg>" />
@@ -38,9 +41,8 @@
 
   <div class="dash" id="dash-view" hidden>
     <header class="dash__header">
-      <div>
-        <p class="dash__brand">ROCHUS</p>
-        <h1 class="dash__title">Bestellingen</h1>
+      <div class="dash__id">
+        <h1 class="dash__brand">ROCHUS <span class="dash__brand-sub">bar</span></h1>
         <p class="dash__live" id="live-status">
           <span class="dash__live-dot" aria-hidden="true"></span>
           <span id="live-status-text">Verbinden…</span>
@@ -50,13 +52,15 @@
       <div class="dash__actions">
         <label class="dash__toggle" title="Geluid bij nieuwe tickets én elke minuut zolang er open bestellingen zijn">
           <input type="checkbox" id="sound-toggle" checked />
-          <span>Geluid (1 min reminder)</span>
+          <span class="dash__switch" aria-hidden="true"></span>
+          <span class="dash__toggle-text">🔔 Geluid</span>
         </label>
+        <button type="button" class="dash__link" id="wake-toggle" hidden>💡 Scherm aan</button>
         <button type="button" class="dash__link" id="stock-toggle-btn" aria-expanded="false" aria-controls="stock-panel">
-          Voorraad
+          📦 Voorraad
         </button>
-        <a class="dash__link" href="/print">Menukaart printen</a>
-        <a class="dash__link" href="/qr">QR-codes</a>
+        <a class="dash__link" href="/print">🖨️ Menukaart</a>
+        <a class="dash__link" href="/qr">🔳 QR</a>
         <button type="button" class="dash__logout" id="logout-btn">Uitloggen</button>
       </div>
     </header>
@@ -75,7 +79,11 @@
     <div class="dash__flash" id="new-flash" hidden>Nieuwe bestelling</div>
 
     <main class="board" id="order-board">
-      <p class="board__empty" id="board-empty">Nog geen open bestellingen</p>
+      <div class="board__empty" id="board-empty">
+        <span class="board__empty-icon" aria-hidden="true">🍸</span>
+        <p class="board__empty-title">Geen open bestellingen</p>
+        <p class="board__empty-sub">Alles geserveerd. Poets een glas, geniet even.</p>
+      </div>
     </main>
   </div>
 
