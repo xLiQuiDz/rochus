@@ -1419,120 +1419,380 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* Menu-roulette: het lot kiest je volgende drankje                   */
+  /* Rad van Fortuin — zwierbaar, met donkere humor                     */
   /* ------------------------------------------------------------------ */
+  const wheelOverlay = document.getElementById('wheel-overlay');
+  const wheelStage = document.getElementById('wheel-stage');
+  const wheelCanvas = document.getElementById('wheel-canvas');
+  const wheelTitle = document.getElementById('wheel-title');
+  const wheelSub = document.getElementById('wheel-sub');
+  const wheelResult = document.getElementById('wheel-result');
+  const wheelSpinBtn = document.getElementById('wheel-spin');
+  const wheelGotoBtn = document.getElementById('wheel-goto');
+  const wheelCloseBtn = document.getElementById('wheel-close');
   const diceBtn = document.getElementById('menu-dice');
-  let diceRolling = false;
-  let diceRolls = 0;
+  const whoPaysBtn = document.getElementById('who-pays');
 
-  function rollDice() {
-    if (diceRolling) return;
-    // Water doet niet mee — dat moet je zelf vangen
-    const candidates = [...document.querySelectorAll('[data-add]')].filter((btn) => {
-      const name = btn.dataset.name || '';
-      return name && name !== 'Water' && !btn.disabled && !outOfStock.has(name);
-    });
-    if (candidates.length === 0) {
-      showToast('Alles is op?! Legendarische avond 🍾', true, 2600);
-      return;
+  // Cards-against-humanity-vibes: kort op het rad, de dolk in de toelichting
+  const WHO_PAYS_CARDS = [
+    { label: 'De ex-checker 📱', line: 'Wie z’n ex vannacht nog gecheckt heeft, betaalt. Geen oordeel. (Beetje wel.)' },
+    { label: 'Teleurstelling 🏆', line: 'De grootste teleurstelling van de familie betaalt. Jullie weten allemaal wie.' },
+    { label: 'Woont nog thuis 🏠', line: 'Wie nog bij mama woont, betaalt. Je spaart toch huur uit.' },
+    { label: 'Huilde deze week 😭', line: 'Wie deze week al geweend heeft, betaalt. Tranen drogen, portefeuille boven.' },
+    { label: 'Therapie geskipt 🛋️', line: 'Wie therapie heeft afgezegd voor dit café, betaalt. Dit ís nu je therapie.' },
+    { label: 'Droevigste lovelife 💔', line: 'Degene met het droevigste liefdesleven betaalt. Overleg gerust even.' },
+    { label: 'Rode vlaggen 🚩', line: 'De persoon met de meeste rode vlaggen betaalt. Ja, iedereen kijkt nu naar jou.' },
+    { label: 'LinkedIn-poster 💼', line: 'Wie ooit “excited to announce” heeft gepost, betaalt. Terecht.' },
+    { label: 'Kater incoming 🧟', line: 'Wie morgen “nooit meer alcohol” gaat zeggen, betaalt vanavond alvast.' },
+    { label: 'Jij. Gewoon jij. 🫵', line: 'Het rad heeft jou gekozen. Het universum ook. Aanvaard het.' },
+    { label: 'Splitsen 🧮', line: 'Niemand wint: splitsen. Jullie sterven toch ook allemaal alleen.' },
+    { label: 'De stilste 👀', line: 'De stilste aan tafel betaalt. Die spaart woorden én geld — tijd om te delen.' },
+    { label: 'Hoogste schermtijd 📵', line: 'Wie de hoogste schermtijd heeft, betaalt. Toon maar. Lafaards verliezen dubbel.' },
+    { label: 'Gym-abonnement 🏋️', line: 'Wie een ongebruikt gymabonnement heeft, betaalt — geld weggooien kan je al.' },
+    { label: 'Situationship 🥀', line: 'Wie in een situationship zit, betaalt. Onduidelijkheid kost geld.' },
+    { label: '“Gestopt” met vapen 💨', line: 'Wie “gestopt is met vapen” maar er eentje op zak heeft: betalen.' },
+  ];
+
+  const FATE_LINES = [
+    'Het lot neemt geen klachten aan.',
+    'Bezwaar indienen kan bij niemand.',
+    'Dit is nu je persoonlijkheid.',
+    'Het rad liegt nooit. Mensen wel.',
+    'Drink het en denk aan je keuzes.',
+    'Gekozen door het universum, betaald door jou.',
+  ];
+
+  const WHEEL_SEGMENTS = 8;
+  const WHEEL_SIZE = 640;
+  const wheelCtx = wheelCanvas ? wheelCanvas.getContext('2d') : null;
+
+  let wheelMode = 'whopays';
+  /** @type {{ label: string, line: string, addBtn?: Element }[]} */
+  let wheelItems = [];
+  let wheelRot = 0;
+  let wheelSpinning = false;
+  let wheelAnimFrame = 0;
+  let wheelWinner = -1;
+  let wheelAudioCtx = null;
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function wheelTick(final = false) {
+    try {
+      if (!wheelAudioCtx) {
+        wheelAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (wheelAudioCtx.state === 'suspended') wheelAudioCtx.resume().catch(() => {});
+      const t = wheelAudioCtx.currentTime;
+      const osc = wheelAudioCtx.createOscillator();
+      const gain = wheelAudioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(final ? 660 : 1100, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(final ? 0.09 : 0.045, t + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + (final ? 0.25 : 0.04));
+      osc.connect(gain);
+      gain.connect(wheelAudioCtx.destination);
+      osc.start(t);
+      osc.stop(t + (final ? 0.3 : 0.06));
+    } catch {
+      /* geen audio, geen drama */
+    }
+    if (navigator.vibrate) navigator.vibrate(final ? [20, 40, 30] : 6);
+  }
+
+  function drawWheel(highlight = -1) {
+    if (!wheelCtx) return;
+    const n = wheelItems.length;
+    const seg = (Math.PI * 2) / n;
+    const c = WHEEL_SIZE / 2;
+    const r = c - 8;
+    const ctx = wheelCtx;
+
+    ctx.clearRect(0, 0, WHEEL_SIZE, WHEEL_SIZE);
+    for (let i = 0; i < n; i++) {
+      const start = i * seg;
+      const isWin = i === highlight;
+      ctx.beginPath();
+      ctx.moveTo(c, c);
+      ctx.arc(c, c, r, start, start + seg);
+      ctx.closePath();
+      ctx.fillStyle = isWin
+        ? 'rgba(212, 175, 112, 0.32)'
+        : i % 2 === 0
+          ? '#1d1813'
+          : '#2a2118';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(212, 175, 112, 0.35)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Label radiaal naar buiten
+      ctx.save();
+      ctx.translate(c, c);
+      ctx.rotate(start + seg / 2);
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.font = `600 ${isWin ? 25 : 22}px 'Plus Jakarta Sans', sans-serif`;
+      ctx.fillStyle = isWin ? '#fff6e5' : i % 2 === 0 ? '#f0d9a8' : '#c4b8a8';
+      const label = wheelItems[i].label;
+      // Per code point inkorten — nooit een emoji doormidden knippen
+      const chars = Array.from(label);
+      const maxW = r * 0.68;
+      while (chars.length > 2 && ctx.measureText(chars.join('')).width > maxW) {
+        chars.pop();
+      }
+      let shown = chars.join('');
+      if (shown !== label) shown = shown.trimEnd() + '…';
+      ctx.fillText(shown, r * 0.94, 0);
+      ctx.restore();
     }
 
-    diceRolling = true;
-    diceRolls += 1;
-    diceBtn.classList.remove('search-bar__dice--rolling');
-    void diceBtn.offsetWidth;
-    diceBtn.classList.add('search-bar__dice--rolling');
-
-    if (searchInput.value) searchInput.value = '';
-    applyCategoryFilter('all');
-
-    const target = pick(candidates);
-    const name = target.dataset.name;
-
-    setTimeout(() => {
-      diceBtn.classList.remove('search-bar__dice--rolling');
-      diceRolling = false;
-
-      const card = target.closest('.menu-card, .daily-special');
-      if (card) {
-        spyPaused = true;
-        card.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
-        setTimeout(() => {
-          spyPaused = false;
-        }, 900);
-        if (!prefersReducedMotion) {
-          card.classList.remove('gag-wobble');
-          void card.offsetWidth;
-          card.classList.add('gag-wobble');
-          setTimeout(() => card.classList.remove('gag-wobble'), 900);
-          triggerCardShimmer(card);
-          spawnFloatingSticker(card, 'het lot');
-        }
-      }
-      showToast(`Het lot zegt: ${name} 🎲`, false, 3200);
-      if (diceRolls > 0 && diceRolls % 4 === 0) {
-        setTimeout(() => showToast('Het lot begint zich zorgen te maken 😅', false, 2200), 3400);
-      }
-    }, prefersReducedMotion ? 0 : 650);
+    // Buitenring + naaf
+    ctx.beginPath();
+    ctx.arc(c, c, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(212, 175, 112, 0.7)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(c, c, 44, 0, Math.PI * 2);
+    ctx.fillStyle = '#12100e';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(212, 175, 112, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.font = '30px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🎡', c, c + 2);
   }
 
-  if (diceBtn) diceBtn.addEventListener('click', rollDice);
+  function applyWheelRot() {
+    wheelCanvas.style.transform = `rotate(${wheelRot}rad)`;
+  }
 
-  /* ------------------------------------------------------------------ */
-  /* Wie betaalt? — het rad beslist, geen discussie                     */
-  /* ------------------------------------------------------------------ */
-  const whoPaysBtn = document.getElementById('who-pays');
-  const WHO_PAYS_DEFAULT = '🎡 Wie betaalt deze ronde?';
-  const WHO_PAYS_OUTCOMES = [
-    'Degene met de minste batterij 🔋',
-    'De persoon rechts van jou 👉',
-    'Jij. Gewoon jij. 🫵',
-    'Wie het laatst “proost!” zei 🥂',
-    'De oudste aan tafel 🧓',
-    'Degene met de beste schoenen 👟',
-    'Wie het laatst op z’n telefoon zat 📱',
-    'Niemand — jullie splitten 🧮',
-    'Degene die dit knopje indrukte 😈',
-    'Wie morgen moet werken 💼',
-  ];
-  let whoPaysSpinning = false;
+  function wheelIndexAtPointer() {
+    const n = wheelItems.length;
+    const seg = (Math.PI * 2) / n;
+    // De pijl staat bovenaan (canvas-hoek -π/2); rad is geroteerd met wheelRot
+    const angle = (((-Math.PI / 2 - wheelRot) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    return Math.floor(angle / seg) % n;
+  }
 
-  if (whoPaysBtn) {
-    whoPaysBtn.addEventListener('click', () => {
-      if (whoPaysSpinning) return;
-      whoPaysSpinning = true;
-      const finalPick = pick(WHO_PAYS_OUTCOMES);
+  function revealWinner() {
+    wheelWinner = wheelIndexAtPointer();
+    const item = wheelItems[wheelWinner];
+    if (!item) return;
+    drawWheel(wheelWinner);
+    wheelTick(true);
+    wheelResult.textContent =
+      wheelMode === 'whopays' ? item.line : `${item.label} — ${pick(FATE_LINES)}`;
+    wheelResult.hidden = false;
+    wheelSpinBtn.textContent = 'Nog eens draaien';
+    wheelGotoBtn.hidden = wheelMode !== 'fate';
+    burstConfetti();
+  }
 
-      const land = () => {
-        whoPaysBtn.classList.remove('order-drawer__whopays--spinning');
-        whoPaysBtn.classList.add('order-drawer__whopays--landed');
-        whoPaysBtn.textContent = finalPick;
-        burstConfetti();
-        showToast('Het rad heeft gesproken 🎡 Geen discussie.', false, 2600);
-        setTimeout(() => {
-          whoPaysBtn.classList.remove('order-drawer__whopays--landed');
-          whoPaysBtn.textContent = WHO_PAYS_DEFAULT;
-          whoPaysSpinning = false;
-        }, 6000);
-      };
+  function spinWheel(dir = 1, power = 1) {
+    if (wheelSpinning || wheelItems.length === 0) return;
+    wheelSpinning = true;
+    wheelResult.hidden = true;
+    wheelGotoBtn.hidden = true;
+    wheelWinner = -1;
+    drawWheel();
 
-      if (prefersReducedMotion) {
-        land();
+    const turns = (3 + Math.random() * 2.5) * Math.min(2.2, Math.max(0.7, power));
+    const target = wheelRot + dir * (turns * Math.PI * 2 + Math.random() * Math.PI * 2);
+    const duration = prefersReducedMotion ? 0 : 3200 + Math.random() * 900 + power * 300;
+    const from = wheelRot;
+    const startAt = performance.now();
+    let lastIdx = wheelIndexAtPointer();
+
+    const frame = (now) => {
+      const t = duration === 0 ? 1 : Math.min(1, (now - startAt) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      wheelRot = from + (target - from) * eased;
+      applyWheelRot();
+      const idx = wheelIndexAtPointer();
+      if (idx !== lastIdx) {
+        lastIdx = idx;
+        if (!prefersReducedMotion) wheelTick();
+      }
+      if (t < 1) {
+        wheelAnimFrame = requestAnimationFrame(frame);
+      } else {
+        wheelSpinning = false;
+        revealWinner();
+      }
+    };
+    wheelAnimFrame = requestAnimationFrame(frame);
+  }
+
+  function openWheel(mode) {
+    wheelMode = mode;
+    if (mode === 'whopays') {
+      wheelTitle.textContent = 'Wie betaalt?';
+      wheelSub.textContent = 'Zwier het rad — het rad kent geen genade';
+      wheelItems = shuffle(WHO_PAYS_CARDS).slice(0, WHEEL_SEGMENTS);
+    } else {
+      // Water doet niet mee — dat moet je zelf vangen
+      const candidates = [...document.querySelectorAll('[data-add]')].filter((btn) => {
+        const name = btn.dataset.name || '';
+        return name && name !== 'Water' && !btn.disabled && !outOfStock.has(name);
+      });
+      if (candidates.length < 2) {
+        showToast('Alles is op?! Legendarische avond 🍾', true, 2600);
         return;
       }
+      wheelTitle.textContent = 'Het lot beslist';
+      wheelSub.textContent = 'Zwier het rad en drink wat het zegt';
+      wheelItems = shuffle(candidates)
+        .slice(0, WHEEL_SEGMENTS)
+        .map((btn) => ({
+          label: btn.dataset.name.replace(" van 't vat", '').replace(' (6 stuks)', ''),
+          line: '',
+          addBtn: btn,
+        }));
+    }
+    wheelRot = Math.random() * Math.PI * 2;
+    wheelWinner = -1;
+    wheelResult.hidden = true;
+    wheelGotoBtn.hidden = true;
+    wheelSpinBtn.textContent = 'Draai';
+    drawWheel();
+    applyWheelRot();
+    wheelOverlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
 
-      whoPaysBtn.classList.add('order-drawer__whopays--spinning');
-      let ticks = 0;
-      const spin = setInterval(() => {
-        whoPaysBtn.textContent = pick(WHO_PAYS_OUTCOMES);
-        ticks += 1;
-        if (ticks >= 14) {
-          clearInterval(spin);
-          land();
+  function closeWheel() {
+    if (wheelAnimFrame) cancelAnimationFrame(wheelAnimFrame);
+    wheelSpinning = false;
+    wheelOverlay.hidden = true;
+    // Alleen scroll-lock loslaten als het mandje niet open is
+    if (!drawer.classList.contains('open')) document.body.style.overflow = '';
+  }
+
+  function gotoFateResult() {
+    const item = wheelItems[wheelWinner];
+    const addBtn = item && item.addBtn;
+    closeWheel();
+    closeDrawer();
+    if (!addBtn) return;
+    if (searchInput.value) searchInput.value = '';
+    applyCategoryFilter('all');
+    const card = addBtn.closest('.menu-card, .daily-special');
+    if (!card) return;
+    spyPaused = true;
+    card.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
+    setTimeout(() => {
+      spyPaused = false;
+    }, 900);
+    if (!prefersReducedMotion) {
+      card.classList.remove('gag-wobble');
+      void card.offsetWidth;
+      card.classList.add('gag-wobble');
+      setTimeout(() => card.classList.remove('gag-wobble'), 900);
+      triggerCardShimmer(card);
+      spawnFloatingSticker(card, 'het lot');
+    }
+  }
+
+  /* Zelf zwieren: sleep/flick op het rad */
+  if (wheelStage && wheelCanvas) {
+    let dragging = false;
+    let dragPrevAngle = 0;
+    /** @type {{ t: number, a: number }[]} */
+    let dragSamples = [];
+
+    const stageAngle = (ev) => {
+      const rect = wheelStage.getBoundingClientRect();
+      return Math.atan2(
+        ev.clientY - (rect.top + rect.height / 2),
+        ev.clientX - (rect.left + rect.width / 2)
+      );
+    };
+
+    wheelStage.addEventListener('pointerdown', (ev) => {
+      if (wheelSpinning) return;
+      dragging = true;
+      dragPrevAngle = stageAngle(ev);
+      dragSamples = [{ t: performance.now(), a: 0 }];
+      wheelStage.setPointerCapture(ev.pointerId);
+    });
+
+    wheelStage.addEventListener('pointermove', (ev) => {
+      if (!dragging || wheelSpinning) return;
+      const a = stageAngle(ev);
+      let delta = a - dragPrevAngle;
+      if (delta > Math.PI) delta -= Math.PI * 2;
+      if (delta < -Math.PI) delta += Math.PI * 2;
+      dragPrevAngle = a;
+      wheelRot += delta;
+      applyWheelRot();
+      const total = dragSamples[dragSamples.length - 1].a + delta;
+      dragSamples.push({ t: performance.now(), a: total });
+      if (dragSamples.length > 24) dragSamples.shift();
+    });
+
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      const now = performance.now();
+      const recent = dragSamples.filter((s) => now - s.t < 130);
+      if (recent.length >= 2) {
+        const dt = (recent[recent.length - 1].t - recent[0].t) / 1000;
+        const da = recent[recent.length - 1].a - recent[0].a;
+        const velocity = dt > 0 ? da / dt : 0;
+        if (Math.abs(velocity) > 1.4) {
+          spinWheel(Math.sign(velocity) || 1, Math.min(2.2, Math.abs(velocity) / 7));
         }
-      }, 90);
+      }
+      dragSamples = [];
+    };
+    wheelStage.addEventListener('pointerup', endDrag);
+    wheelStage.addEventListener('pointercancel', endDrag);
+  }
+
+  if (wheelSpinBtn) {
+    wheelSpinBtn.addEventListener('click', () => spinWheel(Math.random() < 0.5 ? -1 : 1, 1));
+  }
+  if (wheelGotoBtn) wheelGotoBtn.addEventListener('click', gotoFateResult);
+  if (wheelCloseBtn) wheelCloseBtn.addEventListener('click', closeWheel);
+  if (wheelOverlay) {
+    wheelOverlay.addEventListener('click', (e) => {
+      if (e.target === wheelOverlay) closeWheel();
     });
   }
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key === 'Escape' && wheelOverlay && !wheelOverlay.hidden) {
+        closeWheel();
+        e.stopPropagation();
+      }
+    },
+    true
+  );
+
+  if (diceBtn) {
+    diceBtn.addEventListener('click', () => {
+      if (!prefersReducedMotion) {
+        diceBtn.classList.remove('search-bar__dice--rolling');
+        void diceBtn.offsetWidth;
+        diceBtn.classList.add('search-bar__dice--rolling');
+      }
+      openWheel('fate');
+    });
+  }
+  if (whoPaysBtn) whoPaysBtn.addEventListener('click', () => openWheel('whopays'));
 
   // Rotate hero badge vibes every so often
   const badgeTextEl = document.getElementById('hero-badge-text');

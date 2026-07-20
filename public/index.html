@@ -659,6 +659,23 @@
     </div>
   </div>
 
+  <div class="wheel-overlay" id="wheel-overlay" hidden>
+    <div class="wheel-modal" role="dialog" aria-modal="true" aria-labelledby="wheel-title">
+      <button type="button" class="wheel__close" id="wheel-close" aria-label="Sluit het rad">×</button>
+      <h2 class="wheel__title" id="wheel-title">Wie betaalt?</h2>
+      <p class="wheel__sub" id="wheel-sub">Zwier het rad — het rad kent geen genade</p>
+      <div class="wheel__stage" id="wheel-stage">
+        <div class="wheel__pointer" aria-hidden="true"></div>
+        <canvas class="wheel__canvas" id="wheel-canvas" width="640" height="640"></canvas>
+      </div>
+      <p class="wheel__result" id="wheel-result" role="status" aria-live="polite" hidden></p>
+      <div class="wheel__actions">
+        <button type="button" class="wheel__btn wheel__btn--primary" id="wheel-spin">Draai</button>
+        <button type="button" class="wheel__btn wheel__btn--ghost" id="wheel-goto" hidden>Breng me erheen</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/vendor/confetti.browser.min.js" defer></script>

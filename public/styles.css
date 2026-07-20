@@ -1418,21 +1418,161 @@ h1, h2, h3, h4 {
   border-color: var(--amber-500);
 }
 
-.order-drawer__whopays--spinning {
-  animation: whopaysTick 0.18s ease-in-out infinite;
+/* Rad van Fortuin — full-screen zwierbaar rad */
+.wheel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(6, 5, 4, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.wheel-overlay[hidden] {
+  display: none !important;
+}
+
+.wheel-modal {
+  position: relative;
+  width: min(calc(100vw - 40px), 440px);
+  padding: 30px 22px 22px;
+  background:
+    linear-gradient(180deg, var(--glass-highlight) 0%, transparent 14px),
+    var(--bg-surface);
+  border: 1px solid var(--border-amber);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card), var(--shadow-glow-strong);
+  text-align: center;
+}
+
+.wheel__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.wheel__close:hover {
   color: var(--text-primary);
 }
 
-.order-drawer__whopays--landed {
-  border-style: solid;
-  border-color: var(--amber-500);
-  background: var(--amber-glow);
-  color: var(--amber-400);
+.wheel__title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--text-primary);
 }
 
-@keyframes whopaysTick {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(0.985); }
+.wheel__sub {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.wheel__stage {
+  position: relative;
+  width: min(76vw, 340px);
+  margin: 18px auto 6px;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wheel__stage:active {
+  cursor: grabbing;
+}
+
+.wheel__canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  will-change: transform;
+}
+
+.wheel__pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 13px solid transparent;
+  border-right: 13px solid transparent;
+  border-top: 22px solid var(--amber-400);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
+  z-index: 2;
+}
+
+.wheel__result {
+  display: block;
+  min-height: 2.9em;
+  max-width: 36ch;
+  margin: 10px auto 0;
+  color: var(--amber-400);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+/* hidden = onzichtbaar maar houdt zijn plaats — modal springt niet */
+.wheel__result[hidden] {
+  visibility: hidden;
+}
+
+.wheel__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.wheel__btn {
+  padding: 12px 22px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.wheel__btn[hidden] {
+  display: none !important;
+}
+
+.wheel__btn--primary {
+  background: linear-gradient(145deg, var(--amber-400), var(--amber-700));
+  border: none;
+  color: var(--bg-deep);
+  box-shadow: 0 6px 24px rgba(212, 175, 112, 0.35);
+}
+
+.wheel__btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(212, 175, 112, 0.5);
+}
+
+.wheel__btn--ghost {
+  background: transparent;
+  border: 1px solid var(--border-amber);
+  color: var(--text-secondary);
+}
+
+.wheel__btn--ghost:hover {
+  color: var(--amber-400);
+  border-color: var(--amber-500);
 }
 
 /* Live order tracking chip */
