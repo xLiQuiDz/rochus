@@ -101,7 +101,7 @@
       sticker: 'vip sip',
     },
     'Sharing Nacho\'s': { toast: 'Sharing is caring (tot de laatste chip)', className: 'gag-wobble' },
-    '105 Sharing Burger': { toast: 'Burger diplomacy', className: 'gag-bounce', sticker: 'feed me' },
+    'Friet 105': { toast: 'Friet diplomacy', className: 'gag-bounce', sticker: 'feed me' },
     Champagne: { toast: 'Champagne problems, but make it cash', className: 'gag-tilt', sticker: 'bougie' },
     Water: { toast: 'Eindelijk water. Hydratatie legend 💧', className: 'gag-bounce', sticker: 'hydrate' },
   };

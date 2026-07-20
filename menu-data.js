@@ -44,7 +44,7 @@ const MENU_ITEMS = [
   { name: 'Kippen Nuggets (6 stuks)', price: 6, category: 'fingerfood' },
   { name: 'Kipfingers (6 stuks)', price: 6, category: 'fingerfood' },
   { name: "Sharing Nacho's", price: 15, category: 'fingerfood' },
-  { name: '105 Sharing Burger', price: 9, category: 'fingerfood' },
+  { name: 'Friet 105', price: 9, category: 'fingerfood' },
 ];
 
 const byName = new Map(MENU_ITEMS.map((item) => [item.name, item]));
