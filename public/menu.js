@@ -2586,6 +2586,11 @@
   const diceGame = diceOverlay ? diceOverlay.querySelector('.dice-game') : null;
   const diceCube = document.getElementById('dice-cube');
   const diceStage = document.getElementById('dice-stage');
+  const diceFloat = document.getElementById('dice-float');
+  const diceFloor = document.getElementById('dice-floor');
+  const diceShockwave = document.getElementById('dice-shockwave');
+  const diceFlash = document.getElementById('dice-flash');
+  const diceEmbers = document.getElementById('dice-embers');
   const diceSub = document.getElementById('dice-sub');
   const diceRollBtn = document.getElementById('dice-roll');
   const diceResult = document.getElementById('dice-result');
@@ -2601,9 +2606,10 @@
   };
 
   const DICE_LINES = [
+    'De steen twijfelt nooit. Jij betaalt.',
+    'Zes kanten. Eén rekening. De jouwe.',
     'Het lot heeft gesproken. Jouw dorst ook.',
-    'Zes kanten. Eén waarheid. Drink.',
-    'Geen keuzestress meer — alleen een resultaat.',
+    'Geen keuzestress meer — alleen een schuld.',
     'De steen kent je beter dan jijzelf.',
     'Twijfel is voor mensen zonder dobbelsteen.',
   ];
@@ -2689,7 +2695,8 @@
       face.className = `dice__face dice__face--${i}`;
       face.innerHTML =
         `<span class="dice__face-emoji">${item.emoji}</span>` +
-        `<span class="dice__face-name">${escapeHtml(item.short)}</span>`;
+        `<span class="dice__face-name">${escapeHtml(item.short)}</span>` +
+        `<span class="dice__face-price">${formatEuro(item.price)}</span>`;
       diceCube.appendChild(face);
     });
   }
@@ -2725,30 +2732,148 @@
     }
   }
 
+  /** Zware dreun bij de landing */
+  function diceThud() {
+    try {
+      if (!wheelAudioCtx) {
+        wheelAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (wheelAudioCtx.state === 'suspended') wheelAudioCtx.resume().catch(() => {});
+      const t = wheelAudioCtx.currentTime;
+      const osc = wheelAudioCtx.createOscillator();
+      const gain = wheelAudioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(130, t);
+      osc.frequency.exponentialRampToValueAtTime(42, t + 0.22);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.22, t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+      osc.connect(gain);
+      gain.connect(wheelAudioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.32);
+    } catch {
+      /* stil mag ook */
+    }
+  }
+
+  /** Gouden klingel bij de reveal */
+  function diceChime() {
+    try {
+      if (!wheelAudioCtx) return;
+      const notes = [880, 1174.7, 1568];
+      notes.forEach((freq, i) => {
+        const t = wheelAudioCtx.currentTime + i * 0.09;
+        const osc = wheelAudioCtx.createOscillator();
+        const gain = wheelAudioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.05, t + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+        osc.connect(gain);
+        gain.connect(wheelAudioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.55);
+      });
+    } catch {
+      /* stil mag ook */
+    }
+  }
+
+  /** Zwevende sintels in de arena (eenmalig gezaaid) */
+  function seedDiceEmbers() {
+    if (!diceEmbers || diceEmbers.childElementCount || prefersReducedMotion) return;
+    for (let i = 0; i < 18; i++) {
+      const s = document.createElement('span');
+      s.className = 'dice__ember';
+      const size = 2 + Math.random() * 3;
+      s.style.width = `${size.toFixed(1)}px`;
+      s.style.height = `${size.toFixed(1)}px`;
+      s.style.left = `${(Math.random() * 100).toFixed(1)}%`;
+      s.style.setProperty('--drift', `${Math.round(Math.random() * 70 - 35)}px`);
+      s.style.animationDuration = `${(6 + Math.random() * 9).toFixed(1)}s`;
+      s.style.animationDelay = `${(Math.random() * 9).toFixed(1)}s`;
+      diceEmbers.appendChild(s);
+    }
+  }
+
+  /** Trage etalage-rotatie zolang er niet gerold wordt */
+  let diceIdleRaf = 0;
+  function startDiceIdleDrift() {
+    if (prefersReducedMotion) return;
+    cancelAnimationFrame(diceIdleRaf);
+    let last = performance.now();
+    const step = (now) => {
+      if (
+        !diceOverlay ||
+        diceOverlay.hidden ||
+        diceRolling ||
+        diceGame.classList.contains('dice-game--landed')
+      ) {
+        diceIdleRaf = 0;
+        return;
+      }
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      applyCubeTransform(-16 + Math.sin(now / 1500) * 7, diceAngle.y + dt * 26);
+      diceIdleRaf = requestAnimationFrame(step);
+    };
+    diceIdleRaf = requestAnimationFrame(step);
+  }
+
+  /** Flits + schokgolf + camera-shake + dreun bij de landing */
+  function diceImpactFX() {
+    if (prefersReducedMotion) return;
+    if (diceFlash) {
+      diceFlash.classList.remove('dice__flash--go');
+      void diceFlash.offsetWidth;
+      diceFlash.classList.add('dice__flash--go');
+    }
+    if (diceShockwave) {
+      diceShockwave.classList.remove('dice__shockwave--go');
+      void diceShockwave.offsetWidth;
+      diceShockwave.classList.add('dice__shockwave--go');
+    }
+    diceGame.classList.remove('dice-game--impact');
+    void diceGame.offsetWidth;
+    diceGame.classList.add('dice-game--impact');
+    diceThud();
+    fireConfetti({
+      particleCount: 34,
+      spread: 100,
+      startVelocity: 24,
+      scalar: 0.75,
+      origin: { y: 0.62 },
+      colors: ROCHUS_CONFETTI_COLORS,
+    });
+  }
+
   function showDiceResult(item) {
     diceResult.innerHTML =
-      `<p class="dice__result-eyebrow">ROCHUS · HET LOT</p>` +
-      `<p class="dice__result-emoji" aria-hidden="true">${item.emoji}</p>` +
-      `<p class="dice__result-name">${escapeHtml(item.name)}</p>` +
+      `<p class="dice__result-eyebrow">Het lot heeft gesproken</p>` +
+      `<p class="dice__result-pay">Jij betaalt</p>` +
       `<p class="dice__result-price">${formatEuro(item.price)}</p>` +
+      `<p class="dice__result-name">${escapeHtml(item.name)}</p>` +
       `<p class="dice__result-line">${escapeHtml(pick(DICE_LINES))}</p>` +
       `<div class="dice__result-actions">` +
       `<button type="button" class="dice__result-btn dice__result-btn--take" id="dice-take">Zet op mijn bestelling</button>` +
-      `<button type="button" class="dice__result-btn dice__result-btn--again" id="dice-again">Nieuw spel</button>` +
+      `<button type="button" class="dice__result-btn dice__result-btn--again" id="dice-again">Opnieuw rollen</button>` +
       `</div>`;
+    if (diceRollBtn) diceRollBtn.hidden = true;
     diceResult.hidden = false;
   }
 
   function tumbleToFace(faceIdx) {
     return new Promise((resolve) => {
       const settle = DICE_SETTLE[faceIdx];
-      const spinsX = 3 + Math.floor(Math.random() * 3);
-      const spinsY = 4 + Math.floor(Math.random() * 3);
+      const spinsX = 4 + Math.floor(Math.random() * 3);
+      const spinsY = 5 + Math.floor(Math.random() * 3);
       const fromX = diceAngle.x;
       const fromY = diceAngle.y;
       const toX = settle.x + spinsX * 360;
       const toY = settle.y + spinsY * 360;
-      const duration = prefersReducedMotion ? 0 : 2200;
+      const duration = prefersReducedMotion ? 0 : 2600;
 
       if (duration === 0) {
         applyCubeTransform(settle.x, settle.y);
@@ -2759,16 +2884,51 @@
       if (diceCube) diceCube.style.transition = 'none';
       const start = performance.now();
       let lastTick = 0;
+      // Impactmomenten van de worp: grote klap, stuit, laatste tikje
+      const bounces = [
+        { at: 0.52, height: -130 },
+        { at: 0.8, height: -48 },
+        { at: 0.95, height: -16 },
+      ];
+      const hit = new Set();
 
       const frame = (now) => {
         const t = Math.min(1, (now - start) / duration);
         const eased = 1 - Math.pow(1 - t, 3);
         const x = fromX + (toX - fromX) * eased;
         const y = fromY + (toY - fromY) * eased;
-        const z = Math.sin(t * Math.PI * 3) * 18 * (1 - t);
+        const z = Math.sin(t * Math.PI * 3) * 20 * (1 - t);
         applyCubeTransform(x, y, z);
 
-        if (t - lastTick > 0.12) {
+        // Werpboog: omhoog, neer, stuiteren
+        let hop = 0;
+        if (t < 0.52) hop = Math.sin((t / 0.52) * Math.PI) * -130;
+        else if (t < 0.8) hop = Math.sin(((t - 0.52) / 0.28) * Math.PI) * -48;
+        else if (t < 0.95) hop = Math.sin(((t - 0.8) / 0.15) * Math.PI) * -16;
+
+        // Squash net na elke landing
+        const near = (c, w) => Math.max(0, 1 - Math.abs(t - c) / w);
+        const squash =
+          1 -
+          0.14 *
+            Math.max(near(0.52, 0.05), near(0.8, 0.045) * 0.7, near(1, 0.06));
+        if (diceFloat) {
+          diceFloat.style.transform = `translateY(${hop.toFixed(1)}px) scale(${(2 - squash).toFixed(3)}, ${squash.toFixed(3)})`;
+        }
+        if (diceFloor) {
+          const lift = Math.min(0.5, -hop / 260);
+          diceFloor.style.transform = `scale(${(1 - lift).toFixed(3)})`;
+          diceFloor.style.opacity = `${(1 - lift * 0.9).toFixed(3)}`;
+        }
+
+        bounces.forEach((b, i) => {
+          if (!hit.has(i) && t >= b.at) {
+            hit.add(i);
+            diceClack(1.1 - i * 0.2);
+            if (navigator.vibrate) navigator.vibrate(12);
+          }
+        });
+        if (t - lastTick > 0.14 && t < 0.5) {
           lastTick = t;
           diceClack(0.85 + Math.random() * 0.4);
         }
@@ -2777,7 +2937,11 @@
           requestAnimationFrame(frame);
         } else {
           applyCubeTransform(settle.x, settle.y);
-          diceClack(0.55);
+          if (diceFloat) diceFloat.style.transform = '';
+          if (diceFloor) {
+            diceFloor.style.transform = '';
+            diceFloor.style.opacity = '';
+          }
           resolve();
         }
       };
@@ -2835,39 +2999,55 @@
     if (diceRolling || diceFaces.length < 6) return;
     diceRolling = true;
     diceWinner = null;
-    diceGame.classList.remove('dice-game--landed');
+    cancelAnimationFrame(diceIdleRaf);
+    diceIdleRaf = 0;
+    diceGame.classList.remove('dice-game--landed', 'dice-game--impact');
     diceGame.classList.add('dice-game--rolling');
+    diceCube
+      .querySelectorAll('.dice__face--win')
+      .forEach((f) => f.classList.remove('dice__face--win'));
     diceResult.hidden = true;
-    diceSub.textContent = 'Rol… het lot is in beweging';
+    diceSub.textContent = 'De steen is onderweg…';
     if (diceRollBtn) {
+      diceRollBtn.hidden = false;
       diceRollBtn.disabled = true;
-      diceRollBtn.textContent = 'Bezig…';
+      diceRollBtn.textContent = 'De steen rolt…';
     }
     if (navigator.vibrate) navigator.vibrate([12, 40, 12]);
 
     const faceIdx = Math.floor(Math.random() * 6);
     await tumbleToFace(faceIdx);
 
+    // Landing: klap eerst, dan pas de uitspraak
+    diceImpactFX();
+    if (!prefersReducedMotion) {
+      await new Promise((r) => setTimeout(r, 320));
+    }
+
     const item = diceFaces[faceIdx];
     diceWinner = item;
     diceGame.classList.remove('dice-game--rolling');
     diceGame.classList.add('dice-game--landed');
+    const winFace = diceCube.querySelector(`.dice__face--${faceIdx}`);
+    if (winFace) winFace.classList.add('dice__face--win');
     diceSub.textContent = 'Het lot heeft gekozen';
     showDiceResult(item);
+    diceChime();
     burstConfetti();
     if (navigator.vibrate) navigator.vibrate([30, 50, 40]);
 
-    if (diceRollBtn) {
-      diceRollBtn.disabled = false;
-      diceRollBtn.textContent = 'Opnieuw schudden';
-    }
     diceRolling = false;
   }
 
   function resetDiceRound({ newAssortment }) {
     diceWinner = null;
-    diceGame.classList.remove('dice-game--rolling', 'dice-game--landed');
+    diceGame.classList.remove('dice-game--rolling', 'dice-game--landed', 'dice-game--impact');
     diceResult.hidden = true;
+    if (diceFloat) diceFloat.style.transform = '';
+    if (diceFloor) {
+      diceFloor.style.transform = '';
+      diceFloor.style.opacity = '';
+    }
     if (newAssortment) {
       if (!dealNewFaces()) {
         showToast('Te weinig drankjes voor een dobbelsteen 🎲', true, 2600);
@@ -2878,15 +3058,23 @@
     applyCubeTransform(-18 + Math.random() * 10, 20 + Math.random() * 40);
     diceSub.textContent = 'Schud je telefoon — of tik op de steen';
     if (diceRollBtn) {
+      diceRollBtn.hidden = false;
       diceRollBtn.disabled = false;
-      diceRollBtn.textContent = 'Schud of tik hier';
+      diceRollBtn.textContent = 'Schud of tik — de steen beslist';
     }
+    startDiceIdleDrift();
     return true;
   }
 
   async function openDice() {
-    if (!resetDiceRound({ newAssortment: true })) return;
+    if (!dealNewFaces()) {
+      showToast('Te weinig drankjes voor een dobbelsteen 🎲', true, 2600);
+      return;
+    }
+    paintCube();
     diceOverlay.hidden = false;
+    seedDiceEmbers();
+    resetDiceRound({ newAssortment: false });
     document.body.style.overflow = 'hidden';
     // iOS vraagt toestemming pas na een user-gesture; open telt als één
     await ensureMotionPermission();
@@ -2895,9 +3083,11 @@
 
   function closeDice() {
     stopShakeListen();
+    cancelAnimationFrame(diceIdleRaf);
+    diceIdleRaf = 0;
     diceOverlay.hidden = true;
     diceRolling = false;
-    diceGame.classList.remove('dice-game--rolling', 'dice-game--landed');
+    diceGame.classList.remove('dice-game--rolling', 'dice-game--landed', 'dice-game--impact');
     if (!drawer.classList.contains('open')) document.body.style.overflow = '';
   }
 

@@ -63,7 +63,7 @@
         type="button"
         class="search-bar__dice"
         id="menu-dice"
-        aria-label="Dobbelsteen — schud en laat het lot kiezen wat je drinkt"
+        aria-label="Dobbelsteen — de steen bepaalt wat je drinkt én betaalt"
         title="Dobbelsteen"
       >🎲</button>
     </div>
@@ -746,21 +746,35 @@
 
   <div class="dice-overlay" id="dice-overlay" hidden>
     <div class="dice-game" role="dialog" aria-modal="true" aria-labelledby="dice-title">
+      <div class="dice__embers" id="dice-embers" aria-hidden="true"></div>
       <button type="button" class="dice__close" id="dice-close" aria-label="Sluit de dobbelsteen">×</button>
 
-      <h2 class="dice__title" id="dice-title">DOBBEL</h2>
-      <p class="dice__sub" id="dice-sub">Schud je telefoon — of tik op de steen</p>
+      <header class="dice__head">
+        <p class="dice__eyebrow">Rochus · Huis van het Lot</p>
+        <h2 class="dice__title" id="dice-title">DE STEEN BESLIST</h2>
+        <p class="dice__sub" id="dice-sub">Schud je telefoon — of tik op de steen</p>
+      </header>
 
       <div class="dice__stage" id="dice-stage">
-        <div class="dice__scene">
-          <div class="dice__cube" id="dice-cube" aria-hidden="true"></div>
+        <div class="dice__rays" aria-hidden="true"></div>
+        <div class="dice__aura" aria-hidden="true"></div>
+        <div class="dice__streaks" aria-hidden="true"></div>
+        <div class="dice__float" id="dice-float">
+          <div class="dice__scene">
+            <div class="dice__cube" id="dice-cube" aria-hidden="true"></div>
+          </div>
         </div>
-        <div class="dice__floor" aria-hidden="true"></div>
+        <div class="dice__altar" aria-hidden="true"></div>
+        <div class="dice__floor" id="dice-floor" aria-hidden="true"></div>
+        <div class="dice__shockwave" id="dice-shockwave" aria-hidden="true"></div>
       </div>
 
-      <button type="button" class="dice__roll" id="dice-roll">Schud of tik hier</button>
+      <div class="dice__deck">
+        <button type="button" class="dice__roll" id="dice-roll">Schud of tik — de steen beslist</button>
+        <div class="dice__result" id="dice-result" aria-live="polite" hidden></div>
+      </div>
 
-      <div class="dice__result" id="dice-result" aria-live="polite" hidden></div>
+      <div class="dice__flash" id="dice-flash" aria-hidden="true"></div>
     </div>
   </div>
 
