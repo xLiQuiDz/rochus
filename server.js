@@ -17,6 +17,8 @@ const {
   getOutOfStockSet,
   setItemOutOfStock,
   getTodayStats,
+  listTransactions,
+  getAnalytics,
 } = require('./db');
 const { MENU_ITEMS, getMenuItem, validateAndPrice, getPrintMenu } = require('./menu-data');
 const QRCode = require('qrcode');
@@ -197,6 +199,41 @@ app.get('/api/stats/today', requireStaff, async (_req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Kon statistieken niet laden' });
+  }
+});
+
+const VALID_RANGES = new Set(['today', 'yesterday', '7d', '30d', 'all']);
+
+/** Staff: transactielijst met filters */
+app.get('/api/transactions', requireStaff, async (req, res) => {
+  try {
+    const range = VALID_RANGES.has(String(req.query.range)) ? String(req.query.range) : 'today';
+    const table = Number(req.query.table);
+    const data = await listTransactions({
+      range,
+      status: req.query.status ? String(req.query.status) : undefined,
+      payment: req.query.payment ? String(req.query.payment) : undefined,
+      table: Number.isInteger(table) ? table : undefined,
+      limit: Number(req.query.limit) || 200,
+      offset: Number(req.query.offset) || 0,
+    });
+    res.set('Cache-Control', 'no-store');
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon transacties niet laden' });
+  }
+});
+
+/** Staff: kerncijfers en reeksen voor de grafieken */
+app.get('/api/analytics', requireStaff, async (req, res) => {
+  try {
+    const range = VALID_RANGES.has(String(req.query.range)) ? String(req.query.range) : 'today';
+    res.set('Cache-Control', 'no-store');
+    res.json(await getAnalytics({ range }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon analyse niet laden' });
   }
 });
 
@@ -438,6 +475,10 @@ app.get('/qr', (_req, res) => {
 
 app.get('/print', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'print.html'));
+});
+
+app.get(['/transacties', '/transactions'], (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'transacties.html'));
 });
 
 async function start() {

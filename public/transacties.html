@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Rochus · Transacties</title>
+  <meta name="theme-color" content="#0a0908" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="transacties.css" />
+</head>
+<body>
+  <!-- ============ LOGIN ============ -->
+  <div class="login" id="login-view">
+    <div class="login__card">
+      <p class="login__brand">ROCHUS</p>
+      <h1 class="login__title">Transacties</h1>
+      <p class="login__sub">Voer de PIN in om de cijfers te zien</p>
+      <form class="login__form" id="login-form">
+        <input type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password"
+               class="login__pin" id="login-pin" placeholder="PIN" maxlength="12" required />
+        <button type="submit" class="login__btn">Toon transacties</button>
+        <p class="login__error" id="login-error" hidden></p>
+      </form>
+      <p class="login__back"><a href="/bar">← Terug naar bar</a></p>
+    </div>
+  </div>
+
+  <!-- ============ DASHBOARD ============ -->
+  <div class="page" id="page-view" hidden>
+    <header class="topbar">
+      <div class="topbar__brand">
+        <span class="topbar__mark">ROCHUS</span>
+        <span class="topbar__sub">transacties</span>
+      </div>
+
+      <div class="segmented" role="group" aria-label="Periode">
+        <button type="button" class="segmented__btn segmented__btn--on" data-range="today">Vandaag</button>
+        <button type="button" class="segmented__btn" data-range="yesterday">Gisteren</button>
+        <button type="button" class="segmented__btn" data-range="7d">7 dagen</button>
+        <button type="button" class="segmented__btn" data-range="30d">30 dagen</button>
+        <button type="button" class="segmented__btn" data-range="all">Alles</button>
+      </div>
+
+      <div class="topbar__actions">
+        <button type="button" class="btn" id="export-btn">⬇ CSV</button>
+        <a class="btn btn--ghost" href="/bar">← Bar</a>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- KPI's -->
+      <section class="kpis" aria-label="Kerncijfers">
+        <article class="kpi kpi--hero">
+          <p class="kpi__label">Omzet</p>
+          <p class="kpi__value" id="kpi-revenue">—</p>
+          <p class="kpi__sub" id="kpi-revenue-sub"></p>
+        </article>
+        <article class="kpi">
+          <p class="kpi__label">Bestellingen</p>
+          <p class="kpi__value" id="kpi-orders">—</p>
+          <p class="kpi__sub" id="kpi-orders-sub"></p>
+        </article>
+        <article class="kpi">
+          <p class="kpi__label">Gemiddeld per bestelling</p>
+          <p class="kpi__value" id="kpi-avg">—</p>
+          <p class="kpi__sub" id="kpi-avg-sub"></p>
+        </article>
+        <article class="kpi">
+          <p class="kpi__label">Drukste tafel</p>
+          <p class="kpi__value" id="kpi-table">—</p>
+          <p class="kpi__sub" id="kpi-table-sub"></p>
+        </article>
+      </section>
+
+      <!-- Grafieken -->
+      <section class="cards">
+        <article class="card card--wide">
+          <header class="card__head">
+            <h2 class="card__title">Omzet per <span id="unit-label">uur</span></h2>
+            <p class="card__note" id="revenue-note"></p>
+          </header>
+          <div class="chart" id="chart-revenue"></div>
+        </article>
+
+        <article class="card">
+          <header class="card__head">
+            <h2 class="card__title">Betaalwijze</h2>
+            <p class="card__note">aandeel van de omzet</p>
+          </header>
+          <div class="legend" id="pay-legend"></div>
+          <div class="chart chart--short" id="chart-payment"></div>
+          <div class="paybreak" id="pay-breakdown"></div>
+        </article>
+
+        <article class="card">
+          <header class="card__head">
+            <h2 class="card__title">Top producten</h2>
+            <p class="card__note">op omzet</p>
+          </header>
+          <div class="chart" id="chart-items"></div>
+        </article>
+
+        <article class="card">
+          <header class="card__head">
+            <h2 class="card__title">Omzet per categorie</h2>
+            <p class="card__note"></p>
+          </header>
+          <div class="chart" id="chart-categories"></div>
+        </article>
+      </section>
+
+      <!-- Transacties -->
+      <section class="card card--table">
+        <header class="card__head card__head--row">
+          <div>
+            <h2 class="card__title">Alle transacties</h2>
+            <p class="card__note" id="table-note"></p>
+          </div>
+          <div class="filters">
+            <label class="filter">
+              <span>Status</span>
+              <select id="filter-status">
+                <option value="">Alle</option>
+                <option value="new">Nieuw</option>
+                <option value="preparing">Bezig</option>
+                <option value="served">Geserveerd</option>
+                <option value="cancelled">Geannuleerd</option>
+              </select>
+            </label>
+            <label class="filter">
+              <span>Betaling</span>
+              <select id="filter-payment">
+                <option value="">Alle</option>
+                <option value="cash">Cash</option>
+                <option value="payconiq">Bancontact</option>
+              </select>
+            </label>
+            <label class="filter">
+              <span>Tafel</span>
+              <input type="number" id="filter-table" min="1" placeholder="alle" inputmode="numeric" />
+            </label>
+          </div>
+        </header>
+
+        <div class="table-wrap">
+          <table class="tx">
+            <thead>
+              <tr>
+                <th scope="col" data-col="id">#</th>
+                <th scope="col">Tijd</th>
+                <th scope="col">Tafel</th>
+                <th scope="col">Items</th>
+                <th scope="col">Betaling</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="tx__num">Bedrag</th>
+              </tr>
+            </thead>
+            <tbody id="tx-body"></tbody>
+          </table>
+          <p class="tx__empty" id="tx-empty" hidden>Geen transacties in deze periode</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="tip" id="tip" hidden></div>
+
+  <script src="transacties.js" defer></script>
+</body>
+</html>

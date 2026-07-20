@@ -318,6 +318,191 @@ async function getTodayStats() {
   };
 }
 
+/* ============================================================
+   Transacties & analyse
+   ============================================================ */
+
+/** Whitelist — deze fragmenten gaan rechtstreeks in SQL, dus nooit user input. */
+const RANGE_SQL = {
+  today:
+    "(o.created_at AT TIME ZONE 'Europe/Brussels')::date = (NOW() AT TIME ZONE 'Europe/Brussels')::date",
+  yesterday:
+    "(o.created_at AT TIME ZONE 'Europe/Brussels')::date = (NOW() AT TIME ZONE 'Europe/Brussels')::date - 1",
+  '7d': "o.created_at >= NOW() - INTERVAL '7 days'",
+  '30d': "o.created_at >= NOW() - INTERVAL '30 days'",
+  all: 'TRUE',
+};
+
+function rangeClause(range) {
+  return RANGE_SQL[range] || RANGE_SQL.today;
+}
+
+/** Per uur groeperen bij één dag, per dag bij langere periodes. */
+function bucketsByHour(range) {
+  return range === 'today' || range === 'yesterday';
+}
+
+/**
+ * Transactielijst met filters en paginering.
+ * @param {{range?:string,status?:string,payment?:string,table?:number,limit?:number,offset?:number}} opts
+ */
+async function listTransactions(opts = {}) {
+  const where = [rangeClause(opts.range)];
+  const params = [];
+
+  if (opts.status && VALID_STATUSES.has(opts.status)) {
+    params.push(opts.status);
+    where.push(`o.status = $${params.length}`);
+  }
+  if (opts.payment && VALID_PAYMENT_METHODS.has(opts.payment)) {
+    params.push(opts.payment);
+    where.push(`o.payment_method = $${params.length}`);
+  }
+  if (Number.isInteger(opts.table) && opts.table > 0) {
+    params.push(opts.table);
+    where.push(`o.table_number = $${params.length}`);
+  }
+
+  const whereSql = where.join(' AND ');
+  const limit = Math.min(500, Math.max(1, Number(opts.limit) || 100));
+  const offset = Math.max(0, Number(opts.offset) || 0);
+
+  const totals = await pool.query(
+    `SELECT COUNT(*)::int AS total,
+            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status <> 'cancelled'), 0)::int AS revenue_cents
+     FROM orders o WHERE ${whereSql}`,
+    params
+  );
+
+  const { rows } = await pool.query(
+    `SELECT * FROM orders o
+     WHERE ${whereSql}
+     ORDER BY o.created_at DESC
+     LIMIT ${limit} OFFSET ${offset}`,
+    params
+  );
+
+  if (rows.length === 0) {
+    return { total: totals.rows[0].total, revenue_cents: totals.rows[0].revenue_cents, rows: [] };
+  }
+
+  const ids = rows.map((r) => Number(r.id));
+  const { rows: itemRows } = await pool.query(
+    `SELECT id, order_id, name, unit_price_cents, qty, category, free_qty
+     FROM order_items WHERE order_id = ANY($1::bigint[]) ORDER BY id`,
+    [ids]
+  );
+  const byOrder = new Map();
+  for (const item of itemRows) {
+    const key = Number(item.order_id);
+    if (!byOrder.has(key)) byOrder.set(key, []);
+    byOrder.get(key).push(item);
+  }
+
+  return {
+    total: totals.rows[0].total,
+    revenue_cents: totals.rows[0].revenue_cents,
+    rows: rows.map((row) => mapOrder(row, byOrder.get(Number(row.id)) || [])),
+  };
+}
+
+/** Kerncijfers + reeksen voor de grafieken. */
+async function getAnalytics({ range = 'today' } = {}) {
+  const clause = rangeClause(range);
+  const byHour = bucketsByHour(range);
+  const paid = `${clause} AND o.status <> 'cancelled'`;
+
+  const totals = await pool.query(
+    `SELECT COUNT(*) FILTER (WHERE o.status <> 'cancelled')::int AS orders,
+            COUNT(*) FILTER (WHERE o.status = 'cancelled')::int AS cancelled,
+            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status <> 'cancelled'), 0)::int AS revenue_cents,
+            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status <> 'cancelled' AND o.payment_method = 'payconiq'), 0)::int AS payconiq_cents,
+            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status <> 'cancelled' AND o.payment_method = 'cash'), 0)::int AS cash_cents,
+            COUNT(*) FILTER (WHERE o.status <> 'cancelled' AND o.payment_method = 'payconiq')::int AS payconiq_orders,
+            COUNT(*) FILTER (WHERE o.status <> 'cancelled' AND o.payment_method = 'cash')::int AS cash_orders
+     FROM orders o WHERE ${clause}`
+  );
+
+  const series = await pool.query(
+    byHour
+      ? `SELECT date_trunc('hour', o.created_at AT TIME ZONE 'Europe/Brussels') AS bucket,
+                COALESCE(SUM(o.total_cents), 0)::int AS revenue_cents,
+                COUNT(*)::int AS orders
+         FROM orders o WHERE ${paid}
+         GROUP BY 1 ORDER BY 1`
+      : `SELECT (o.created_at AT TIME ZONE 'Europe/Brussels')::date AS bucket,
+                COALESCE(SUM(o.total_cents), 0)::int AS revenue_cents,
+                COUNT(*)::int AS orders
+         FROM orders o WHERE ${paid}
+         GROUP BY 1 ORDER BY 1`
+  );
+
+  const items = await pool.query(
+    `SELECT oi.name,
+            SUM(oi.qty)::int AS qty,
+            SUM(oi.unit_price_cents * (oi.qty - oi.free_qty))::int AS revenue_cents
+     FROM order_items oi JOIN orders o ON o.id = oi.order_id
+     WHERE ${paid}
+     GROUP BY oi.name ORDER BY revenue_cents DESC, oi.name LIMIT 8`
+  );
+
+  const categories = await pool.query(
+    `SELECT oi.category,
+            SUM(oi.qty)::int AS qty,
+            SUM(oi.unit_price_cents * (oi.qty - oi.free_qty))::int AS revenue_cents
+     FROM order_items oi JOIN orders o ON o.id = oi.order_id
+     WHERE ${paid}
+     GROUP BY oi.category ORDER BY revenue_cents DESC`
+  );
+
+  const tables = await pool.query(
+    `SELECT o.table_number::int AS table_number,
+            COUNT(*)::int AS orders,
+            COALESCE(SUM(o.total_cents), 0)::int AS revenue_cents
+     FROM orders o WHERE ${paid}
+     GROUP BY 1 ORDER BY revenue_cents DESC LIMIT 6`
+  );
+
+  const t = totals.rows[0];
+  const itemsSold = items.rows.reduce((sum, r) => sum + Number(r.qty), 0);
+
+  return {
+    range,
+    unit: byHour ? 'uur' : 'dag',
+    totals: {
+      orders: t.orders,
+      cancelled: t.cancelled,
+      revenue_cents: t.revenue_cents,
+      avg_cents: t.orders > 0 ? Math.round(t.revenue_cents / t.orders) : 0,
+      cash_cents: t.cash_cents,
+      payconiq_cents: t.payconiq_cents,
+      cash_orders: t.cash_orders,
+      payconiq_orders: t.payconiq_orders,
+      top_items_sold: itemsSold,
+    },
+    series: series.rows.map((r) => ({
+      bucket: r.bucket instanceof Date ? r.bucket.toISOString() : String(r.bucket),
+      revenue_cents: r.revenue_cents,
+      orders: r.orders,
+    })),
+    top_items: items.rows.map((r) => ({
+      name: r.name,
+      qty: Number(r.qty),
+      revenue_cents: r.revenue_cents,
+    })),
+    categories: categories.rows.map((r) => ({
+      category: r.category,
+      qty: Number(r.qty),
+      revenue_cents: r.revenue_cents,
+    })),
+    tables: tables.rows.map((r) => ({
+      table_number: r.table_number,
+      orders: r.orders,
+      revenue_cents: r.revenue_cents,
+    })),
+  };
+}
+
 async function createStaffSession(token, expiresAt) {
   await pool.query(
     `INSERT INTO staff_sessions (token, expires_at)
@@ -362,5 +547,8 @@ module.exports = {
   getOutOfStockSet,
   setItemOutOfStock,
   getTodayStats,
+  listTransactions,
+  getAnalytics,
   VALID_STATUSES,
+  VALID_PAYMENT_METHODS,
 };

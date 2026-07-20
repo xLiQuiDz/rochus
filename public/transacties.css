@@ -1,0 +1,280 @@
+/* ============================================================
+   ROCHUS · TRANSACTIES
+   Grafiekkleuren zijn gevalideerd tegen het donkere oppervlak
+   (#15120f) met de dataviz-validator: amber #c98500 + blauw
+   #3987e5 halen alle checks (lichtheid, chroma, CVD, contrast).
+   ============================================================ */
+:root {
+  --bg: #0a0908;
+  --surface: #15120f;          /* grafiekoppervlak — gevalideerd */
+  --raise: rgba(255, 255, 255, 0.035);
+  --line: rgba(245, 230, 200, 0.1);
+  --line-strong: rgba(245, 230, 200, 0.2);
+  --grid: rgba(245, 230, 200, 0.08);
+
+  --gold: #d4af70;             /* chrome, niet voor datamarks */
+  --gold-lite: #f0d9a8;
+  --text: #f7f1e8;
+  --muted: #9a8f80;
+
+  /* Datamarks */
+  --series-1: #c98500;         /* amber — cash / hoofdreeks */
+  --series-2: #3987e5;         /* blauw — Bancontact */
+  --ok: #4ade80;
+  --danger: #f87171;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 10% -10%, rgba(212, 175, 112, 0.08), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+button, a, select, input { font-family: inherit; }
+[hidden] { display: none !important; }
+
+/* ---------------- Login ---------------- */
+.login {
+  position: relative; z-index: 1;
+  min-height: 100vh; display: grid; place-items: center; padding: 24px;
+}
+.login__card {
+  width: min(100%, 400px); padding: 44px 34px; text-align: center;
+  background: var(--surface); border: 1px solid rgba(212, 175, 112, 0.32);
+  border-radius: 22px; box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+}
+.login__brand {
+  font-family: 'Cinzel', serif; letter-spacing: 0.3em; text-indent: 0.3em;
+  color: var(--gold); font-size: 0.95rem; margin-bottom: 10px;
+}
+.login__title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.3rem; font-weight: 500; }
+.login__sub { color: var(--muted); font-size: 0.9rem; margin: 8px 0 28px; }
+.login__pin {
+  width: 100%; min-height: 56px; padding: 15px; margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line);
+  border-radius: 14px; color: var(--text); font-size: 1.25rem;
+  letter-spacing: 0.3em; text-align: center; outline: none;
+}
+.login__pin:focus { border-color: var(--gold); }
+.login__btn {
+  width: 100%; min-height: 56px; border: none; border-radius: 14px;
+  background: linear-gradient(135deg, var(--gold-lite), var(--gold));
+  color: var(--bg); font-weight: 800; font-size: 1rem; cursor: pointer;
+}
+.login__error { margin-top: 14px; color: var(--danger); font-size: 0.88rem; }
+.login__back { margin-top: 18px; font-size: 0.82rem; }
+.login__back a { color: var(--gold); text-decoration: none; }
+
+/* ---------------- Shell ---------------- */
+.page { position: relative; z-index: 1; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 20px 12px;
+  background: rgba(10, 9, 8, 0.86);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar__brand { display: flex; align-items: baseline; gap: 7px; }
+.topbar__mark {
+  font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 600;
+  letter-spacing: 0.2em; color: var(--gold-lite);
+}
+.topbar__sub {
+  font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic;
+  font-size: 1rem; color: var(--muted);
+}
+.topbar__actions { margin-left: auto; display: flex; gap: 8px; }
+
+.segmented {
+  display: flex; gap: 3px; padding: 4px;
+  background: var(--raise); border: 1px solid var(--line); border-radius: 12px;
+}
+.segmented__btn {
+  min-height: 38px; padding: 0 14px; border: none; border-radius: 9px;
+  background: transparent; color: var(--muted);
+  font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  transition: color 0.2s var(--ease), background 0.2s var(--ease);
+}
+.segmented__btn:hover { color: var(--text); }
+.segmented__btn--on {
+  background: linear-gradient(135deg, var(--gold-lite), var(--gold));
+  color: var(--bg);
+}
+
+.btn {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 10px 16px;
+  background: var(--raise); border: 1px solid var(--line-strong); border-radius: 999px;
+  color: var(--gold-lite); font-size: 0.83rem; font-weight: 700;
+  text-decoration: none; cursor: pointer;
+  transition: border-color 0.2s var(--ease);
+}
+.btn:hover { border-color: var(--gold); }
+.btn--ghost { color: var(--muted); border-color: var(--line); }
+
+.content {
+  max-width: 1320px; margin: 0 auto;
+  padding: 22px 20px calc(60px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 18px;
+}
+
+/* ---------------- KPI's ---------------- */
+.kpis {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.kpi {
+  padding: 18px 20px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 16px;
+}
+.kpi__label {
+  font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px;
+}
+/* Cijfers in de sans met tabellarische cijfers — geen sierletter op data */
+.kpi__value {
+  font-size: 1.9rem; font-weight: 800; line-height: 1.1;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+}
+.kpi--hero .kpi__value { font-size: 2.6rem; color: var(--gold-lite); }
+.kpi__sub { margin-top: 6px; font-size: 0.78rem; color: var(--muted); }
+
+/* ---------------- Kaarten ---------------- */
+.cards {
+  display: grid; gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+}
+.card {
+  padding: 20px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 16px;
+  min-width: 0;
+}
+.card--wide { grid-column: 1 / -1; }
+.card__head { margin-bottom: 16px; }
+.card__head--row {
+  display: flex; flex-wrap: wrap; align-items: flex-end;
+  justify-content: space-between; gap: 14px;
+}
+.card__title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.35rem; font-weight: 600; line-height: 1.2;
+}
+.card__note { margin-top: 3px; font-size: 0.76rem; color: var(--muted); }
+
+.chart { width: 100%; min-height: 40px; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart__empty { padding: 40px 10px; text-align: center; color: var(--muted); font-size: 0.85rem; }
+
+/* Legenda — identiteit nooit alleen via kleur */
+.legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
+.legend__item { display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+.legend__swatch { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+.legend__label { color: var(--text); font-weight: 600; }
+.legend__value { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Uitsplitsing onder de betaalbalk */
+.paybreak { margin-top: 18px; display: grid; gap: 10px; }
+.paybreak__row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding-top: 10px; border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+.paybreak__row:first-child { border-top: none; padding-top: 0; }
+.paybreak__label { font-weight: 700; }
+.paybreak__meta { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ---------------- Tabel ---------------- */
+.card--table { padding-bottom: 8px; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; }
+.filter { display: grid; gap: 4px; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.filter select,
+.filter input {
+  min-height: 42px; min-width: 120px; padding: 8px 12px;
+  background: var(--raise); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--text); font-size: 0.88rem; letter-spacing: 0; text-transform: none; outline: none;
+}
+.filter select:focus, .filter input:focus { border-color: var(--gold); }
+
+.table-wrap { overflow-x: auto; }
+.tx { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.tx thead th {
+  position: sticky; top: 0;
+  text-align: left; font-size: 0.68rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted); font-weight: 700;
+  padding: 10px 12px; background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.tx tbody td { padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); vertical-align: top; }
+.tx__row { cursor: pointer; transition: background 0.15s var(--ease); }
+.tx__row:hover { background: rgba(255, 255, 255, 0.025); }
+.tx__id { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tx__time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tx__table { font-weight: 800; color: var(--gold-lite); font-variant-numeric: tabular-nums; }
+.tx__items { color: var(--text); line-height: 1.4; min-width: 220px; }
+.tx__num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+
+.pill {
+  display: inline-block; padding: 4px 10px; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+  border: 1px solid var(--line); color: var(--muted);
+}
+.pill--payconiq { color: #93c5fd; border-color: rgba(57, 135, 229, 0.5); }
+.pill--served { color: var(--ok); border-color: rgba(74, 222, 128, 0.4); }
+.pill--cancelled { color: var(--danger); border-color: rgba(248, 113, 113, 0.4); }
+.pill--new, .pill--preparing { color: var(--gold-lite); border-color: rgba(212, 175, 112, 0.4); }
+
+.tx__detail td { background: rgba(255, 255, 255, 0.02); }
+.tx__detail-list { list-style: none; display: grid; gap: 6px; }
+.tx__detail-list li { display: flex; justify-content: space-between; gap: 16px; font-size: 0.86rem; }
+.tx__detail-note { margin-top: 10px; font-style: italic; color: var(--gold-lite); font-size: 0.86rem; }
+.tx__empty { padding: 50px 16px; text-align: center; color: var(--muted); }
+
+/* ---------------- Tooltip ---------------- */
+.tip {
+  position: fixed; z-index: 200; pointer-events: none;
+  padding: 9px 13px; background: rgba(21, 18, 15, 0.97);
+  border: 1px solid var(--line-strong); border-radius: 10px;
+  font-size: 0.82rem; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  transform: translate(-50%, -100%);
+}
+.tip__sub { display: block; margin-top: 2px; color: var(--muted); font-weight: 500; font-size: 0.76rem; }
+
+/* Op tablet/telefoon wint het bedrag van het volgnummer */
+@media (max-width: 980px) {
+  .tx__id,
+  .tx th[data-col='id'] { display: none; }
+  .tx tbody td, .tx thead th { padding: 10px 8px; }
+  .tx { font-size: 0.85rem; }
+  .tx__items { min-width: 150px; }
+  .pill { padding: 3px 8px; font-size: 0.66rem; }
+}
+
+@media (max-width: 640px) {
+  .topbar { gap: 10px; }
+  .segmented { order: 3; width: 100%; overflow-x: auto; }
+  .kpi--hero .kpi__value { font-size: 2.1rem; }
+  .content { padding: 16px 14px 50px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

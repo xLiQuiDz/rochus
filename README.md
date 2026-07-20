@@ -31,6 +31,7 @@ npm test   # catalog & pricing unit tests (no DB needed)
 
 - Menu: http://localhost:3000/?t=1
 - Staff: http://localhost:3000/bar
+- Transacties & cijfers: http://localhost:3000/transacties
 - Menukaart printen: http://localhost:3000/print
 - QR print: http://localhost:3000/qr
 
@@ -63,6 +64,20 @@ npm test   # catalog & pricing unit tests (no DB needed)
   voor de houten klemborden (2 per A4 liggend, knippen op de stippellijn)
 - QR-stickers per tafel
 
+## Transacties (/transacties)
+
+Aparte staff-pagina met periodekiezer (vandaag · gisteren · 7d · 30d · alles):
+
+- Kerncijfers: omzet, bestellingen, gemiddeld bedrag, drukste tafel
+- Grafieken: omzet per uur/dag, aandeel per betaalwijze, top producten, omzet per categorie
+- Volledige transactietabel — filter op status, betaalwijze en tafel; klik een rij
+  voor de losse regels en de opmerking; **CSV-export** van de zichtbare selectie
+
+De grafieken zijn met de hand getekende SVG (geen externe library, werkt offline).
+Datakleuren — amber `#c98500` en blauw `#3987e5` — zijn gevalideerd tegen het
+donkere oppervlak `#15120f` op lichtheid, chroma, kleurenblindheid-scheiding en
+contrast.
+
 ## API overview
 
 | Endpoint | Auth | Purpose |
@@ -75,6 +90,8 @@ npm test   # catalog & pricing unit tests (no DB needed)
 | `GET /api/orders/stream` | staff | SSE live tickets + availability |
 | `PATCH /api/menu/availability` | staff | Item uitverkocht / terug beschikbaar |
 | `GET /api/stats/today` | staff | Dagtotalen + top items (Europe/Brussels) |
+| `GET /api/transactions` | staff | Transactielijst — `range`, `status`, `payment`, `table` |
+| `GET /api/analytics` | staff | Kerncijfers + reeksen per `range` voor de grafieken |
 | `GET /api/menu/print` | staff | Printklare menukaart-data |
 | `GET /api/qr/:table` | — | PNG QR-sticker voor tafel N |
 | `GET /api/qr/payconiq.png` | — | PNG QR met de Bancontact-betaallink |
