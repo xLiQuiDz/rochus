@@ -2652,13 +2652,16 @@
   }
 
   function buildDrinkPool() {
-    // Alleen drankjes: geen flessenbier, geen wijnflessen, geen eten, geen water
+    // Alleen alcohol: vatbier, cocktails, wijn per glas, shots.
+    // Geen fris, warme, flessen, 0,0 of eten.
+    const ALCOHOL_CATS = new Set(['bieren', 'cocktails', 'wijnen', 'shots']);
     const btns = [...document.querySelectorAll('[data-add]')].filter((btn) => {
       const name = btn.dataset.name || '';
       const cat = btn.dataset.category || '';
-      if (!name || name === 'Water' || btn.disabled || outOfStock.has(name)) return false;
-      if (cat === 'flessen' || cat === 'fingerfood') return false;
+      if (!name || btn.disabled || outOfStock.has(name)) return false;
+      if (!ALCOHOL_CATS.has(cat)) return false;
       if (/\(fles\)$/.test(name)) return false;
+      if (/0[,.]0/.test(name)) return false;
       return true;
     });
     const seen = new Set();
