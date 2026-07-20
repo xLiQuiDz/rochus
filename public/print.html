@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Rochus · Menukaart printen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="print.css" />
+</head>
+<body>
+  <div class="login" id="login-view">
+    <div class="login__card">
+      <p class="login__brand">ROCHUS</p>
+      <h1 class="login__title">Menukaart</h1>
+      <p class="login__sub">Staff PIN · printklare A4 om te lamineren</p>
+      <form class="login__form" id="login-form">
+        <input
+          type="password"
+          inputmode="numeric"
+          class="login__pin"
+          id="login-pin"
+          placeholder="PIN"
+          maxlength="12"
+          required
+        />
+        <button type="submit" class="login__btn">Toon menukaart</button>
+        <p class="login__error" id="login-error" hidden></p>
+      </form>
+      <p class="login__back"><a href="/bar">← Terug naar bar</a></p>
+    </div>
+  </div>
+
+  <div class="print-page" id="print-view" hidden>
+    <header class="print-toolbar no-print">
+      <div>
+        <p class="print-toolbar__brand">ROCHUS</p>
+        <h1 class="print-toolbar__title">Menukaart printen</h1>
+        <p class="print-toolbar__meta">
+          A4 · 100% schaal · zonder “aanpassen aan pagina” · lamineren in A4-hoes
+        </p>
+      </div>
+      <div class="print-toolbar__actions">
+        <button type="button" class="print-btn" id="print-btn">Printen</button>
+        <a class="print-btn print-btn--ghost" href="/bar">Bar</a>
+        <button type="button" class="print-btn print-btn--ghost" id="logout-btn">Uitloggen</button>
+      </div>
+    </header>
+
+    <aside class="print-tips no-print">
+      <strong>Tips</strong>
+      <ul>
+        <li>Papier: A4 160–200g indien mogelijk</li>
+        <li>Print: kleur of zwart-wit, marges “standaard” of minimaal</li>
+        <li>Lamineren: A4-hoes, ~2–3 mm vrije rand; anders A3-hoes en bijknippen</li>
+      </ul>
+    </aside>
+
+    <main class="sheet" id="menu-sheet" aria-label="Printbare menukaart">
+      <header class="sheet__header">
+        <p class="sheet__brand" id="sheet-brand">ROCHUS</p>
+        <p class="sheet__subtitle" id="sheet-subtitle">Summer pop-up bar</p>
+        <div class="sheet__rule" aria-hidden="true"></div>
+      </header>
+      <div class="sheet__columns" id="sheet-columns"></div>
+      <footer class="sheet__footer">
+        <span>Scan de QR op je tafel om te bestellen</span>
+        <span>Cash bij levering</span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="print.js" defer></script>
+</body>
+</html>

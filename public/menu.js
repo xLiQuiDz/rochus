@@ -663,6 +663,7 @@
       closeDrawer();
       showToast(pick(SENT_TOASTS).replace('{n}', String(tableNumber)), false, 4200);
       celebrateOrderSuccess();
+      if (data && data.id) trackOrder(data.id);
     } catch (err) {
       showToast(err.message || 'Bestelling mislukt', true, 4200);
       confirmSend.disabled = false;
@@ -873,6 +874,162 @@
       }
     }
   });
+
+  /* ------------------------------------------------------------------ */
+  /* Live tracking van verzonden bestellingen                           */
+  /* ------------------------------------------------------------------ */
+  const trackChip = document.getElementById('order-track');
+  const trackText = document.getElementById('order-track-text');
+  const trackIcon = document.getElementById('order-track-icon');
+
+  const TRACK_KEY = 'rochus-tracked-orders';
+  const TRACK_POLL_MS = 10000;
+  const TRACK_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+  const TRACK_LINGER_MS = 2 * 60 * 1000;
+
+  const TRACK_LABELS = {
+    new: { icon: '🍹', text: 'Bij de bar' },
+    preparing: { icon: '🍸', text: 'Wordt gemaakt' },
+    served: { icon: '🥂', text: 'Geserveerd' },
+    cancelled: { icon: '🫥', text: 'Geannuleerd' },
+  };
+
+  const TRACK_TOASTS = {
+    preparing: ['De bar is met je bestelling bezig 🍸', 'Er wordt geshaked en gestird ✨', 'Je drankjes zijn in de maak 🧑‍🍳'],
+    served: ['Geserveerd! Proost 🥂', 'Op tafel — enjoy! 🎉', 'Alles staat klaar. Santé! 🍻'],
+    cancelled: ['Bestelling geannuleerd — check even bij de bar 🫥'],
+  };
+
+  let trackTimer = null;
+
+  function loadTracked() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(TRACK_KEY) || '[]');
+      if (!Array.isArray(raw)) return [];
+      const now = Date.now();
+      return raw.filter(
+        (o) =>
+          o &&
+          Number.isFinite(o.id) &&
+          now - (o.at || 0) < TRACK_MAX_AGE_MS &&
+          (!o.closedAt || now - o.closedAt < TRACK_LINGER_MS)
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  function saveTracked(list) {
+    try {
+      localStorage.setItem(TRACK_KEY, JSON.stringify(list.slice(-3)));
+    } catch {
+      /* private mode etc. */
+    }
+  }
+
+  function renderTrackChip() {
+    if (!trackChip) return;
+    const list = loadTracked();
+    saveTracked(list);
+    const current = list[list.length - 1];
+    if (!current) {
+      trackChip.hidden = true;
+      stopTrackPolling();
+      return;
+    }
+    const label = TRACK_LABELS[current.status] || TRACK_LABELS.new;
+    trackIcon.textContent = label.icon;
+    trackText.textContent = `#${current.id} · ${label.text}`;
+    trackChip.classList.toggle('order-track--done', current.status === 'served');
+    trackChip.classList.toggle('order-track--cancelled', current.status === 'cancelled');
+    trackChip.hidden = false;
+  }
+
+  async function pollTrackedOrders() {
+    if (document.hidden) return;
+    const list = loadTracked();
+    const open = list.filter((o) => o.status === 'new' || o.status === 'preparing');
+    if (open.length === 0) {
+      renderTrackChip();
+      return;
+    }
+    let changed = false;
+    for (const entry of open) {
+      try {
+        const res = await fetch(`/api/orders/${entry.id}/status`, { cache: 'no-store' });
+        if (res.status === 404) {
+          entry.closedAt = Date.now() - TRACK_LINGER_MS;
+          changed = true;
+          continue;
+        }
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data.status && data.status !== entry.status) {
+          entry.status = data.status;
+          changed = true;
+          if (data.status === 'served' || data.status === 'cancelled') {
+            entry.closedAt = Date.now();
+          }
+          const lines = TRACK_TOASTS[data.status];
+          if (lines) showToast(pick(lines), data.status === 'cancelled', 4200);
+          if (data.status === 'served') burstConfetti();
+        }
+      } catch {
+        /* offline — try again next tick */
+      }
+    }
+    if (changed) saveTracked(list);
+    renderTrackChip();
+  }
+
+  function stopTrackPolling() {
+    if (trackTimer) {
+      clearInterval(trackTimer);
+      trackTimer = null;
+    }
+  }
+
+  function startTrackPolling() {
+    if (trackTimer) return;
+    trackTimer = setInterval(pollTrackedOrders, TRACK_POLL_MS);
+  }
+
+  function trackOrder(id) {
+    const list = loadTracked().filter((o) => o.id !== id);
+    list.push({ id, status: 'new', at: Date.now() });
+    saveTracked(list);
+    renderTrackChip();
+    startTrackPolling();
+  }
+
+  if (trackChip) {
+    trackChip.addEventListener('click', () => {
+      const list = loadTracked();
+      const current = list[list.length - 1];
+      if (!current) return;
+      if (current.status === 'served' || current.status === 'cancelled') {
+        saveTracked(list.filter((o) => o.id !== current.id));
+        renderTrackChip();
+        return;
+      }
+      showToast(
+        current.status === 'preparing'
+          ? `Bestelling #${current.id} wordt gemaakt — bijna proosten 🍸`
+          : `Bestelling #${current.id} staat in de rij bij de bar 🍹`,
+        false,
+        2600
+      );
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && loadTracked().length > 0) pollTrackedOrders();
+    });
+
+    renderTrackChip();
+    if (loadTracked().some((o) => o.status === 'new' || o.status === 'preparing')) {
+      startTrackPolling();
+    }
+  }
 
   /* ------------------------------------------------------------------ */
   /* Table from QR (?t=12)                                              */

@@ -6,6 +6,7 @@ const {
   initDb,
   createOrder,
   getOrderById,
+  getOrderPublicStatus,
   listOrders,
   updateOrderStatus,
   createStaffSession,
@@ -294,6 +295,23 @@ app.get('/api/orders/stream', requireStaff, (req, res) => {
     clearInterval(heartbeat);
     sseClients.delete(res);
   });
+});
+
+/** Public: guests poll the progress of their own order (status only) */
+app.get('/api/orders/:id/status', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(404).json({ error: 'Bestelling niet gevonden' });
+    }
+    const status = await getOrderPublicStatus(id);
+    if (!status) return res.status(404).json({ error: 'Bestelling niet gevonden' });
+    res.set('Cache-Control', 'no-store');
+    res.json(status);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon status niet laden' });
+  }
 });
 
 app.patch('/api/orders/:id', requireStaff, async (req, res) => {

@@ -144,6 +144,20 @@ async function getOrderById(id) {
   }
 }
 
+/** Minimal lookup for the public guest-tracking endpoint — no items, no amounts. */
+async function getOrderPublicStatus(id) {
+  const { rows } = await pool.query(
+    'SELECT id, table_number, status FROM orders WHERE id = $1',
+    [id]
+  );
+  if (!rows[0]) return null;
+  return {
+    id: Number(rows[0].id),
+    table_number: Number(rows[0].table_number),
+    status: rows[0].status,
+  };
+}
+
 async function createOrder({ table_number, note, priced, client_request_id }) {
   if (client_request_id) {
     const existing = await pool.query(
@@ -286,6 +300,7 @@ module.exports = {
   initDb,
   createOrder,
   getOrderById,
+  getOrderPublicStatus,
   listOrders,
   updateOrderStatus,
   createStaffSession,

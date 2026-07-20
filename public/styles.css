@@ -1361,6 +1361,59 @@ h1, h2, h3, h4 {
   letter-spacing: 0.06em;
 }
 
+/* Live order tracking chip */
+.order-track {
+  position: fixed;
+  bottom: 24px;
+  left: 16px;
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(10, 9, 8, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-amber);
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: var(--shadow-glow);
+  transition: all var(--transition-fast);
+  animation: fadeInUp 0.5s var(--ease-out-expo) both;
+}
+
+.order-track[hidden] {
+  display: none !important;
+}
+
+.order-track:hover {
+  border-color: var(--amber-500);
+  box-shadow: var(--shadow-glow-strong);
+}
+
+.order-track__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.order-track--done {
+  border-color: rgba(74, 222, 128, 0.55);
+}
+
+.order-track--done .order-track__text {
+  color: #bbf7d0;
+}
+
+.order-track--cancelled {
+  border-color: rgba(239, 68, 68, 0.5);
+  opacity: 0.85;
+}
+
 /* Toast */
 .toast {
   position: fixed;
@@ -1423,6 +1476,7 @@ body.water-chase .search-bar,
 body.water-chase .menu-content,
 body.water-chase .site-footer,
 body.water-chase .order-fab,
+body.water-chase .order-track,
 body.water-chase .table-chip,
 body.water-chase .order-overlay,
 body.water-chase .order-drawer {
@@ -2031,6 +2085,13 @@ body.water-chase #water-card {
     width: 50px;
     height: 50px;
     font-size: 1.3rem;
+  }
+
+  .order-track {
+    bottom: 16px;
+    left: 12px;
+    padding: 8px 13px;
+    font-size: 0.75rem;
   }
 
   .menu-section__header {
