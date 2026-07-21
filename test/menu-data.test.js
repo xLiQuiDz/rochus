@@ -62,7 +62,7 @@ test('getPrintMenu collapses wines into glas/fles rows', () => {
   assert.equal(champagne.bottle, 55);
 });
 
-test('getPrintMenu keeps section order and the water joke', () => {
+test('getPrintMenu omits digital-only water and collapses tea/chips variants', () => {
   const menu = getPrintMenu();
   const ids = menu.sections.map((s) => s.id);
   assert.deepEqual(
@@ -71,7 +71,17 @@ test('getPrintMenu keeps section order and the water joke', () => {
   );
 
   const fris = menu.sections.find((s) => s.id === 'fris');
-  const water = fris.items.find((i) => i.name === 'Water');
-  assert.ok(water, 'water on the printed card');
-  assert.match(water.note || '', /vangen/);
+  assert.ok(!fris.items.find((i) => i.name === 'Water'), 'water stays off paper (digital game only)');
+
+  const warme = menu.sections.find((s) => s.id === 'warme');
+  const thee = warme.items.find((i) => i.name === 'Thee');
+  assert.ok(thee, 'thee collapsed on print');
+  assert.match(thee.note || '', /munt/i);
+  assert.equal(warme.items.filter((i) => /Thee/i.test(i.name)).length, 1);
+
+  const bites = menu.sections.find((s) => s.id === 'fingerfood');
+  const chips = bites.items.find((i) => i.name === 'Zak Chips');
+  assert.ok(chips, 'chips collapsed on print');
+  assert.match(chips.note || '', /gestoofde kip/i);
+  assert.equal(bites.items.filter((i) => /Chips/i.test(i.name)).length, 1);
 });

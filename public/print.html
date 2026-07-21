@@ -41,7 +41,7 @@
         <p class="print-toolbar__brand">ROCHUS</p>
         <h1 class="print-toolbar__title">Menukaart printen</h1>
         <p class="print-toolbar__meta">
-          A4 · 100% schaal · zonder “aanpassen aan pagina” · lamineren in A4-hoes
+          A4 · 2 pagina’s · 100% schaal · zonder “aanpassen aan pagina” · lamineren in A4-hoes
         </p>
       </div>
       <div class="print-toolbar__actions">
@@ -59,28 +59,40 @@
       <strong>Tips</strong>
       <ul>
         <li>Papier: A4 160–200g indien mogelijk · altijd 100% schaal (niet “aanpassen aan pagina”)</li>
-        <li>A4 tafelkaart: staand printen, lamineren in A4-hoes</li>
+        <li>A4 tafelkaart: 2 pagina’s, staand printen — recto-verso (of 2 vellen rug-aan-rug) in één A4-hoes</li>
         <li>Klemkaart: <em>liggend</em> printen → 2 kaarten per vel, knippen op de stippellijn, A5-hoes; bovenaan is ruimte vrijgehouden voor de kroon-klem</li>
       </ul>
     </aside>
 
-    <main class="sheet" id="menu-sheet" aria-label="Printbare menukaart">
-      <header class="sheet__header">
-        <p class="sheet__ornament" aria-hidden="true">✦</p>
-        <p class="sheet__brand" id="sheet-brand">ROCHUS</p>
-        <p class="sheet__subtitle" id="sheet-subtitle">Summer pop-up bar</p>
-        <div class="sheet__rule" aria-hidden="true"><span></span>✦<span></span></div>
-        <p class="sheet__tagline">golden hour · cold drinks · questionable decisions</p>
-      </header>
-      <div class="sheet__columns" id="sheet-columns"></div>
-      <footer class="sheet__footer">
-        <div class="sheet__footer-row">
-          <span>Scan de QR op je tafel om te bestellen</span>
-          <span class="sheet__footer-sep" aria-hidden="true">✦</span>
-          <span>Cash of Bancontact bij levering</span>
-        </div>
-        <p class="sheet__footer-note">sip slow · deel je snacks · wees lief voor de bar</p>
-      </footer>
+    <main class="pages" id="menu-sheet" aria-label="Printbare menukaart (2 pagina's)">
+      <section class="sheet sheet--page1" aria-label="Pagina 1 — dranken">
+        <header class="sheet__header">
+          <p class="sheet__ornament" aria-hidden="true">✦</p>
+          <p class="sheet__brand" data-brand>ROCHUS</p>
+          <p class="sheet__subtitle" data-subtitle>Summer pop-up bar</p>
+          <div class="sheet__rule" aria-hidden="true"><span></span>✦<span></span></div>
+          <p class="sheet__tagline">golden hour · cold drinks · questionable decisions</p>
+        </header>
+        <div class="sheet__sections" id="page1-sections"></div>
+        <p class="sheet__turn"><span aria-hidden="true">✦</span> vervolg op de keerzijde <span aria-hidden="true">✦</span></p>
+      </section>
+
+      <section class="sheet sheet--page2" aria-label="Pagina 2 — wijnen &amp; snacks">
+        <header class="sheet__header sheet__header--compact">
+          <p class="sheet__ornament" aria-hidden="true">✦</p>
+          <p class="sheet__brand" data-brand>ROCHUS</p>
+          <div class="sheet__rule" aria-hidden="true"><span></span>✦<span></span></div>
+        </header>
+        <div class="sheet__sections" id="page2-sections"></div>
+        <footer class="sheet__footer">
+          <div class="sheet__footer-row">
+            <span>Scan de QR op je tafel om te bestellen</span>
+            <span class="sheet__footer-sep" aria-hidden="true">✦</span>
+            <span>Cash of Bancontact bij levering</span>
+          </div>
+          <p class="sheet__footer-note">sip slow · deel je snacks · wees lief voor de bar</p>
+        </footer>
+      </section>
     </main>
 
     <section class="duo" id="duo-sheet" aria-label="Printbare klemkaarten (2 per vel)" hidden></section>

@@ -38,8 +38,11 @@ const MENU_ITEMS = [
   { name: 'Limoncello Bongiorno', price: 4, category: 'shots' },
   { name: 'Rum', price: 4, category: 'shots' },
   { name: 'Koffie', price: 3, category: 'warme' },
-  { name: 'Thee', price: 4, category: 'warme' },
-  { name: 'Zak Chips', price: 2, category: 'fingerfood' },
+  { name: 'Thee (munt)', price: 4, category: 'warme' },
+  { name: 'Thee (lemon)', price: 4, category: 'warme' },
+  { name: 'Zak Chips (zout)', price: 2, category: 'fingerfood' },
+  { name: 'Zak Chips (paprika)', price: 2, category: 'fingerfood' },
+  { name: 'Zak Chips (gestoofde kip)', price: 2, category: 'fingerfood' },
   { name: 'Kaasballetjes (6 stuks)', price: 6, category: 'fingerfood' },
   { name: 'Mozzarella Fingers (6 stuks)', price: 6, category: 'fingerfood' },
   { name: 'Bitterballen (6 stuks)', price: 6, category: 'fingerfood' },
@@ -47,6 +50,23 @@ const MENU_ITEMS = [
   { name: 'Kipfingers (6 stuks)', price: 6, category: 'fingerfood' },
   { name: "Sharing Nacho's", price: 15, category: 'fingerfood' },
   { name: 'Friet 105 Burger', price: 9, category: 'fingerfood' },
+];
+
+/** Alleen via water-game op digitaal menu; niet op papieren menukaart. */
+const PRINT_EXCLUDE = new Set(['Water']);
+
+/** Variants collapsed to one print row: first key is the display item. */
+const PRINT_VARIANT_GROUPS = [
+  {
+    names: ['Thee (munt)', 'Thee (lemon)'],
+    display: 'Thee',
+    note: 'munt of lemon',
+  },
+  {
+    names: ['Zak Chips (zout)', 'Zak Chips (paprika)', 'Zak Chips (gestoofde kip)'],
+    display: 'Zak Chips',
+    note: 'zout · paprika · gestoofde kip',
+  },
 ];
 
 const byName = new Map(MENU_ITEMS.map((item) => [item.name, item]));
@@ -134,11 +154,16 @@ const PRINT_CATEGORY_LABELS = {
 
 const PRINT_NOTES = {
   Corona: '4+2 op Corona Bucket',
-  'Zak Chips': 'Paprika',
-  Water: 'als je hem kan vangen',
 };
 
 const PRINT_SIGNATURES = new Set(["Tripel Karmeliet van 't vat"]);
+
+const PRINT_VARIANT_BY_NAME = new Map();
+for (const group of PRINT_VARIANT_GROUPS) {
+  for (const name of group.names) {
+    PRINT_VARIANT_BY_NAME.set(name, group);
+  }
+}
 
 /**
  * Group catalog into print-ready sections (wines collapsed to glas/fles).
@@ -156,8 +181,12 @@ function getPrintMenu() {
 
   /** @type {Map<string, { name: string, glass: number|null, bottle: number|null }>} */
   const wines = new Map();
+  /** @type {Set<string>} */
+  const emittedVariantGroups = new Set();
 
   for (const item of MENU_ITEMS) {
+    if (PRINT_EXCLUDE.has(item.name)) continue;
+
     if (item.category === 'wijnen') {
       const glassMatch = item.name.match(/^(.*) \(glas\)$/);
       const bottleMatch = item.name.match(/^(.*) \(fles\)$/);
@@ -169,6 +198,21 @@ function getPrintMenu() {
       if (glassMatch) row.glass = item.price;
       else if (bottleMatch) row.bottle = item.price;
       else row.bottle = item.price;
+      continue;
+    }
+
+    const variant = PRINT_VARIANT_BY_NAME.get(item.name);
+    if (variant) {
+      if (emittedVariantGroups.has(variant.display)) continue;
+      emittedVariantGroups.add(variant.display);
+      const section = sections.get(item.category);
+      if (!section) continue;
+      section.items.push({
+        name: variant.display,
+        price: item.price,
+        note: variant.note,
+        signature: undefined,
+      });
       continue;
     }
 

@@ -8,12 +8,14 @@
   const loginError = document.getElementById('login-error');
   const printBtn = document.getElementById('print-btn');
   const logoutBtn = document.getElementById('logout-btn');
-  const sheetBrand = document.getElementById('sheet-brand');
-  const sheetSubtitle = document.getElementById('sheet-subtitle');
-  const sheetColumns = document.getElementById('sheet-columns');
+  const brandEls = [...document.querySelectorAll('[data-brand]')];
+  const subtitleEls = [...document.querySelectorAll('[data-subtitle]')];
+  const page1Sections = document.getElementById('page1-sections');
+  const page2Sections = document.getElementById('page2-sections');
 
-  const LEFT_IDS = new Set(['bieren', 'flessen', 'fris', 'cocktails']);
-  const RIGHT_IDS = new Set(['wijnen', 'shots', 'warme', 'fingerfood']);
+  /* Pagina 1 van de A4-kaart (en linkerkolom van de klemkaart) vs. pagina 2 (rechterkolom) */
+  const FIRST_IDS = new Set(['bieren', 'flessen', 'fris', 'cocktails']);
+  const SECOND_IDS = new Set(['wijnen', 'shots', 'warme', 'fingerfood']);
 
   function formatEuro(price) {
     if (price == null) return '–';
@@ -49,6 +51,7 @@
               : `<span class="sheet__bottle">${formatEuro(item.bottle)}</span>`;
           return `<li class="sheet__row sheet__row--wine">
             <span class="sheet__name"><span class="sheet__name-text">${escapeHtml(item.name)}</span></span>
+            <span class="sheet__leader" aria-hidden="true"></span>
             ${glass}${bottle}
           </li>`;
         }
@@ -82,29 +85,27 @@
     </section>`;
   }
 
-  function splitColumns(data) {
+  function splitSections(data) {
     const sections = Array.isArray(data.sections) ? data.sections : [];
-    const left = sections.filter((s) => LEFT_IDS.has(s.id));
-    const right = sections.filter((s) => RIGHT_IDS.has(s.id));
-    const leftovers = sections.filter((s) => !LEFT_IDS.has(s.id) && !RIGHT_IDS.has(s.id));
-    right.push(...leftovers);
-    return { left, right };
+    const first = sections.filter((s) => FIRST_IDS.has(s.id));
+    const second = sections.filter((s) => SECOND_IDS.has(s.id));
+    const leftovers = sections.filter((s) => !FIRST_IDS.has(s.id) && !SECOND_IDS.has(s.id));
+    second.push(...leftovers);
+    return { first, second };
   }
 
   function renderA4(data) {
-    sheetBrand.textContent = data.brand || 'ROCHUS';
-    sheetSubtitle.textContent = data.subtitle || 'Summer pop-up bar';
+    brandEls.forEach((el) => (el.textContent = data.brand || 'ROCHUS'));
+    subtitleEls.forEach((el) => (el.textContent = data.subtitle || 'Summer pop-up bar'));
 
-    const { left, right } = splitColumns(data);
-    sheetColumns.innerHTML = `
-      <div class="sheet__col">${left.map(renderSection).join('')}</div>
-      <div class="sheet__col">${right.map(renderSection).join('')}</div>
-    `;
+    const { first, second } = splitSections(data);
+    page1Sections.innerHTML = first.map(renderSection).join('');
+    page2Sections.innerHTML = second.map(renderSection).join('');
   }
 
   /** Smalle kaart voor het houten klembord — 2 identieke per vel, liggend */
   function clipCardHtml(data) {
-    const { left, right } = splitColumns(data);
+    const { first: left, second: right } = splitSections(data);
     return `<article class="sheet sheet--clip">
       <header class="sheet__header">
         <p class="sheet__brand">${escapeHtml(data.brand || 'ROCHUS')}</p>
