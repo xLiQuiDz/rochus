@@ -256,7 +256,7 @@
         <div class="tik__right">
           <span class="tik__age">${ageLabel(mins)}</span>
           <span class="tik__pay${payconiq ? ' tik__pay--payconiq' : ''}">${
-            payconiq ? '📱 Payconiq' : '💶 Cash'
+            payconiq ? '📱 Bancontact' : '💶 Cash'
           }</span>
         </div>
       </div>

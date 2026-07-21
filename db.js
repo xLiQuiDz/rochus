@@ -11,8 +11,16 @@ const pool = new Pool({
   max: 10,
 });
 
-const VALID_STATUSES = new Set(['new', 'preparing', 'served', 'cancelled']);
+const VALID_STATUSES = new Set([
+  'awaiting_payment',
+  'new',
+  'preparing',
+  'served',
+  'cancelled',
+]);
+const STAFF_VISIBLE_STATUSES = new Set(['new', 'preparing', 'served', 'cancelled']);
 const VALID_PAYMENT_METHODS = new Set(['cash', 'payconiq']);
+const VALID_PAYMENT_STATUSES = new Set(['pending', 'succeeded', 'failed', 'expired', 'none']);
 
 function mapOrder(row, items = []) {
   return {
@@ -20,6 +28,9 @@ function mapOrder(row, items = []) {
     table_number: Number(row.table_number),
     status: row.status,
     payment_method: row.payment_method || 'cash',
+    payment_id: row.payment_id || null,
+    payment_status: row.payment_status || (row.payment_method === 'payconiq' ? 'pending' : 'none'),
+    paid_at: row.paid_at || null,
     subtotal_cents: Number(row.subtotal_cents),
     discount_cents: Number(row.discount_cents),
     total_cents: Number(row.total_cents),
@@ -46,10 +57,11 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS orders (
       id BIGSERIAL PRIMARY KEY,
       table_number INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'new'
-        CHECK (status IN ('new', 'preparing', 'served', 'cancelled')),
-      payment_method TEXT NOT NULL DEFAULT 'cash'
-        CHECK (payment_method IN ('cash', 'payconiq')),
+      status TEXT NOT NULL DEFAULT 'new',
+      payment_method TEXT NOT NULL DEFAULT 'cash',
+      payment_id TEXT,
+      payment_status TEXT NOT NULL DEFAULT 'none',
+      paid_at TIMESTAMPTZ,
       subtotal_cents INTEGER NOT NULL,
       discount_cents INTEGER NOT NULL DEFAULT 0,
       total_cents INTEGER NOT NULL,
@@ -59,8 +71,22 @@ async function initDb() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'cash'
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'cash';
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_id TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'none';
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+
+    ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
+    ALTER TABLE orders ADD CONSTRAINT orders_status_check
+      CHECK (status IN ('awaiting_payment', 'new', 'preparing', 'served', 'cancelled'));
+
+    ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_payment_method_check;
+    ALTER TABLE orders ADD CONSTRAINT orders_payment_method_check
       CHECK (payment_method IN ('cash', 'payconiq'));
+
+    ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_payment_status_check;
+    ALTER TABLE orders ADD CONSTRAINT orders_payment_status_check
+      CHECK (payment_status IN ('none', 'pending', 'succeeded', 'failed', 'expired'));
 
     CREATE TABLE IF NOT EXISTS order_items (
       id BIGSERIAL PRIMARY KEY,
@@ -86,6 +112,8 @@ async function initDb() {
 
     CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
     CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_orders_payment_id ON orders(payment_id)
+      WHERE payment_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_staff_sessions_expires ON staff_sessions(expires_at);
     CREATE INDEX IF NOT EXISTS idx_menu_availability_oos
       ON menu_availability(item_name) WHERE out_of_stock = true;
@@ -154,7 +182,8 @@ async function getOrderById(id) {
 /** Minimal lookup for the public guest-tracking endpoint — no items, no amounts. */
 async function getOrderPublicStatus(id) {
   const { rows } = await pool.query(
-    'SELECT id, table_number, status FROM orders WHERE id = $1',
+    `SELECT id, table_number, status, payment_method, payment_status, paid_at
+     FROM orders WHERE id = $1`,
     [id]
   );
   if (!rows[0]) return null;
@@ -162,11 +191,35 @@ async function getOrderPublicStatus(id) {
     id: Number(rows[0].id),
     table_number: Number(rows[0].table_number),
     status: rows[0].status,
+    payment_method: rows[0].payment_method || 'cash',
+    payment_status: rows[0].payment_status || 'none',
+    paid_at: rows[0].paid_at || null,
   };
 }
 
-async function createOrder({ table_number, note, priced, client_request_id, payment_method }) {
+async function createOrder({
+  table_number,
+  note,
+  priced,
+  client_request_id,
+  payment_method,
+  status,
+  payment_status,
+}) {
   const method = VALID_PAYMENT_METHODS.has(payment_method) ? payment_method : 'cash';
+  const initialStatus =
+    status && VALID_STATUSES.has(status)
+      ? status
+      : method === 'payconiq'
+        ? 'awaiting_payment'
+        : 'new';
+  const initialPayStatus =
+    payment_status && VALID_PAYMENT_STATUSES.has(payment_status)
+      ? payment_status
+      : method === 'payconiq'
+        ? 'pending'
+        : 'none';
+
   if (client_request_id) {
     const existing = await pool.query(
       'SELECT id FROM orders WHERE client_request_id = $1',
@@ -183,12 +236,15 @@ async function createOrder({ table_number, note, priced, client_request_id, paym
 
     const orderResult = await client.query(
       `INSERT INTO orders
-        (table_number, status, payment_method, subtotal_cents, discount_cents, total_cents, note, client_request_id)
-       VALUES ($1, 'new', $2, $3, $4, $5, $6, $7)
+        (table_number, status, payment_method, payment_status,
+         subtotal_cents, discount_cents, total_cents, note, client_request_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         table_number,
+        initialStatus,
         method,
+        initialPayStatus,
         priced.subtotal_cents,
         priced.discount_cents,
         priced.total_cents,
@@ -234,6 +290,110 @@ async function createOrder({ table_number, note, priced, client_request_id, paym
   }
 }
 
+async function attachPaymentToOrder(orderId, { payment_id, payment_status = 'pending' }) {
+  const result = await pool.query(
+    `UPDATE orders
+     SET payment_id = $2,
+         payment_status = $3,
+         updated_at = NOW()
+     WHERE id = $1
+     RETURNING id`,
+    [orderId, payment_id, payment_status]
+  );
+  if (!result.rows[0]) return null;
+  return getOrderById(orderId);
+}
+
+async function getOrderByPaymentId(paymentId) {
+  const id = String(paymentId || '').trim();
+  if (!id) return null;
+  const { rows } = await pool.query('SELECT id FROM orders WHERE payment_id = $1 LIMIT 1', [id]);
+  if (!rows[0]) return null;
+  return getOrderById(rows[0].id);
+}
+
+/**
+ * Mark Bancontact order paid (idempotent). Returns { order, newlyPaid }.
+ */
+async function markOrderPaid(orderId, { payment_id, expected_cents } = {}) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [orderId]);
+    const row = rows[0];
+    if (!row) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    if (payment_id && row.payment_id && row.payment_id !== payment_id) {
+      await client.query('ROLLBACK');
+      throw new Error('payment_id komt niet overeen');
+    }
+    if (
+      Number.isFinite(expected_cents) &&
+      Number(row.total_cents) !== Number(expected_cents)
+    ) {
+      await client.query('ROLLBACK');
+      throw new Error('Betaald bedrag komt niet overeen met de bestelling');
+    }
+
+    if (row.payment_status === 'succeeded' && row.status !== 'awaiting_payment') {
+      await client.query('COMMIT');
+      const order = await getOrderById(orderId);
+      return { order, newlyPaid: false };
+    }
+
+    const nextStatus = row.status === 'awaiting_payment' ? 'new' : row.status;
+    await client.query(
+      `UPDATE orders
+       SET payment_status = 'succeeded',
+           payment_id = COALESCE($2, payment_id),
+           paid_at = COALESCE(paid_at, NOW()),
+           status = $3,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [orderId, payment_id || null, nextStatus]
+    );
+    await client.query('COMMIT');
+    const order = await getOrderById(orderId);
+    return { order, newlyPaid: true };
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      /* ignore */
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function updateOrderPaymentStatus(orderId, paymentStatus) {
+  if (!VALID_PAYMENT_STATUSES.has(paymentStatus) || paymentStatus === 'none') {
+    throw new Error('Ongeldige payment_status');
+  }
+  if (paymentStatus === 'succeeded') {
+    return markOrderPaid(orderId);
+  }
+  const result = await pool.query(
+    `UPDATE orders
+     SET payment_status = $2,
+         status = CASE
+           WHEN $2 IN ('failed', 'expired') AND status = 'awaiting_payment'
+             THEN 'cancelled'
+           ELSE status
+         END,
+         updated_at = NOW()
+     WHERE id = $1
+     RETURNING id`,
+    [orderId, paymentStatus]
+  );
+  if (!result.rows[0]) return null;
+  return getOrderById(orderId);
+}
+
 async function listOrders({ status } = {}) {
   let result;
   if (status === 'open') {
@@ -242,14 +402,18 @@ async function listOrders({ status } = {}) {
        WHERE status IN ('new', 'preparing')
        ORDER BY created_at DESC`
     );
-  } else if (status) {
+  } else if (status && VALID_STATUSES.has(status)) {
     result = await pool.query(
       `SELECT * FROM orders WHERE status = $1 ORDER BY created_at DESC`,
       [status]
     );
   } else {
+    // Default staff feed: never include unpaid Bancontact holds
     result = await pool.query(
-      `SELECT * FROM orders ORDER BY created_at DESC LIMIT 100`
+      `SELECT * FROM orders
+       WHERE status <> 'awaiting_payment'
+       ORDER BY created_at DESC
+       LIMIT 100`
     );
   }
 
@@ -273,13 +437,13 @@ async function listOrders({ status } = {}) {
 }
 
 async function updateOrderStatus(id, status) {
-  if (!VALID_STATUSES.has(status)) {
+  if (!STAFF_VISIBLE_STATUSES.has(status)) {
     throw new Error('Ongeldige status');
   }
   const result = await pool.query(
     `UPDATE orders
      SET status = $1, updated_at = NOW()
-     WHERE id = $2
+     WHERE id = $2 AND status <> 'awaiting_payment'
      RETURNING id`,
     [status, id]
   );
@@ -295,7 +459,7 @@ async function getTodayStats() {
             COALESCE(SUM(total_cents) FILTER (WHERE payment_method = 'payconiq'), 0)::int
               AS payconiq_cents
      FROM orders
-     WHERE status <> 'cancelled'
+     WHERE status NOT IN ('cancelled', 'awaiting_payment')
        AND (created_at AT TIME ZONE 'Europe/Brussels')::date =
            (NOW() AT TIME ZONE 'Europe/Brussels')::date`
   );
@@ -303,7 +467,7 @@ async function getTodayStats() {
     `SELECT oi.name, SUM(oi.qty)::int AS qty
      FROM order_items oi
      JOIN orders o ON o.id = oi.order_id
-     WHERE o.status <> 'cancelled'
+     WHERE o.status NOT IN ('cancelled', 'awaiting_payment')
        AND (o.created_at AT TIME ZONE 'Europe/Brussels')::date =
            (NOW() AT TIME ZONE 'Europe/Brussels')::date
      GROUP BY oi.name
@@ -350,9 +514,12 @@ async function listTransactions(opts = {}) {
   const where = [rangeClause(opts.range)];
   const params = [];
 
-  if (opts.status && VALID_STATUSES.has(opts.status)) {
+  if (opts.status && STAFF_VISIBLE_STATUSES.has(opts.status)) {
     params.push(opts.status);
     where.push(`o.status = $${params.length}`);
+  } else {
+    // Hide unpaid Bancontact holds from the ledger unless explicitly requested
+    where.push(`o.status <> 'awaiting_payment'`);
   }
   if (opts.payment && VALID_PAYMENT_METHODS.has(opts.payment)) {
     params.push(opts.payment);
@@ -369,7 +536,7 @@ async function listTransactions(opts = {}) {
 
   const totals = await pool.query(
     `SELECT COUNT(*)::int AS total,
-            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status <> 'cancelled'), 0)::int AS revenue_cents
+            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status NOT IN ('cancelled', 'awaiting_payment')), 0)::int AS revenue_cents
      FROM orders o WHERE ${whereSql}`,
     params
   );
@@ -410,16 +577,16 @@ async function listTransactions(opts = {}) {
 async function getAnalytics({ range = 'today' } = {}) {
   const clause = rangeClause(range);
   const byHour = bucketsByHour(range);
-  const paid = `${clause} AND o.status <> 'cancelled'`;
+  const paid = `${clause} AND o.status NOT IN ('cancelled', 'awaiting_payment')`;
 
   const totals = await pool.query(
-    `SELECT COUNT(*) FILTER (WHERE o.status <> 'cancelled')::int AS orders,
+    `SELECT COUNT(*) FILTER (WHERE o.status NOT IN ('cancelled', 'awaiting_payment'))::int AS orders,
             COUNT(*) FILTER (WHERE o.status = 'cancelled')::int AS cancelled,
-            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status <> 'cancelled'), 0)::int AS revenue_cents,
-            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status <> 'cancelled' AND o.payment_method = 'payconiq'), 0)::int AS payconiq_cents,
-            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status <> 'cancelled' AND o.payment_method = 'cash'), 0)::int AS cash_cents,
-            COUNT(*) FILTER (WHERE o.status <> 'cancelled' AND o.payment_method = 'payconiq')::int AS payconiq_orders,
-            COUNT(*) FILTER (WHERE o.status <> 'cancelled' AND o.payment_method = 'cash')::int AS cash_orders
+            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status NOT IN ('cancelled', 'awaiting_payment')), 0)::int AS revenue_cents,
+            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status NOT IN ('cancelled', 'awaiting_payment') AND o.payment_method = 'payconiq'), 0)::int AS payconiq_cents,
+            COALESCE(SUM(o.total_cents) FILTER (WHERE o.status NOT IN ('cancelled', 'awaiting_payment') AND o.payment_method = 'cash'), 0)::int AS cash_cents,
+            COUNT(*) FILTER (WHERE o.status NOT IN ('cancelled', 'awaiting_payment') AND o.payment_method = 'payconiq')::int AS payconiq_orders,
+            COUNT(*) FILTER (WHERE o.status NOT IN ('cancelled', 'awaiting_payment') AND o.payment_method = 'cash')::int AS cash_orders
      FROM orders o WHERE ${clause}`
   );
 
@@ -536,7 +703,11 @@ module.exports = {
   initDb,
   createOrder,
   getOrderById,
+  getOrderByPaymentId,
   getOrderPublicStatus,
+  attachPaymentToOrder,
+  markOrderPaid,
+  updateOrderPaymentStatus,
   listOrders,
   updateOrderStatus,
   createStaffSession,
@@ -550,5 +721,7 @@ module.exports = {
   listTransactions,
   getAnalytics,
   VALID_STATUSES,
+  STAFF_VISIBLE_STATUSES,
   VALID_PAYMENT_METHODS,
+  VALID_PAYMENT_STATUSES,
 };

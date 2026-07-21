@@ -6,7 +6,11 @@ const {
   initDb,
   createOrder,
   getOrderById,
+  getOrderByPaymentId,
   getOrderPublicStatus,
+  attachPaymentToOrder,
+  markOrderPaid,
+  updateOrderPaymentStatus,
   listOrders,
   updateOrderStatus,
   createStaffSession,
@@ -21,16 +25,15 @@ const {
   getAnalytics,
 } = require('./db');
 const { MENU_ITEMS, getMenuItem, validateAndPrice, getPrintMenu } = require('./menu-data');
+const bancontact = require('./bancontact');
 const QRCode = require('qrcode');
 
 const PORT = Number(process.env.PORT) || 3000;
 const STAFF_PIN = process.env.STAFF_PIN || '4321';
 const TABLE_COUNT = Math.max(1, Number(process.env.TABLE_COUNT) || 30);
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
-// Bancontact/Payconiq betaallink van de bar (statische QR — gast typt zelf het bedrag)
-const PAYCONIQ_URL =
-  process.env.PAYCONIQ_URL ||
-  'https://pay.bancontact.net/t/1/6a5e23900444c2c061bab505?D=Drink%2C+chill+%26+have+fun&R=Afterfive+Summerbar';
+// Legacy static link — only used if Bancontact API is not configured (dev fallback QR)
+const PAYCONIQ_URL = process.env.PAYCONIQ_URL || '';
 const SESSION_COOKIE = 'rochus_staff';
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
@@ -41,7 +44,17 @@ const app = express();
 app.disable('x-powered-by');
 // Railway/reverse proxy: nodig zodat req.ip het echte client-IP is
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '32kb' }));
+app.use(
+  express.json({
+    limit: '64kb',
+    verify: (req, _res, buf) => {
+      // Raw body needed to verify Bancontact detached JWS
+      if (req.originalUrl?.startsWith('/api/payments/bancontact/callback')) {
+        req.rawBody = buf;
+      }
+    },
+  })
+);
 app.use(cookieParser());
 
 /* PIN brute-force bescherming — per IP, in-memory */
@@ -129,7 +142,13 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.get('/api/config', (_req, res) => {
-  res.json({ tableCount: TABLE_COUNT, publicUrl: PUBLIC_URL, payconiqUrl: PAYCONIQ_URL });
+  res.json({
+    tableCount: TABLE_COUNT,
+    publicUrl: PUBLIC_URL,
+    bancontactEnabled: bancontact.isConfigured(),
+    // Legacy static URL only when API is not configured
+    payconiqUrl: bancontact.isConfigured() ? '' : PAYCONIQ_URL,
+  });
 });
 
 /** Public: which items are currently out of stock */
@@ -237,10 +256,15 @@ app.get('/api/analytics', requireStaff, async (req, res) => {
   }
 });
 
-/** PNG QR that opens the bar's Bancontact/Payconiq payment link */
-app.get(['/api/qr/payconiq', '/api/qr/payconiq.png'], async (_req, res) => {
+/** PNG QR for a Bancontact payment link (dynamic `?u=` or legacy static URL) */
+app.get(['/api/qr/payconiq', '/api/qr/payconiq.png'], async (req, res) => {
   try {
-    const png = await QRCode.toBuffer(PAYCONIQ_URL, {
+    const dynamic = String(req.query.u || '').trim();
+    const target = dynamic || PAYCONIQ_URL;
+    if (!target || !/^https:\/\//i.test(target)) {
+      return res.status(404).send('Geen betaallink');
+    }
+    const png = await QRCode.toBuffer(target, {
       type: 'png',
       width: 440,
       margin: 2,
@@ -249,7 +273,7 @@ app.get(['/api/qr/payconiq', '/api/qr/payconiq.png'], async (_req, res) => {
     });
     res.set({
       'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=86400',
+      'Cache-Control': dynamic ? 'no-store' : 'public, max-age=86400',
     });
     res.send(png);
   } catch (err) {
@@ -349,6 +373,13 @@ app.post('/api/orders', async (req, res) => {
 
     const paymentMethod = req.body?.payment_method === 'payconiq' ? 'payconiq' : 'cash';
 
+    if (paymentMethod === 'payconiq' && !bancontact.isConfigured()) {
+      return res.status(503).json({
+        error:
+          'Bancontact is nog niet geconfigureerd. Kies cash, of vraag de bar om de Bancontact API-key te zetten.',
+      });
+    }
+
     const priced = validateAndPrice(req.body?.items || []);
     const oos = await getOutOfStockSet();
     const blocked = priced.items.find((item) => oos.has(item.name));
@@ -359,18 +390,215 @@ app.post('/api/orders', async (req, res) => {
       });
     }
 
-    const order = await createOrder({
+    if (paymentMethod === 'cash') {
+      const order = await createOrder({
+        table_number: table,
+        note,
+        priced,
+        client_request_id: clientRequestId || null,
+        payment_method: 'cash',
+        status: 'new',
+        payment_status: 'none',
+      });
+      broadcast('order', order);
+      return res.status(201).json(order);
+    }
+
+    // Bancontact: hold order until webhook confirms payment
+    let order = await createOrder({
       table_number: table,
       note,
       priced,
       client_request_id: clientRequestId || null,
-      payment_method: paymentMethod,
+      payment_method: 'payconiq',
+      status: 'awaiting_payment',
+      payment_status: 'pending',
     });
-    broadcast('order', order);
-    res.status(201).json(order);
+
+    if (order.payment_status === 'succeeded') {
+      return res.status(201).json({
+        ...order,
+        payment: { id: order.payment_id, status: 'succeeded' },
+      });
+    }
+    if (
+      order.status === 'cancelled' ||
+      order.payment_status === 'failed' ||
+      order.payment_status === 'expired'
+    ) {
+      return res.status(409).json({
+        error: 'Vorige Bancontact-poging is afgelopen — start opnieuw vanuit het mandje',
+      });
+    }
+
+    // Idempotent replay: if this client_request_id already has a payment, reuse it
+    if (order.payment_id && order.payment_status === 'pending') {
+      try {
+        const existingPay = await bancontact.getPayment(order.payment_id);
+        const mapped = bancontact.mapBancontactStatus(existingPay.status);
+        if (mapped === 'succeeded') {
+          const paid = await markOrderPaid(order.id, {
+            payment_id: existingPay.id,
+            expected_cents: existingPay.amount,
+          });
+          if (paid?.newlyPaid) broadcast('order', paid.order);
+          return res.status(201).json({
+            ...paid.order,
+            payment: {
+              id: existingPay.id,
+              status: 'succeeded',
+              deeplink: bancontact.buildReturnDeeplink(existingPay.deeplink),
+              checkoutUrl: existingPay.checkoutUrl,
+              qrUrl: existingPay.qrUrl,
+            },
+          });
+        }
+        return res.status(201).json({
+          ...order,
+          payment: {
+            id: existingPay.id,
+            status: mapped,
+            deeplink: bancontact.buildReturnDeeplink(existingPay.deeplink),
+            checkoutUrl: existingPay.checkoutUrl,
+            qrUrl: existingPay.qrUrl,
+          },
+        });
+      } catch {
+        /* create a fresh payment below */
+      }
+    }
+
+    let payment;
+    try {
+      payment = await bancontact.createPayment({
+        amountCents: order.total_cents,
+        description: `Rochus tafel ${table}`,
+        reference: `T${table}-O${order.id}`.slice(0, 35),
+      });
+    } catch (err) {
+      await updateOrderPaymentStatus(order.id, 'failed').catch(() => {});
+      throw err;
+    }
+
+    order = await attachPaymentToOrder(order.id, {
+      payment_id: payment.id,
+      payment_status: 'pending',
+    });
+
+    // Do NOT broadcast to the bar until paid
+    res.status(201).json({
+      ...order,
+      payment: {
+        id: payment.id,
+        status: 'pending',
+        deeplink: bancontact.buildReturnDeeplink(payment.deeplink),
+        checkoutUrl: payment.checkoutUrl,
+        qrUrl: payment.qrUrl,
+      },
+    });
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || 'Bestelling mislukt' });
+    const status = err.code === 'BANCONTACT_NOT_CONFIGURED' ? 503 : 400;
+    res.status(status).json({ error: err.message || 'Bestelling mislukt' });
+  }
+});
+
+/** Bancontact Pro payment status webhook (JWS-signed) */
+app.post('/api/payments/bancontact/callback', async (req, res) => {
+  try {
+    const signature = req.get('signature') || req.get('Signature') || '';
+    const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}), 'utf8');
+    await bancontact.verifyCallbackSignature(signature, raw);
+
+    const body = req.body || {};
+    const paymentId = String(body.paymentId || body.id || '');
+    const status = bancontact.mapBancontactStatus(body.status);
+    const amount = Number(body.amount);
+
+    if (!paymentId) {
+      return res.status(400).json({ error: 'paymentId ontbreekt' });
+    }
+
+    let order = await getOrderByPaymentId(paymentId);
+    if (!order && body.reference) {
+      // Fallback: reference like T3-O12
+      const m = String(body.reference).match(/O(\d+)/i);
+      if (m) order = await getOrderById(Number(m[1]));
+    }
+    if (!order) {
+      // Acknowledge unknown payments so Bancontact stops retrying forever
+      console.warn('Bancontact callback for unknown payment', paymentId);
+      return res.status(200).json({ ok: true, ignored: true });
+    }
+
+    if (status === 'succeeded') {
+      const result = await markOrderPaid(order.id, {
+        payment_id: paymentId,
+        expected_cents: Number.isFinite(amount) ? amount : undefined,
+      });
+      if (result?.newlyPaid) broadcast('order', result.order);
+      return res.status(200).json({ ok: true, status: 'succeeded' });
+    }
+
+    if (status === 'failed' || status === 'expired') {
+      await updateOrderPaymentStatus(order.id, status);
+      return res.status(200).json({ ok: true, status });
+    }
+
+    res.status(200).json({ ok: true, status: 'pending' });
+  } catch (err) {
+    console.error('Bancontact callback error', err);
+    res.status(400).json({ error: err.message || 'Callback afgewezen' });
+  }
+});
+
+/** Guest: poll Bancontact payment for an order (with API fallback) */
+app.get('/api/orders/:id/payment', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(404).json({ error: 'Bestelling niet gevonden' });
+    }
+    let order = await getOrderById(id);
+    if (!order) return res.status(404).json({ error: 'Bestelling niet gevonden' });
+
+    if (
+      order.payment_method === 'payconiq' &&
+      order.payment_status === 'pending' &&
+      order.payment_id &&
+      bancontact.isConfigured()
+    ) {
+      try {
+        const payment = await bancontact.getPayment(order.payment_id);
+        const mapped = bancontact.mapBancontactStatus(payment.status);
+        if (mapped === 'succeeded') {
+          const result = await markOrderPaid(order.id, {
+            payment_id: payment.id,
+            expected_cents: payment.amount,
+          });
+          if (result?.newlyPaid) broadcast('order', result.order);
+          order = result?.order || order;
+        } else if (mapped === 'failed' || mapped === 'expired') {
+          order = (await updateOrderPaymentStatus(order.id, mapped)) || order;
+        }
+      } catch (err) {
+        console.warn('Bancontact poll fallback failed', err.message);
+      }
+    }
+
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      id: order.id,
+      status: order.status,
+      payment_method: order.payment_method,
+      payment_status: order.payment_status,
+      payment_id: order.payment_id,
+      total_cents: order.total_cents,
+      paid_at: order.paid_at,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon betaalstatus niet laden' });
   }
 });
 

@@ -735,14 +735,15 @@
     <div class="pay-modal" role="dialog" aria-modal="true" aria-labelledby="pay-title">
       <button type="button" class="pay-modal__close" id="pay-close" aria-label="Sluit betaalscherm">×</button>
       <h2 class="pay-modal__title" id="pay-title">Betalen met Bancontact</h2>
-      <p class="pay-modal__amount-label">Typ dit bedrag in de app</p>
+      <p class="pay-modal__amount-label">Exact dit bedrag — de bar krijgt je order pas na betaling</p>
       <p class="pay-modal__amount" id="pay-amount">€0</p>
+      <p class="pay-modal__status" id="pay-status" role="status" aria-live="polite">Wachten op betaling…</p>
       <a class="pay-modal__btn" id="pay-link" href="#" target="_blank" rel="noopener">
         Open Bancontact / bank-app
       </a>
       <p class="pay-modal__or">of laat iemand anders scannen</p>
-      <img class="pay-modal__qr" id="pay-qr" src="/api/qr/payconiq.png" alt="Bancontact betaal-QR" width="180" height="180" loading="lazy" />
-      <p class="pay-modal__hint">Betaald? Toon het vinkje even als we je bestelling brengen 🙌</p>
+      <img class="pay-modal__qr" id="pay-qr" alt="Bancontact betaal-QR" width="180" height="180" loading="lazy" />
+      <p class="pay-modal__hint" id="pay-hint">Scan of open de app. Zodra Bancontact bevestigt, gaat het naar de bar.</p>
       <button type="button" class="pay-modal__whopays" id="pay-whopays">
         Onenigheid over wie betaalt? Vingers op het scherm 🫵
       </button>

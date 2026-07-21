@@ -961,9 +961,14 @@
   const payOverlay = document.getElementById('pay-overlay');
   const payAmountEl = document.getElementById('pay-amount');
   const payLinkEl = document.getElementById('pay-link');
+  const payQrEl = document.getElementById('pay-qr');
+  const payStatusEl = document.getElementById('pay-status');
+  const payHintEl = document.getElementById('pay-hint');
   const payCloseBtn = document.getElementById('pay-close');
   let payMethod = 'cash';
-  let payconiqUrl = '';
+  let bancontactEnabled = false;
+  let payPollTimer = 0;
+  let payPollOrderId = null;
   try {
     if (localStorage.getItem(PAY_KEY) === 'payconiq') payMethod = 'payconiq';
   } catch {
@@ -972,7 +977,7 @@
 
   const PAY_HINTS = {
     cash: 'Pas na bevestiging gaat dit naar de bar · cash bij levering',
-    payconiq: 'Pas na bevestiging gaat dit naar de bar · daarna betaal je met de app',
+    payconiq: 'Je betaalt eerst via Bancontact — pas daarna ziet de bar je order',
   };
 
   function applyPayMethod(method) {
@@ -995,14 +1000,96 @@
   });
   applyPayMethod(payMethod);
 
-  function openPayOverlay(totalCents) {
+  function stopPayPoll() {
+    if (payPollTimer) {
+      clearInterval(payPollTimer);
+      payPollTimer = 0;
+    }
+    payPollOrderId = null;
+  }
+
+  function setPayUiStatus(text, tone) {
+    if (payStatusEl) {
+      payStatusEl.textContent = text;
+      payStatusEl.dataset.tone = tone || 'pending';
+    }
+  }
+
+  async function pollPaymentOnce(orderId) {
+    const res = await fetch(`/api/orders/${orderId}/payment`, { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Kon betaalstatus niet laden');
+    return data;
+  }
+
+  function startPayPoll(orderId) {
+    stopPayPoll();
+    payPollOrderId = orderId;
+    const tick = async () => {
+      if (payPollOrderId !== orderId) return;
+      try {
+        const data = await pollPaymentOnce(orderId);
+        if (data.payment_status === 'succeeded') {
+          stopPayPoll();
+          setPayUiStatus('Betaald ✓ — de bar heeft je order', 'ok');
+          if (payHintEl) {
+            payHintEl.textContent = 'Bedankt! We brengen alles naar je tafel.';
+          }
+          showToast('Betaald — order staat bij de bar 🍹', false, 4200);
+          celebrateOrderSuccess();
+          trackOrder(orderId);
+          setTimeout(() => closePayOverlay(), 2200);
+          return;
+        }
+        if (data.payment_status === 'failed' || data.payment_status === 'expired') {
+          stopPayPoll();
+          setPayUiStatus(
+            data.payment_status === 'expired' ? 'Betaling verlopen' : 'Betaling mislukt',
+            'err'
+          );
+          if (payHintEl) {
+            payHintEl.textContent = 'Probeer opnieuw via het mandje, of kies cash.';
+          }
+          return;
+        }
+        setPayUiStatus('Wachten op Bancontact…', 'pending');
+      } catch {
+        /* keep polling */
+      }
+    };
+    tick();
+    payPollTimer = setInterval(tick, 2500);
+  }
+
+  function openPayOverlay({ totalCents, payment }) {
     if (!payOverlay) return;
     payAmountEl.textContent = formatEuro(totalCents / 100);
-    if (payconiqUrl) payLinkEl.href = payconiqUrl;
+    const link = payment?.deeplink || payment?.checkoutUrl || '#';
+    if (payLinkEl) {
+      payLinkEl.href = link;
+      payLinkEl.classList.toggle('is-disabled', link === '#');
+    }
+    if (payQrEl) {
+      if (payment?.qrUrl) {
+        payQrEl.src = payment.qrUrl;
+        payQrEl.hidden = false;
+      } else if (payment?.deeplink) {
+        payQrEl.src = `/api/qr/payconiq?u=${encodeURIComponent(payment.deeplink)}`;
+        payQrEl.hidden = false;
+      } else {
+        payQrEl.hidden = true;
+      }
+    }
+    setPayUiStatus('Wachten op betaling…', 'pending');
+    if (payHintEl) {
+      payHintEl.textContent =
+        'Scan of open de app. Zodra Bancontact bevestigt, gaat het naar de bar.';
+    }
     payOverlay.hidden = false;
   }
 
   function closePayOverlay() {
+    stopPayPoll();
     if (payOverlay) payOverlay.hidden = true;
   }
 
@@ -1026,10 +1113,14 @@
   async function submitOrder() {
     // Hard gate: never POST unless the confirm dialog is open
     if (!confirmReady || submitting || !tableNumber || order.size === 0) return;
+    if (payMethod === 'payconiq' && !bancontactEnabled) {
+      showToast('Bancontact is nog niet actief — kies cash of vraag de bar', true, 4200);
+      return;
+    }
     submitting = true;
     updateSubmitState();
     confirmSend.disabled = true;
-    confirmSend.textContent = 'Versturen…';
+    confirmSend.textContent = payMethod === 'payconiq' ? 'Betaling starten…' : 'Versturen…';
     submitBtn.textContent = 'Bezig…';
 
     const items = [...order.values()].map((item) => ({
@@ -1068,11 +1159,15 @@
       renderOrder();
       closeConfirm();
       closeDrawer();
-      showToast(pick(SENT_TOASTS).replace('{n}', String(tableNumber)), false, 4200);
-      celebrateOrderSuccess();
-      if (data && data.id) trackOrder(data.id);
-      if (payMethod === 'payconiq' && data && data.total_cents) {
-        setTimeout(() => openPayOverlay(data.total_cents), 600);
+
+      if (payMethod === 'payconiq') {
+        showToast('Betaal om je order naar de bar te sturen', false, 3600);
+        openPayOverlay({ totalCents: data.total_cents, payment: data.payment || {} });
+        if (data.id) startPayPoll(data.id);
+      } else {
+        showToast(pick(SENT_TOASTS).replace('{n}', String(tableNumber)), false, 4200);
+        celebrateOrderSuccess();
+        if (data && data.id) trackOrder(data.id);
       }
     } catch (err) {
       showToast(err.message || 'Bestelling mislukt', true, 4200);
@@ -1435,7 +1530,18 @@
       if (res.ok) {
         const cfg = await res.json();
         if (cfg.tableCount) tableCount = cfg.tableCount;
-        if (cfg.payconiqUrl) payconiqUrl = cfg.payconiqUrl;
+        bancontactEnabled = Boolean(cfg.bancontactEnabled);
+        // Disable Bancontact option in UI when API is not configured
+        payButtons.forEach((btn) => {
+          if (btn.dataset.pay === 'payconiq') {
+            btn.disabled = !bancontactEnabled;
+            btn.title = bancontactEnabled
+              ? ''
+              : 'Bancontact API nog niet geconfigureerd';
+          }
+        });
+        if (!bancontactEnabled && payMethod === 'payconiq') applyPayMethod('cash');
+
       }
     } catch {
       /* offline / static preview */

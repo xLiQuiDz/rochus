@@ -2633,6 +2633,11 @@ h1, h2, h3, h4 {
   margin: 14px 0 10px;
 }
 
+.pay-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .pay-option {
   flex: 1;
   padding: 11px 10px;
@@ -2716,6 +2721,21 @@ h1, h2, h3, h4 {
   color: var(--text-muted);
 }
 
+.pay-modal__status {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--amber-400);
+}
+
+.pay-modal__status[data-tone='ok'] {
+  color: #86efac;
+}
+
+.pay-modal__status[data-tone='err'] {
+  color: #fca5a5;
+}
+
 .pay-modal__amount {
   font-family: 'Cinzel', serif;
   font-size: 2.4rem;
@@ -2736,6 +2756,11 @@ h1, h2, h3, h4 {
   text-decoration: none;
   box-shadow: 0 6px 24px rgba(37, 99, 235, 0.4);
   transition: transform var(--transition-fast);
+}
+
+.pay-modal__btn.is-disabled {
+  pointer-events: none;
+  opacity: 0.45;
 }
 
 .pay-modal__btn:hover {
