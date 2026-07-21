@@ -9,6 +9,8 @@ const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
   max: 10,
+  // Fail fast instead of queueing forever when the pool is saturated
+  connectionTimeoutMillis: 10_000,
 });
 
 const VALID_STATUSES = new Set([
@@ -111,6 +113,7 @@ async function initDb() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+    CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
     CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_orders_payment_id ON orders(payment_id)
       WHERE payment_id IS NOT NULL;
@@ -231,6 +234,7 @@ async function createOrder({
   }
 
   const client = await pool.connect();
+  let caught = null;
   try {
     await client.query('BEGIN');
 
@@ -255,19 +259,29 @@ async function createOrder({
 
     const orderRow = orderResult.rows[0];
 
-    for (const item of priced.items) {
-      await client.query(
-        `INSERT INTO order_items
-          (order_id, name, unit_price_cents, qty, category, free_qty)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
+    if (priced.items.length > 0) {
+      // Eén multi-row INSERT houdt de transactie (en de pool-connectie) kort
+      const placeholders = [];
+      const params = [];
+      priced.items.forEach((item, i) => {
+        const base = i * 6;
+        placeholders.push(
+          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`
+        );
+        params.push(
           orderRow.id,
           item.name,
           item.unit_price_cents,
           item.qty,
           item.category,
-          item.free_qty,
-        ]
+          item.free_qty
+        );
+      });
+      await client.query(
+        `INSERT INTO order_items
+          (order_id, name, unit_price_cents, qty, category, free_qty)
+         VALUES ${placeholders.join(', ')}`,
+        params
       );
     }
 
@@ -275,19 +289,26 @@ async function createOrder({
     const items = await getOrderItems(client, orderRow.id);
     return mapOrder(orderRow, items);
   } catch (err) {
-    await client.query('ROLLBACK');
-    // Unique violation on idempotency key → return existing
-    if (err.code === '23505' && client_request_id) {
-      const existing = await pool.query(
-        'SELECT id FROM orders WHERE client_request_id = $1',
-        [client_request_id]
-      );
-      if (existing.rows[0]) return getOrderById(existing.rows[0].id);
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      /* ignore */
     }
-    throw err;
+    caught = err;
   } finally {
     client.release();
   }
+
+  // Unique violation on idempotency key → return existing. Looked up AFTER
+  // release so we never hold two pool connections at once.
+  if (caught.code === '23505' && client_request_id) {
+    const existing = await pool.query(
+      'SELECT id FROM orders WHERE client_request_id = $1',
+      [client_request_id]
+    );
+    if (existing.rows[0]) return getOrderById(existing.rows[0].id);
+  }
+  throw caught;
 }
 
 async function attachPaymentToOrder(orderId, { payment_id, payment_status = 'pending' }) {
@@ -317,47 +338,42 @@ async function getOrderByPaymentId(paymentId) {
  */
 async function markOrderPaid(orderId, { payment_id, expected_cents } = {}) {
   const client = await pool.connect();
+  /** @type {'missing'|'already'|'paid'|null} */
+  let outcome = null;
   try {
     await client.query('BEGIN');
     const { rows } = await client.query('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [orderId]);
     const row = rows[0];
     if (!row) {
       await client.query('ROLLBACK');
-      return null;
-    }
-
-    if (payment_id && row.payment_id && row.payment_id !== payment_id) {
-      await client.query('ROLLBACK');
-      throw new Error('payment_id komt niet overeen');
-    }
-    if (
+      outcome = 'missing';
+    } else if (
       Number.isFinite(expected_cents) &&
       Number(row.total_cents) !== Number(expected_cents)
     ) {
       await client.query('ROLLBACK');
       throw new Error('Betaald bedrag komt niet overeen met de bestelling');
-    }
-
-    if (row.payment_status === 'succeeded' && row.status !== 'awaiting_payment') {
+    } else if (row.payment_status === 'succeeded' && row.status !== 'awaiting_payment') {
       await client.query('COMMIT');
-      const order = await getOrderById(orderId);
-      return { order, newlyPaid: false };
+      outcome = 'already';
+    } else {
+      // Een verschil in payment_id is toegestaan zolang het bedrag klopt:
+      // een verlopen eerste poging kan vervangen zijn terwijl de gast de
+      // oude link betaalde. We bewaren dan de id die écht betaald is.
+      const nextStatus = row.status === 'awaiting_payment' ? 'new' : row.status;
+      await client.query(
+        `UPDATE orders
+         SET payment_status = 'succeeded',
+             payment_id = COALESCE($2, payment_id),
+             paid_at = COALESCE(paid_at, NOW()),
+             status = $3,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [orderId, payment_id || null, nextStatus]
+      );
+      await client.query('COMMIT');
+      outcome = 'paid';
     }
-
-    const nextStatus = row.status === 'awaiting_payment' ? 'new' : row.status;
-    await client.query(
-      `UPDATE orders
-       SET payment_status = 'succeeded',
-           payment_id = COALESCE($2, payment_id),
-           paid_at = COALESCE(paid_at, NOW()),
-           status = $3,
-           updated_at = NOW()
-       WHERE id = $1`,
-      [orderId, payment_id || null, nextStatus]
-    );
-    await client.query('COMMIT');
-    const order = await getOrderById(orderId);
-    return { order, newlyPaid: true };
   } catch (err) {
     try {
       await client.query('ROLLBACK');
@@ -368,6 +384,11 @@ async function markOrderPaid(orderId, { payment_id, expected_cents } = {}) {
   } finally {
     client.release();
   }
+
+  // Re-read AFTER release — nooit twee pool-connecties tegelijk vasthouden
+  if (outcome === 'missing') return null;
+  const order = await getOrderById(orderId);
+  return { order, newlyPaid: outcome === 'paid' };
 }
 
 async function updateOrderPaymentStatus(orderId, paymentStatus) {

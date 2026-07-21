@@ -90,9 +90,9 @@ async function verifyCallbackSignature(signatureHeader, rawBody, opts = {}) {
 }
 
 /**
- * @param {{ amountCents: number, description: string, reference: string }} opts
+ * @param {{ amountCents: number, description: string, reference: string, returnUrl?: string }} opts
  */
-async function createPayment({ amountCents, description, reference }) {
+async function createPayment({ amountCents, description, reference, returnUrl }) {
   if (!isConfigured()) {
     const err = new Error('Bancontact is niet geconfigureerd (BANCONTACT_API_KEY / CALLBACK_URL)');
     err.code = 'BANCONTACT_NOT_CONFIGURED';
@@ -110,8 +110,9 @@ async function createPayment({ amountCents, description, reference }) {
     description: String(description || 'Rochus').slice(0, 140),
     reference: String(reference || '').slice(0, 35),
   };
-  if (BANCONTACT_RETURN_URL) {
-    body.returnUrl = BANCONTACT_RETURN_URL;
+  const effectiveReturnUrl = returnUrl || BANCONTACT_RETURN_URL;
+  if (effectiveReturnUrl) {
+    body.returnUrl = effectiveReturnUrl;
   }
 
   const res = await fetch(`${BANCONTACT_API_BASE}/v3/payments`, {
@@ -198,11 +199,12 @@ function mapBancontactStatus(status) {
   return 'pending';
 }
 
-function buildReturnDeeplink(deeplink) {
+function buildReturnDeeplink(deeplink, returnUrl) {
   if (!deeplink) return '';
-  if (!BANCONTACT_RETURN_URL) return deeplink;
+  const target = returnUrl || BANCONTACT_RETURN_URL;
+  if (!target) return deeplink;
   const sep = deeplink.includes('?') ? '&' : '?';
-  return `${deeplink}${sep}returnUrl=${encodeURIComponent(BANCONTACT_RETURN_URL)}`;
+  return `${deeplink}${sep}returnUrl=${encodeURIComponent(target)}`;
 }
 
 module.exports = {

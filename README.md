@@ -131,7 +131,7 @@ Zonder API-key weigert de app Bancontact-orders met HTTP 503 (cash blijft werken
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | Postgres connection (required) |
-| `STAFF_PIN` | Staff login PIN |
+| `STAFF_PIN` | Staff login PIN (**verplicht in productie** — app start anders niet) |
 | `TABLE_COUNT` | Tables `1…N` (default 30) |
 | `PUBLIC_URL` | Public base URL for QR codes |
 | `PORT` | HTTP port (Railway injects this) |

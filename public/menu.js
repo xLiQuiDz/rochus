@@ -775,8 +775,13 @@
     outOfStock = next;
     syncAvailabilityUI();
     if (removed > 0) {
+      pendingRequestId = null;
       renderOrder();
-      if (notifyCart !== false) {
+      if (confirmReady) {
+        // Bevestig-modal toont anders een verouderde lijst
+        closeConfirm();
+        showToast('Het aanbod is net veranderd — check je mandje even', true, 3600);
+      } else if (notifyCart !== false) {
         showToast(
           removed === 1
             ? 'Uitverkocht item verwijderd uit mandje'
@@ -969,6 +974,7 @@
   let bancontactEnabled = false;
   let payPollTimer = 0;
   let payPollOrderId = null;
+  let payPollTick = null;
   try {
     if (localStorage.getItem(PAY_KEY) === 'payconiq') payMethod = 'payconiq';
   } catch {
@@ -1000,6 +1006,97 @@
   });
   applyPayMethod(payMethod);
 
+  /* Zelfde limieten als de server — de server blijft de scheidsrechter */
+  const MAX_LINE_QTY = 24;
+  const MAX_ORDER_QTY = 60;
+
+  function cartTotalQty() {
+    let n = 0;
+    for (const item of order.values()) n += item.qty;
+    return n;
+  }
+
+  /* Idempotency-key: stabiel per poging zodat een netwerk-retry nooit een
+     tweede bestelling (of tweede betaling) aanmaakt. Reset bij elke
+     mandje-wijziging en na een geslaagde bestelling. */
+  let pendingRequestId = null;
+
+  function makeRequestId() {
+    return typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  /* Openstaande Bancontact-betaling overleeft reload/terugkeer uit de
+     bank-app via localStorage. */
+  const PENDING_PAY_KEY = 'rochus-pending-payment';
+  const PAY_MAX_AGE_MS = 25 * 60 * 1000; // betaallink leeft ± 20 min
+  let payResumeChip = null;
+
+  function savePendingPayment(rec) {
+    try {
+      localStorage.setItem(PENDING_PAY_KEY, JSON.stringify(rec));
+    } catch {
+      /* private mode */
+    }
+  }
+
+  function loadPendingPayment() {
+    try {
+      const rec = JSON.parse(localStorage.getItem(PENDING_PAY_KEY) || 'null');
+      if (!rec || !Number.isFinite(rec.orderId)) return null;
+      if (Date.now() - (rec.at || 0) > PAY_MAX_AGE_MS) {
+        clearPendingPayment();
+        return null;
+      }
+      return rec;
+    } catch {
+      return null;
+    }
+  }
+
+  function clearPendingPayment() {
+    try {
+      localStorage.removeItem(PENDING_PAY_KEY);
+    } catch {
+      /* private mode */
+    }
+    hidePayResumeChip();
+  }
+
+  function hidePayResumeChip() {
+    if (payResumeChip) payResumeChip.hidden = true;
+  }
+
+  function showPayResumeChip() {
+    if (!payResumeChip) {
+      payResumeChip = document.createElement('button');
+      payResumeChip.type = 'button';
+      payResumeChip.className = 'pay-resume-chip';
+      payResumeChip.textContent = '📱 Betaling bezig — tik om te openen';
+      payResumeChip.style.cssText =
+        'position:fixed;left:50%;bottom:88px;transform:translateX(-50%);z-index:60;' +
+        'padding:10px 16px;border-radius:999px;border:1px solid #c98500;' +
+        'background:#1a1208;color:#fffaf2;font:inherit;font-size:14px;' +
+        'box-shadow:0 6px 18px rgba(0,0,0,.45);cursor:pointer';
+      payResumeChip.addEventListener('click', () => {
+        const rec = loadPendingPayment();
+        if (!rec) {
+          hidePayResumeChip();
+          return;
+        }
+        openPayOverlay({
+          orderId: rec.orderId,
+          totalCents: rec.totalCents,
+          payment: rec.payment || {},
+        });
+        startPayPoll(rec.orderId);
+      });
+      document.body.appendChild(payResumeChip);
+    }
+    payResumeChip.hidden = false;
+  }
+
   function stopPayPoll() {
     if (payPollTimer) {
       clearInterval(payPollTimer);
@@ -1022,46 +1119,80 @@
     return data;
   }
 
+  function handlePaySuccess(orderId) {
+    stopPayPoll();
+    clearPendingPayment();
+    setPayUiStatus('Betaald ✓ — de bar heeft je order', 'ok');
+    if (payHintEl) {
+      payHintEl.textContent = 'Bedankt! We brengen alles naar je tafel.';
+    }
+    showToast('Betaald — order staat bij de bar 🍹', false, 4200);
+    celebrateOrderSuccess();
+    trackOrder(orderId);
+    setTimeout(() => closePayOverlay(), 2200);
+  }
+
+  function handlePayFailure(status) {
+    stopPayPoll();
+    clearPendingPayment();
+    setPayUiStatus(status === 'expired' ? 'Betaling verlopen' : 'Betaling mislukt', 'err');
+    if (payHintEl) {
+      payHintEl.textContent = 'Probeer opnieuw via het mandje, of kies cash.';
+    }
+    // Overlay al dicht? Meld het dan via een toast
+    if (payOverlay && payOverlay.hidden) {
+      showToast(
+        status === 'expired'
+          ? 'Betaling verlopen — bestel gerust opnieuw'
+          : 'Betaling niet gelukt — bestel gerust opnieuw',
+        true,
+        5200
+      );
+    }
+  }
+
   function startPayPoll(orderId) {
     stopPayPoll();
     payPollOrderId = orderId;
+    const startedAt = Date.now();
+    let misses = 0;
     const tick = async () => {
       if (payPollOrderId !== orderId) return;
+      if (Date.now() - startedAt > PAY_MAX_AGE_MS) {
+        handlePayFailure('expired');
+        return;
+      }
       try {
         const data = await pollPaymentOnce(orderId);
+        misses = 0;
         if (data.payment_status === 'succeeded') {
-          stopPayPoll();
-          setPayUiStatus('Betaald ✓ — de bar heeft je order', 'ok');
-          if (payHintEl) {
-            payHintEl.textContent = 'Bedankt! We brengen alles naar je tafel.';
-          }
-          showToast('Betaald — order staat bij de bar 🍹', false, 4200);
-          celebrateOrderSuccess();
-          trackOrder(orderId);
-          setTimeout(() => closePayOverlay(), 2200);
+          handlePaySuccess(orderId);
           return;
         }
         if (data.payment_status === 'failed' || data.payment_status === 'expired') {
-          stopPayPoll();
-          setPayUiStatus(
-            data.payment_status === 'expired' ? 'Betaling verlopen' : 'Betaling mislukt',
-            'err'
-          );
-          if (payHintEl) {
-            payHintEl.textContent = 'Probeer opnieuw via het mandje, of kies cash.';
-          }
+          handlePayFailure(data.payment_status);
           return;
         }
         setPayUiStatus('Wachten op Bancontact…', 'pending');
       } catch {
-        /* keep polling */
+        misses += 1;
+        if (misses >= 8) {
+          setPayUiStatus('Verbinding hapert — we blijven checken…', 'pending');
+        }
       }
     };
+    payPollTick = tick;
     tick();
     payPollTimer = setInterval(tick, 2500);
   }
 
-  function openPayOverlay({ totalCents, payment }) {
+  // Terug uit de bank-app in dezelfde tab: meteen checken, niet wachten op
+  // de (door Safari geknepen) interval
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && payPollOrderId && payPollTick) payPollTick();
+  });
+
+  function openPayOverlay({ orderId, totalCents, payment }) {
     if (!payOverlay) return;
     payAmountEl.textContent = formatEuro(totalCents / 100);
     const link = payment?.deeplink || payment?.checkoutUrl || '#';
@@ -1085,19 +1216,40 @@
       payHintEl.textContent =
         'Scan of open de app. Zodra Bancontact bevestigt, gaat het naar de bar.';
     }
+    hidePayResumeChip();
+    document.body.style.overflow = 'hidden';
     payOverlay.hidden = false;
+    if (orderId) {
+      savePendingPayment({
+        orderId,
+        totalCents,
+        payment: {
+          deeplink: payment?.deeplink || '',
+          checkoutUrl: payment?.checkoutUrl || '',
+          qrUrl: payment?.qrUrl || '',
+        },
+        at: Date.now(),
+      });
+    }
   }
 
   function closePayOverlay() {
-    stopPayPoll();
     if (payOverlay) payOverlay.hidden = true;
+    const pickOpen = pickOverlay && !pickOverlay.hidden;
+    if (!drawer.classList.contains('open') && !pickOpen) {
+      document.body.style.overflow = '';
+    }
+    // Betaling nog bezig? De poll loopt door en de terugkeer-knop blijft staan
+    if (payPollOrderId) {
+      showPayResumeChip();
+      showToast('Betaling loopt door — tik onderaan om terug te keren', false, 3200);
+    }
   }
 
   if (payOverlay) {
     payCloseBtn.addEventListener('click', closePayOverlay);
-    payOverlay.addEventListener('click', (e) => {
-      if (e.target === payOverlay) closePayOverlay();
-    });
+    // Bewust géén sluiten op backdrop-tik: één mis-touch mag een lopende
+    // betaling niet wegvegen
     document.addEventListener(
       'keydown',
       (e) => {
@@ -1128,10 +1280,8 @@
       qty: item.qty,
     }));
 
-    const clientRequestId =
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    if (!pendingRequestId) pendingRequestId = makeRequestId();
+    const clientRequestId = pendingRequestId;
 
     try {
       const res = await fetch('/api/orders', {
@@ -1155,6 +1305,7 @@
       }
 
       order.clear();
+      pendingRequestId = null;
       noteInput.value = '';
       renderOrder();
       closeConfirm();
@@ -1162,7 +1313,11 @@
 
       if (payMethod === 'payconiq') {
         showToast('Betaal om je order naar de bar te sturen', false, 3600);
-        openPayOverlay({ totalCents: data.total_cents, payment: data.payment || {} });
+        openPayOverlay({
+          orderId: data.id,
+          totalCents: data.total_cents,
+          payment: data.payment || {},
+        });
         if (data.id) startPayPoll(data.id);
       } else {
         showToast(pick(SENT_TOASTS).replace('{n}', String(tableNumber)), false, 4200);
@@ -1223,11 +1378,20 @@
       return { toast: 'Uitverkocht', className: '' };
     }
     const existing = order.get(name);
+    if (existing && existing.qty >= MAX_LINE_QTY) {
+      showToast(`Max ${MAX_LINE_QTY}× hetzelfde item — vraag de bar voor meer`, true, 2600);
+      return { toast: 'Max bereikt', className: '' };
+    }
+    if (cartTotalQty() >= MAX_ORDER_QTY) {
+      showToast(`Max ${MAX_ORDER_QTY} items per bestelling — splits je ronde op`, true, 2600);
+      return { toast: 'Max bereikt', className: '' };
+    }
     if (existing) {
       existing.qty += 1;
     } else {
       order.set(name, { name, price, category, qty: 1 });
     }
+    pendingRequestId = null;
     renderOrder();
     if (navigator.vibrate) navigator.vibrate(10);
     // Cart only — never submits to the bar
@@ -1251,8 +1415,13 @@
       showToast('Uitverkocht', true, 2000);
       return;
     }
+    if (delta > 0 && (item.qty >= MAX_LINE_QTY || cartTotalQty() >= MAX_ORDER_QTY)) {
+      showToast('Maximum bereikt — splits je ronde op', true, 2400);
+      return;
+    }
     item.qty += delta;
     if (item.qty <= 0) order.delete(name);
+    pendingRequestId = null;
     renderOrder();
   }
 
@@ -1524,9 +1693,26 @@
   /* ------------------------------------------------------------------ */
   /* Table from QR (?t=12)                                              */
   /* ------------------------------------------------------------------ */
+  function applyTableFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const t = Math.floor(Number(params.get('t')));
+    if (Number.isFinite(t) && t >= 1 && t <= tableCount) {
+      tableNumber = t;
+      tableChip.hidden = false;
+      tableChipNum.textContent = String(t);
+      document.title = `Rochus · Tafel ${t}`;
+    } else {
+      tableNumber = null;
+      tableChip.hidden = true;
+    }
+    updateSubmitState();
+  }
+
   async function initTable() {
+    // Tafel eerst — een hangende config-fetch mag bestellen niet blokkeren
+    applyTableFromUrl();
     try {
-      const res = await fetch('/api/config');
+      const res = await fetch('/api/config', { signal: AbortSignal.timeout(4000) });
       if (res.ok) {
         const cfg = await res.json();
         if (cfg.tableCount) tableCount = cfg.tableCount;
@@ -1547,21 +1733,66 @@
       /* offline / static preview */
     }
 
+    // Opnieuw checken tegen de échte tableCount van de server
+    applyTableFromUrl();
+  }
+
+  /** Hervat een lopende Bancontact-betaling na reload of terugkeer uit de
+      bank-app (returnUrl `?paid=1&order=N`, of het localStorage-record). */
+  async function resumePendingPayment() {
     const params = new URLSearchParams(window.location.search);
-    const t = Math.floor(Number(params.get('t')));
-    if (Number.isFinite(t) && t >= 1 && t <= tableCount) {
-      tableNumber = t;
-      tableChip.hidden = false;
-      tableChipNum.textContent = String(t);
-      document.title = `Rochus · Tafel ${t}`;
-    } else {
-      tableNumber = null;
-      tableChip.hidden = true;
+    const cameBack = params.get('paid') === '1';
+    const urlOrder = Math.floor(Number(params.get('order')));
+    const rec = loadPendingPayment();
+    const orderId = Number.isFinite(urlOrder) && urlOrder >= 1 ? urlOrder : rec?.orderId;
+    if (cameBack) {
+      params.delete('paid');
+      params.delete('order');
+      const qs = params.toString();
+      history.replaceState(null, '', qs ? `${location.pathname}?${qs}` : location.pathname);
     }
-    updateSubmitState();
+    if (!orderId) return;
+    const stored = rec && rec.orderId === orderId ? rec : null;
+    try {
+      const data = await pollPaymentOnce(orderId);
+      if (data.payment_status === 'succeeded') {
+        clearPendingPayment();
+        showToast('Betaald — je bestelling staat bij de bar 🍹', false, 4600);
+        celebrateOrderSuccess();
+        trackOrder(orderId);
+        return;
+      }
+      if (data.payment_status === 'failed' || data.payment_status === 'expired') {
+        clearPendingPayment();
+        showToast(
+          data.payment_status === 'expired'
+            ? 'Betaling verlopen — bestel gerust opnieuw'
+            : 'Betaling niet gelukt — bestel gerust opnieuw',
+          true,
+          5200
+        );
+        return;
+      }
+      if (data.payment_method !== 'payconiq') return;
+      // Nog bezig — heropen het betaalscherm (mét links als we ze nog hebben)
+      if (stored) {
+        openPayOverlay({
+          orderId,
+          totalCents: stored.totalCents,
+          payment: stored.payment || {},
+        });
+      } else {
+        showToast('We checken je betaling…', false, 3200);
+      }
+      startPayPoll(orderId);
+    } catch {
+      // Offline? Laat het record staan; de knop brengt de gast terug
+      if (stored) showPayResumeChip();
+    }
   }
 
   initTable();
+  resumePendingPayment();
 
   /* ------------------------------------------------------------------ */
   /* Category filter + scroll spy                                       */
@@ -2093,7 +2324,8 @@
     if (wheelSpinning || wheelItems.length === 0) return;
     wheelSpinning = true;
     wheelResult.hidden = true;
-    wheelGotoBtn.hidden = true;
+    const wheelGoto = document.getElementById('wheel-goto');
+    if (wheelGoto) wheelGoto.hidden = true;
     wheelWinner = -1;
     drawWheel();
 

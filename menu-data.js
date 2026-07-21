@@ -80,6 +80,11 @@ function toCents(euros) {
   return Math.round(Number(euros) * 100);
 }
 
+/** Ruim genoeg voor de grootste tafel, krap genoeg tegen grap-/floodorders. */
+const MAX_LINE_QTY = 24;
+const MAX_ORDER_LINES = 25;
+const MAX_ORDER_QTY = 60;
+
 /**
  * Validate client line items against catalog and price them.
  * @param {{ name: string, qty: number }[]} rawItems
@@ -88,26 +93,43 @@ function validateAndPrice(rawItems) {
   if (!Array.isArray(rawItems) || rawItems.length === 0) {
     throw new Error('Bestelling is leeg');
   }
+  if (rawItems.length > MAX_ORDER_LINES * 2) {
+    throw new Error('Bestelling is te groot — splits ze op');
+  }
 
-  /** @type {{ name: string, qty: number, category: string, unit_price_cents: number }[]} */
-  const lines = [];
+  /** @type {Map<string, { name: string, qty: number, category: string, unit_price_cents: number }>} */
+  const byLineName = new Map();
 
   for (const raw of rawItems) {
     const name = String(raw.name || '').trim();
     const qty = Number(raw.qty);
-    if (!name || !Number.isInteger(qty) || qty < 1 || qty > 99) {
+    if (!name || !Number.isInteger(qty) || qty < 1 || qty > MAX_LINE_QTY) {
       throw new Error('Ongeldige bestelregel');
     }
     const catalog = getMenuItem(name);
     if (!catalog) {
       throw new Error(`Onbekend item: ${name}`);
     }
-    lines.push({
+    const existing = byLineName.get(catalog.name);
+    const nextQty = (existing?.qty || 0) + qty;
+    if (nextQty > MAX_LINE_QTY) {
+      throw new Error(`Maximaal ${MAX_LINE_QTY}× hetzelfde item per bestelling`);
+    }
+    byLineName.set(catalog.name, {
       name: catalog.name,
-      qty,
+      qty: nextQty,
       category: catalog.category,
       unit_price_cents: toCents(catalog.price),
     });
+  }
+
+  const lines = [...byLineName.values()];
+  if (lines.length > MAX_ORDER_LINES) {
+    throw new Error('Te veel verschillende items in één bestelling — splits ze op');
+  }
+  const totalQty = lines.reduce((sum, line) => sum + line.qty, 0);
+  if (totalQty > MAX_ORDER_QTY) {
+    throw new Error(`Maximaal ${MAX_ORDER_QTY} items per bestelling — splits je ronde op`);
   }
 
   let subtotalCents = 0;
@@ -254,4 +276,7 @@ module.exports = {
   toCents,
   validateAndPrice,
   getPrintMenu,
+  MAX_LINE_QTY,
+  MAX_ORDER_LINES,
+  MAX_ORDER_QTY,
 };

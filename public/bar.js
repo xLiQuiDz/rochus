@@ -477,7 +477,13 @@
   }
 
   /* ---------------- Orders sync ---------------- */
+  /* Bumpt bij elke board-mutatie (SSE, PATCH, merge). Een poll-respons die
+     ouder is dan de laatste mutatie wordt weggegooid — anders flapt een net
+     geserveerd ticket terug open (of verdwijnt een vers ticket even). */
+  let ordersEpoch = 0;
+
   function upsertOrder(order, { announce } = {}) {
+    ordersEpoch += 1;
     const prev = orders.get(order.id);
     const wasOpen = prev && (prev.status === 'new' || prev.status === 'preparing');
     const isOpen = order.status === 'new' || order.status === 'preparing';
@@ -519,10 +525,12 @@
   }
 
   async function loadOrders({ announceNew = false } = {}) {
+    const epochAtFetch = ordersEpoch;
     const res = await fetch('/api/orders?status=open', { credentials: 'include' });
     if (res.status === 401) return showLogin();
     if (!res.ok) throw new Error('Kon bestellingen niet laden');
     const list = await res.json();
+    if (ordersEpoch !== epochAtFetch) return; // board veranderde tijdens de fetch
     if (!announceNew) {
       orders.clear();
       for (const order of list) orders.set(order.id, order);
@@ -564,6 +572,8 @@
     eventSource.addEventListener('connected', () => {
       setLiveStatus('ok', 'Live');
       sseHealthy = true;
+      // Inhalen wat er tijdens de onderbreking binnenkwam
+      loadOrders({ announceNew: true }).catch(() => {});
       startPolling();
     });
 
@@ -625,9 +635,20 @@
   async function showDash() {
     loginView.hidden = true;
     dashView.hidden = false;
-    ensureAudio();
+    const ctx = ensureAudio();
+    // Na cookie-login was er nog geen tik: AudioContext blijft 'suspended'
+    // en chimes zijn stil tot de eerste aanraking
+    if (ctx && ctx.state === 'suspended' && soundToggle.checked) {
+      showBarToast('Tik één keer op het scherm om geluid te activeren 🔔');
+    }
     setLiveStatus('warn', 'Laden…');
-    await Promise.all([loadOrders({ announceNew: false }), loadMenu(), loadStats()]);
+    try {
+      await Promise.all([loadOrders({ announceNew: false }), loadMenu(), loadStats()]);
+    } catch {
+      // Eén hikje mag het bord niet doodleggen — stream + polling halen het in
+      setLiveStatus('warn', 'Verbinding hapert…');
+    }
+    if (!loginView.hidden) return; // sessie bleek toch verlopen (401 → login)
     connectStream();
     startPolling();
     syncOpenReminder();
@@ -870,6 +891,16 @@
     });
     if (wakeWanted) acquireWake();
   }
+
+  // Browsers laten audio pas toe na een user-gesture: de eerste tik waar
+  // dan ook ontgrendelt de chimes (relevant na auto-login via cookie)
+  document.addEventListener(
+    'pointerdown',
+    () => {
+      ensureAudio();
+    },
+    { once: true, capture: true }
+  );
 
   /* ---------------- Boot ---------------- */
   (async () => {

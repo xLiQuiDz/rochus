@@ -29,6 +29,10 @@ const bancontact = require('./bancontact');
 const QRCode = require('qrcode');
 
 const PORT = Number(process.env.PORT) || 3000;
+if (process.env.NODE_ENV === 'production' && !process.env.STAFF_PIN) {
+  // Nooit met de in de repo gepubliceerde fallback-PIN live gaan
+  throw new Error('STAFF_PIN moet gezet zijn in productie');
+}
 const STAFF_PIN = process.env.STAFF_PIN || '4321';
 const TABLE_COUNT = Math.max(1, Number(process.env.TABLE_COUNT) || 30);
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
@@ -57,9 +61,30 @@ app.use(
 );
 app.use(cookieParser());
 
-/* PIN brute-force bescherming — per IP, in-memory */
+/* PIN brute-force bescherming — per IP, in-memory.
+   20 i.p.v. 10: gasten op de zaak-wifi delen één NAT-IP met de staff. */
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_FAILURES = 10;
+const LOGIN_MAX_FAILURES = 20;
+
+/* Bestel-flood bescherming — ruim boven een piek via gedeelde venue-wifi,
+   ver onder wat een script nodig heeft om de bar te overspoelen. */
+const ORDER_WINDOW_MS = 10 * 60 * 1000;
+const ORDER_MAX_PER_WINDOW = 60;
+/** @type {Map<string, number[]>} */
+const orderTimestamps = new Map();
+
+function orderRateLimited(ip) {
+  const now = Date.now();
+  const cutoff = now - ORDER_WINDOW_MS;
+  const list = (orderTimestamps.get(ip) || []).filter((t) => t > cutoff);
+  if (list.length >= ORDER_MAX_PER_WINDOW) {
+    orderTimestamps.set(ip, list);
+    return true;
+  }
+  list.push(now);
+  orderTimestamps.set(ip, list);
+  return false;
+}
 /** @type {Map<string, { count: number, first: number }>} */
 const loginFailures = new Map();
 
@@ -256,12 +281,29 @@ app.get('/api/analytics', requireStaff, async (req, res) => {
   }
 });
 
+/** Alleen echte betaaldomeinen — anders is dit een open QR-generator. */
+function isPaymentLink(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:') return false;
+    const host = u.hostname.toLowerCase();
+    return (
+      host === 'bancontact.net' ||
+      host.endsWith('.bancontact.net') ||
+      host === 'payconiq.com' ||
+      host.endsWith('.payconiq.com')
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** PNG QR for a Bancontact payment link (dynamic `?u=` or legacy static URL) */
 app.get(['/api/qr/payconiq', '/api/qr/payconiq.png'], async (req, res) => {
   try {
     const dynamic = String(req.query.u || '').trim();
     const target = dynamic || PAYCONIQ_URL;
-    if (!target || !/^https:\/\//i.test(target)) {
+    if (!target || !isPaymentLink(target)) {
       return res.status(404).send('Geen betaallink');
     }
     const png = await QRCode.toBuffer(target, {
@@ -358,6 +400,9 @@ app.post('/api/auth/logout', async (req, res) => {
 
 app.post('/api/orders', async (req, res) => {
   try {
+    if (orderRateLimited(req.ip || 'unknown')) {
+      return res.status(429).json({ error: 'Even rustig aan — probeer zo meteen opnieuw' });
+    }
     const table = Math.floor(Number(req.body?.table));
     if (!Number.isFinite(table) || table < 1 || table > TABLE_COUNT) {
       return res.status(400).json({ error: `Kies een tafel van 1 tot ${TABLE_COUNT}` });
@@ -415,6 +460,10 @@ app.post('/api/orders', async (req, res) => {
       payment_status: 'pending',
     });
 
+    // Terug uit de bank-app: mét tafel + order zodat de menupagina de
+    // betaalstatus kan hervatten
+    const returnUrl = `${PUBLIC_URL}/?t=${table}&paid=1&order=${order.id}`;
+
     if (order.payment_status === 'succeeded') {
       return res.status(201).json({
         ...order,
@@ -447,7 +496,7 @@ app.post('/api/orders', async (req, res) => {
             payment: {
               id: existingPay.id,
               status: 'succeeded',
-              deeplink: bancontact.buildReturnDeeplink(existingPay.deeplink),
+              deeplink: bancontact.buildReturnDeeplink(existingPay.deeplink, returnUrl),
               checkoutUrl: existingPay.checkoutUrl,
               qrUrl: existingPay.qrUrl,
             },
@@ -458,7 +507,7 @@ app.post('/api/orders', async (req, res) => {
           payment: {
             id: existingPay.id,
             status: mapped,
-            deeplink: bancontact.buildReturnDeeplink(existingPay.deeplink),
+            deeplink: bancontact.buildReturnDeeplink(existingPay.deeplink, returnUrl),
             checkoutUrl: existingPay.checkoutUrl,
             qrUrl: existingPay.qrUrl,
           },
@@ -474,6 +523,7 @@ app.post('/api/orders', async (req, res) => {
         amountCents: order.total_cents,
         description: `Rochus tafel ${table}`,
         reference: `T${table}-O${order.id}`.slice(0, 35),
+        returnUrl,
       });
     } catch (err) {
       await updateOrderPaymentStatus(order.id, 'failed').catch(() => {});
@@ -491,7 +541,7 @@ app.post('/api/orders', async (req, res) => {
       payment: {
         id: payment.id,
         status: 'pending',
-        deeplink: bancontact.buildReturnDeeplink(payment.deeplink),
+        deeplink: bancontact.buildReturnDeeplink(payment.deeplink, returnUrl),
         checkoutUrl: payment.checkoutUrl,
         qrUrl: payment.qrUrl,
       },
@@ -532,6 +582,12 @@ app.post('/api/payments/bancontact/callback', async (req, res) => {
     }
 
     if (status === 'succeeded') {
+      if (order.payment_status === 'succeeded' && order.payment_id !== paymentId) {
+        // Zelfde order, tweede geslaagde betaling: gast betaalde dubbel
+        console.warn(
+          `Dubbele betaling voor order ${order.id}: ${order.payment_id} én ${paymentId} — terugbetalen via portal`
+        );
+      }
       const result = await markOrderPaid(order.id, {
         payment_id: paymentId,
         expected_cents: Number.isFinite(amount) ? amount : undefined,
@@ -552,6 +608,12 @@ app.post('/api/payments/bancontact/callback', async (req, res) => {
   }
 });
 
+/* Max 1 provider-call per order per 4s, hoe hard gasten (of grappenmakers)
+   ook pollen — anders is dit een gratis Bancontact-API-verbruiker. */
+const PROVIDER_POLL_MIN_MS = 4000;
+/** @type {Map<number, number>} */
+const providerPollAt = new Map();
+
 /** Guest: poll Bancontact payment for an order (with API fallback) */
 app.get('/api/orders/:id/payment', async (req, res) => {
   try {
@@ -562,12 +624,15 @@ app.get('/api/orders/:id/payment', async (req, res) => {
     let order = await getOrderById(id);
     if (!order) return res.status(404).json({ error: 'Bestelling niet gevonden' });
 
+    const lastProviderPoll = providerPollAt.get(id) || 0;
     if (
       order.payment_method === 'payconiq' &&
       order.payment_status === 'pending' &&
       order.payment_id &&
-      bancontact.isConfigured()
+      bancontact.isConfigured() &&
+      Date.now() - lastProviderPoll >= PROVIDER_POLL_MIN_MS
     ) {
+      providerPollAt.set(id, Date.now());
       try {
         const payment = await bancontact.getPayment(order.payment_id);
         const mapped = bancontact.mapBancontactStatus(payment.status);
@@ -586,14 +651,15 @@ app.get('/api/orders/:id/payment', async (req, res) => {
       }
     }
 
+    if (order.payment_status !== 'pending') providerPollAt.delete(id);
+
+    // Bewust minimaal: geen bedragen of payment_id op een publiek endpoint
     res.set('Cache-Control', 'no-store');
     res.json({
       id: order.id,
       status: order.status,
       payment_method: order.payment_method,
       payment_status: order.payment_status,
-      payment_id: order.payment_id,
-      total_cents: order.total_cents,
       paid_at: order.paid_at,
     });
   } catch (err) {
@@ -709,8 +775,21 @@ app.get(['/transacties', '/transactions'], (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'transacties.html'));
 });
 
+async function initDbWithRetry(attempts = 5, delayMs = 3000) {
+  for (let i = 1; i <= attempts; i += 1) {
+    try {
+      await initDb();
+      return;
+    } catch (err) {
+      if (i === attempts) throw err;
+      console.warn(`initDb poging ${i}/${attempts} mislukt (${err.message}) — retry in ${delayMs}ms`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 async function start() {
-  await initDb();
+  await initDbWithRetry();
   await cleanupExpiredSessions();
   setInterval(() => {
     cleanupExpiredSessions().catch((err) => console.error(err));
@@ -718,12 +797,48 @@ async function start() {
     for (const [ip, entry] of loginFailures) {
       if (entry.first < cutoff) loginFailures.delete(ip);
     }
+    const orderCutoff = Date.now() - ORDER_WINDOW_MS;
+    for (const [ip, list] of orderTimestamps) {
+      const fresh = list.filter((t) => t > orderCutoff);
+      if (fresh.length === 0) orderTimestamps.delete(ip);
+      else orderTimestamps.set(ip, fresh);
+    }
+    const pollCutoff = Date.now() - 60 * 60 * 1000;
+    for (const [id, at] of providerPollAt) {
+      if (at < pollCutoff) providerPollAt.delete(id);
+    }
   }, 60 * 60 * 1000);
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Rochus listening on ${PUBLIC_URL} (port ${PORT})`);
     console.log(`Tables: 1–${TABLE_COUNT} · Postgres ready`);
   });
+
+  // Railway redeploy: netjes uitbollen i.p.v. midden in een request sterven
+  let shuttingDown = false;
+  function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`${signal} ontvangen — afsluiten…`);
+    for (const client of [...sseClients]) {
+      try {
+        client.end();
+      } catch {
+        /* ignore */
+      }
+      sseClients.delete(client);
+    }
+    server.close(() => {
+      const { pool } = require('./db');
+      pool
+        .end()
+        .catch(() => {})
+        .finally(() => process.exit(0));
+    });
+    setTimeout(() => process.exit(0), 8000).unref();
+  }
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 start().catch((err) => {

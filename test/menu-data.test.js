@@ -46,6 +46,43 @@ test('validateAndPrice rejects bad input', () => {
   assert.throws(() => validateAndPrice([{ name: 'Duvel', qty: 1.5 }]), /Ongeldige/);
 });
 
+test('validateAndPrice caps order size against flood orders', () => {
+  // Per-line cap
+  assert.throws(() => validateAndPrice([{ name: 'Duvel', qty: 25 }]), /Ongeldige/);
+  assert.equal(validateAndPrice([{ name: 'Duvel', qty: 24 }]).items[0].qty, 24);
+
+  // Duplicate lines merge, and the merged qty still respects the cap
+  const merged = validateAndPrice([
+    { name: 'Duvel', qty: 2 },
+    { name: 'Duvel', qty: 3 },
+  ]);
+  assert.equal(merged.items.length, 1);
+  assert.equal(merged.items[0].qty, 5);
+  assert.throws(
+    () =>
+      validateAndPrice([
+        { name: 'Duvel', qty: 20 },
+        { name: 'Duvel', qty: 20 },
+      ]),
+    /Maximaal 24/
+  );
+
+  // Total-qty cap across lines
+  assert.throws(
+    () =>
+      validateAndPrice([
+        { name: 'Duvel', qty: 24 },
+        { name: 'Corona', qty: 24 },
+        { name: 'Fanta', qty: 24 },
+      ]),
+    /Maximaal 60/
+  );
+
+  // Raw payload flood is rejected outright
+  const flood = Array.from({ length: 60 }, () => ({ name: 'Fanta', qty: 1 }));
+  assert.throws(() => validateAndPrice(flood), /te groot/);
+});
+
 test('alcohol-free beers live in their own section', () => {
   const menu = getPrintMenu();
   const av = menu.sections.find((s) => s.id === 'alcoholvrij');
