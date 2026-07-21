@@ -17,6 +17,7 @@
   const CATEGORY_LABELS = {
     bieren: "Bieren van 't vat",
     flessen: 'Flessenbier',
+    alcoholvrij: 'Alcoholvrij',
     fris: 'Frisdranken',
     cocktails: 'Cocktails',
     wijnen: 'Wijnen & bubbels',

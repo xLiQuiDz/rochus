@@ -568,13 +568,17 @@ h1, h2, h3, h4 {
   z-index: 1;
   max-width: 1200px;
   margin: 0 auto;
-  padding: var(--space-md) var(--space-md) var(--space-3xl);
+  padding: var(--space-md) var(--space-md) var(--space-md);
 }
 
 .menu-section {
   --cat-accent: var(--cat-bieren);
-  margin-bottom: var(--space-3xl);
+  margin-bottom: var(--space-2xl);
   scroll-margin-top: 80px;
+}
+
+.menu-section:last-of-type {
+  margin-bottom: 0;
 }
 
 .menu-section[data-category="bieren"] { --cat-accent: var(--cat-bieren); }
@@ -3477,7 +3481,7 @@ h1, h2, h3, h4 {
   position: relative;
   z-index: 1;
   text-align: center;
-  padding: var(--space-3xl) var(--space-lg);
+  padding: var(--space-xl) var(--space-lg) calc(5.25rem + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border-subtle);
   color: var(--text-muted);
   font-size: 0.78rem;

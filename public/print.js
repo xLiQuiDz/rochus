@@ -14,7 +14,7 @@
   const page2Sections = document.getElementById('page2-sections');
 
   /* Pagina 1 van de A4-kaart (en linkerkolom van de klemkaart) vs. pagina 2 (rechterkolom) */
-  const FIRST_IDS = new Set(['bieren', 'flessen', 'fris', 'cocktails']);
+  const FIRST_IDS = new Set(['bieren', 'flessen', 'alcoholvrij', 'fris', 'cocktails']);
   const SECOND_IDS = new Set(['wijnen', 'shots', 'warme', 'fingerfood']);
 
   function formatEuro(price) {

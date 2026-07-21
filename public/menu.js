@@ -2803,7 +2803,7 @@
 
   function buildDrinkPool() {
     // Alleen alcohol: vatbier, cocktails, wijn per glas, shots.
-    // Geen fris, warme, flessen, 0,0 of eten.
+    // Geen fris, warme, flessen, alcoholvrij, 0,0 of eten.
     const ALCOHOL_CATS = new Set(['bieren', 'cocktails', 'wijnen', 'shots']);
     const btns = [...document.querySelectorAll('[data-add]')].filter((btn) => {
       const name = btn.dataset.name || '';
@@ -3320,6 +3320,7 @@
   const CATEGORY_EMOJI = {
     bieren: '🍺',
     flessen: '🍻',
+    alcoholvrij: '🫧',
     fris: '🥤',
     cocktails: '🍹',
     wijnen: '🍷',

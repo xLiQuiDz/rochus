@@ -46,6 +46,23 @@ test('validateAndPrice rejects bad input', () => {
   assert.throws(() => validateAndPrice([{ name: 'Duvel', qty: 1.5 }]), /Ongeldige/);
 });
 
+test('alcohol-free beers live in their own section', () => {
+  const menu = getPrintMenu();
+  const av = menu.sections.find((s) => s.id === 'alcoholvrij');
+  assert.ok(av, 'alcoholvrij section exists');
+  assert.deepEqual(
+    av.items.map((i) => i.name),
+    ['Stella 0,0', 'Sportzot', 'Tripel Karmeliet 0,0']
+  );
+
+  const flessen = menu.sections.find((s) => s.id === 'flessen');
+  assert.deepEqual(
+    flessen.items.map((i) => i.name),
+    ['Corona', 'Duvel', 'Flying Fish'],
+    'flessenbier keeps only alcoholic bottles'
+  );
+});
+
 test('getPrintMenu collapses wines into glas/fles rows', () => {
   const menu = getPrintMenu();
   const wines = menu.sections.find((s) => s.id === 'wijnen');
@@ -67,7 +84,7 @@ test('getPrintMenu omits digital-only water and collapses tea/chips variants', (
   const ids = menu.sections.map((s) => s.id);
   assert.deepEqual(
     ids,
-    ['bieren', 'flessen', 'fris', 'cocktails', 'wijnen', 'shots', 'warme', 'fingerfood']
+    ['bieren', 'flessen', 'alcoholvrij', 'fris', 'cocktails', 'wijnen', 'shots', 'warme', 'fingerfood']
   );
 
   const fris = menu.sections.find((s) => s.id === 'fris');

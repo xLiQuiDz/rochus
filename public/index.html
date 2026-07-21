@@ -37,6 +37,7 @@
       <button type="button" class="nav-filter__btn active" data-filter="all">Menu</button>
       <button type="button" class="nav-filter__btn" data-filter="bieren">Vatbier</button>
       <button type="button" class="nav-filter__btn" data-filter="flessen">Flessen</button>
+      <button type="button" class="nav-filter__btn" data-filter="alcoholvrij">Alcoholvrij</button>
       <button type="button" class="nav-filter__btn" data-filter="fris">Fris</button>
       <button type="button" class="nav-filter__btn" data-filter="cocktails">Cocktails</button>
       <button type="button" class="nav-filter__btn" data-filter="wijnen">Wijnen</button>
@@ -141,30 +142,6 @@
         <h2 class="menu-section__title">Flessenbier</h2>
       </div>
       <div class="menu-grid">
-        <article class="menu-card stagger-in" data-name="Stella 0,0">
-          <div class="menu-card__info">
-            <h3 class="menu-card__name">Stella 0,0</h3>
-            <p class="menu-card__detail">25 cl</p>
-          </div>
-          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
-          <button type="button" class="menu-card__add-btn" data-add data-name="Stella 0,0" data-price="3" data-category="flessen" aria-label="Voeg Stella 0,0 toe">+</button>
-        </article>
-        <article class="menu-card stagger-in" data-name="Sportzot">
-          <div class="menu-card__info">
-            <h3 class="menu-card__name">Sportzot</h3>
-            <p class="menu-card__detail">33 cl</p>
-          </div>
-          <div class="menu-card__prices"><span class="menu-card__price">€5</span></div>
-          <button type="button" class="menu-card__add-btn" data-add data-name="Sportzot" data-price="5" data-category="flessen" aria-label="Voeg Sportzot toe">+</button>
-        </article>
-        <article class="menu-card stagger-in" data-name="Tripel Karmeliet 0,0">
-          <div class="menu-card__info">
-            <h3 class="menu-card__name">Tripel Karmeliet 0,0</h3>
-            <p class="menu-card__detail">33 cl</p>
-          </div>
-          <div class="menu-card__prices"><span class="menu-card__price">€5</span></div>
-          <button type="button" class="menu-card__add-btn" data-add data-name="Tripel Karmeliet 0,0" data-price="5" data-category="flessen" aria-label="Voeg Tripel Karmeliet 0,0 toe">+</button>
-        </article>
         <article class="menu-card stagger-in" data-name="Corona">
           <div class="menu-card__info">
             <h3 class="menu-card__name">Corona</h3>
@@ -188,6 +165,42 @@
           </div>
           <div class="menu-card__prices"><span class="menu-card__price">€5</span></div>
           <button type="button" class="menu-card__add-btn" data-add data-name="Flying Fish" data-price="5" data-category="flessen" aria-label="Voeg Flying Fish toe">+</button>
+        </article>
+      </div>
+    </section>
+
+    <!-- Alcoholvrij -->
+    <section class="menu-section" id="alcoholvrij" data-category="alcoholvrij">
+      <div class="menu-section__header stagger-in">
+        <span class="menu-section__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M10 2h4l1 4v3.5c1.2.8 2 2.2 2 3.8V20a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-6.7c0-1.6.8-3 2-3.8V6l1-4z"/><ellipse cx="12" cy="15" rx="2" ry="2.6"/></svg>
+        </span>
+        <h2 class="menu-section__title">Alcoholvrij</h2>
+      </div>
+      <div class="menu-grid">
+        <article class="menu-card stagger-in" data-name="Stella 0,0">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Stella 0,0</h3>
+            <p class="menu-card__detail">25 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€3</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Stella 0,0" data-price="3" data-category="alcoholvrij" aria-label="Voeg Stella 0,0 toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Sportzot">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Sportzot</h3>
+            <p class="menu-card__detail">33 cl · 0,4%</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€5</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Sportzot" data-price="5" data-category="alcoholvrij" aria-label="Voeg Sportzot toe">+</button>
+        </article>
+        <article class="menu-card stagger-in" data-name="Tripel Karmeliet 0,0">
+          <div class="menu-card__info">
+            <h3 class="menu-card__name">Tripel Karmeliet 0,0</h3>
+            <p class="menu-card__detail">33 cl</p>
+          </div>
+          <div class="menu-card__prices"><span class="menu-card__price">€5</span></div>
+          <button type="button" class="menu-card__add-btn" data-add data-name="Tripel Karmeliet 0,0" data-price="5" data-category="alcoholvrij" aria-label="Voeg Tripel Karmeliet 0,0 toe">+</button>
         </article>
       </div>
     </section>
@@ -643,7 +656,7 @@
         class="order-drawer__note"
         id="order-note"
         maxlength="200"
-        placeholder="bv. zonder ijs / met drama"
+        placeholder="bv. zonder ijs / met extra spuuw"
         autocomplete="off"
       />
       <button type="button" class="order-drawer__whopays" id="who-pays">

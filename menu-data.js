@@ -3,12 +3,13 @@ const MENU_ITEMS = [
   { name: "Stella Artois van 't vat", price: 3, category: 'bieren' },
   { name: "Tripel Karmeliet van 't vat", price: 5, category: 'bieren' },
   { name: "Hoegaarden Rosé van 't vat", price: 4, category: 'bieren' },
-  { name: 'Stella 0,0', price: 3, category: 'flessen' },
-  { name: 'Sportzot', price: 5, category: 'flessen' },
-  { name: 'Tripel Karmeliet 0,0', price: 5, category: 'flessen' },
   { name: 'Corona', price: 5, category: 'flessen' },
   { name: 'Duvel', price: 5, category: 'flessen' },
   { name: 'Flying Fish', price: 5, category: 'flessen' },
+  // Sportzot is 0,4% — verkocht als alcoholvrij
+  { name: 'Stella 0,0', price: 3, category: 'alcoholvrij' },
+  { name: 'Sportzot', price: 5, category: 'alcoholvrij' },
+  { name: 'Tripel Karmeliet 0,0', price: 5, category: 'alcoholvrij' },
   { name: 'Fruitsap (Minute Maid)', price: 3, category: 'fris' },
   { name: 'Coca-Cola', price: 3, category: 'fris' },
   { name: 'Coca-Cola Zero', price: 3, category: 'fris' },
@@ -133,6 +134,7 @@ function validateAndPrice(rawItems) {
 const PRINT_CATEGORY_ORDER = [
   'bieren',
   'flessen',
+  'alcoholvrij',
   'fris',
   'cocktails',
   'wijnen',
@@ -144,6 +146,7 @@ const PRINT_CATEGORY_ORDER = [
 const PRINT_CATEGORY_LABELS = {
   bieren: "Bieren van 't vat",
   flessen: 'Flessenbier',
+  alcoholvrij: 'Alcoholvrij',
   fris: 'Frisdranken',
   cocktails: 'Cocktails',
   wijnen: 'Wijnen & bubbels',

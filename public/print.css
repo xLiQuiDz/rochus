@@ -333,7 +333,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 4mm;
+  gap: 3mm;
 }
 
 .sheet__turn {
@@ -404,7 +404,7 @@ body {
   display: flex;
   align-items: baseline;
   gap: 2mm;
-  padding: 1.2mm 0;
+  padding: 1mm 0;
   font-size: 0.88rem;
   line-height: 1.3;
 }
