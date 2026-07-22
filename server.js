@@ -276,10 +276,10 @@ app.get('/api/menu/print', requireStaff, (_req, res) => {
   }
 });
 
-/** Staff: print-ready allergen card */
-app.get('/api/menu/allergens', requireStaff, (_req, res) => {
+/** Public: allergen card for guests + staff print */
+app.get('/api/menu/allergens', (_req, res) => {
   try {
-    res.set('Cache-Control', 'no-store');
+    res.set('Cache-Control', 'public, max-age=60');
     res.json(getAllergenCard());
   } catch (err) {
     console.error(err);

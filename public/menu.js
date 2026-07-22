@@ -2530,6 +2530,22 @@
     sections.forEach((section) => {
       if (section.hidden) return;
 
+      if (section.dataset.category === 'allergieen') {
+        const rows = section.querySelectorAll('[data-allergen-item]');
+        let sectionHasMatch = false;
+        rows.forEach((row) => {
+          const name = (row.dataset.allergenItem || '').toLowerCase();
+          const match = !q || name.includes(q) || q.startsWith('allerg');
+          row.hidden = !match;
+          if (match) sectionHasMatch = true;
+        });
+        const header = section.querySelector('.menu-section__header');
+        if (header) header.hidden = Boolean(q && !sectionHasMatch);
+        section.style.display = sectionHasMatch || !q ? '' : 'none';
+        if (sectionHasMatch) anyVisible = true;
+        return;
+      }
+
       const cards = section.querySelectorAll('.menu-card');
       let sectionHasMatch = false;
 
@@ -2570,6 +2586,104 @@
   }
 
   searchInput.addEventListener('input', applySearch);
+
+  /* ------------------------------------------------------------------ */
+  /* Digital allergen card                                              */
+  /* ------------------------------------------------------------------ */
+  const ALLERGEN_ICONS = {
+    gluten:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-.4 1.8-1.2 3.2-2.4 4.2C8.2 7.4 7 8 5.8 8.2c1.6.6 2.9 1.6 3.8 3 .8 1.2 1.3 2.6 1.5 4.1.2-1.5.7-2.9 1.5-4.1.9-1.4 2.2-2.4 3.8-3C15 8 13.8 7.4 12.4 6.2 11.2 5.2 10.4 3.8 12 2zm0 9.5c-.3 1.4-.9 2.6-1.8 3.5-.8.8-1.8 1.3-2.9 1.5 1.2.5 2.2 1.3 2.9 2.4.6.9 1 2 1.1 3.1.2-1.1.6-2.2 1.2-3.1.7-1.1 1.7-1.9 2.9-2.4-1.1-.2-2.1-.7-2.9-1.5-.9-.9-1.5-2.1-1.8-3.5z"/></svg>',
+    ei: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="13" rx="6.5" ry="8" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="12" cy="14" rx="2.2" ry="2.6" fill="currentColor"/></svg>',
+    melk: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M8 5h8l1 3v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8l1-3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M9 5V3.5h6V5"/><path fill="currentColor" d="M9 11h6v8H9z"/></svg>',
+    soja: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 21V8"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 14c-2.5-1-4-3-4-5.5 2.5 0 4 1.5 4 4z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 12c2.5-1 4-3 4-5.5-2.5 0-4 1.5-4 4z"/><circle cx="12" cy="6" r="1.6" fill="currentColor"/></svg>',
+    noten:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="13" rx="5.5" ry="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M12 6.5c1.5 2 1.5 5 0 8M9 10c2 1 4 1 6 0"/></svg>',
+    pinda:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M9.5 7.5c0-2 1.5-3.5 3.5-3.5s3 1.2 3 3c0 1.5-.8 2.5-1.5 3.2.8.7 1.8 1.8 1.8 3.5 0 2.2-1.8 4-4 4s-4.3-1.8-4.3-4c0-1.6 1-2.7 1.8-3.4-.7-.8-1.3-1.8-1.3-3.3z"/></svg>',
+    selderij:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 22V10"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M12 12c-3-2-5-5-4.5-8M12 11c3-2 5-5 4.5-8M12 14c-2.5-1-4-3-3.5-5.5M12 13c2.5-1 4-3 3.5-5.5"/></svg>',
+    mosterd:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M8 20h8l1-10H7l1 10z"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M9 10V7l3-4 3 4v3"/><circle cx="12" cy="15" r="1.3" fill="currentColor"/></svg>',
+    sesam:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="8" cy="9" rx="2" ry="3" fill="currentColor" transform="rotate(-25 8 9)"/><ellipse cx="15" cy="8" rx="2" ry="3" fill="currentColor" transform="rotate(20 15 8)"/><ellipse cx="11" cy="15" rx="2" ry="3" fill="currentColor" transform="rotate(-5 11 15)"/></svg>',
+    sulfiet:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M9 3h6l1 3v14a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6l1-3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M9 8h6"/><path fill="currentColor" d="M10.2 12.2h1.1v4.2h-1.1zm2.5 0h1.1v4.2h-1.1zm-2.5 0c0-1.4.9-2.2 2.05-2.2s2.05.8 2.05 2.2h-1.1c0-.7-.35-1.05-.95-1.05s-.95.35-.95 1.05z"/></svg>',
+    schaaldieren:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 14c2-4 6-6 8-6s6 2 8 6"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M6 14c1.5 3 4 5 6 5s4.5-2 6-5"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/></svg>',
+    vis: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M3 12s4-5 9-5 9 5 9 5-4 5-9 5-9-5-9-5z"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M3 12l3-2.5M3 12l3 2.5"/></svg>',
+    lupine:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 21V9"/><circle cx="12" cy="7" r="2" fill="currentColor"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><circle cx="15" cy="10" r="1.6" fill="currentColor"/><circle cx="10" cy="13.5" r="1.5" fill="currentColor"/><circle cx="14" cy="13.5" r="1.5" fill="currentColor"/></svg>',
+    weekdieren:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M12 4c4 0 7 3.5 7 8s-3 8-7 8-7-3.5-7-8 3-8 7-8z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M12 8c2 0 3.5 2 3.5 4.5S14 17 12 17"/></svg>',
+  };
+
+  function allergenBadgeHtml(key, label) {
+    const icon = ALLERGEN_ICONS[key] || '';
+    const title = escapeHtml(label || key);
+    return `<span class="allergen-badge" title="${title}" aria-label="${title}">${icon}</span>`;
+  }
+
+  function renderGuestAllergenCard(data) {
+    const loadingEl = document.getElementById('allergen-card-loading');
+    const legendEl = document.getElementById('allergen-card-legend');
+    const bodyEl = document.getElementById('allergen-card-body');
+    const disclaimerEl = document.getElementById('allergen-card-disclaimer');
+    if (!legendEl || !bodyEl) return;
+
+    const legend = Array.isArray(data.legend) ? data.legend : [];
+    const legendMap = new Map(legend.map((l) => [l.key, l.label]));
+
+    legendEl.innerHTML = legend
+      .map(
+        (entry) =>
+          `<div class="allergen-card__legend-item">${allergenBadgeHtml(entry.key, entry.label)}<span>${escapeHtml(entry.label)}</span></div>`
+      )
+      .join('');
+
+    bodyEl.innerHTML = (Array.isArray(data.sections) ? data.sections : [])
+      .map((section) => {
+        const rows = (section.items || [])
+          .map((item) => {
+            const badges = (item.allergens || [])
+              .map((key) => allergenBadgeHtml(key, legendMap.get(key) || key))
+              .join('');
+            return `<li class="allergen-card__row" data-allergen-item="${escapeHtml(item.name)}">
+              <span class="allergen-card__name">${escapeHtml(item.name)}</span>
+              <span class="allergen-card__badges">${badges}</span>
+            </li>`;
+          })
+          .join('');
+        return `<div class="allergen-card__section">
+          <h3 class="allergen-card__section-title">${escapeHtml(section.title)}</h3>
+          <ul class="allergen-card__list">${rows}</ul>
+        </div>`;
+      })
+      .join('');
+
+    if (disclaimerEl) {
+      disclaimerEl.textContent = data.disclaimer || '';
+      disclaimerEl.hidden = !data.disclaimer;
+    }
+    if (loadingEl) loadingEl.hidden = true;
+    legendEl.hidden = legend.length === 0;
+    bodyEl.hidden = false;
+  }
+
+  async function loadGuestAllergenCard() {
+    const loadingEl = document.getElementById('allergen-card-loading');
+    try {
+      const res = await fetch('/api/menu/allergens');
+      if (!res.ok) throw new Error('load failed');
+      renderGuestAllergenCard(await res.json());
+    } catch {
+      if (loadingEl) {
+        loadingEl.textContent = 'Allergieën even niet beschikbaar — vraag het aan de bar.';
+        loadingEl.hidden = false;
+      }
+    }
+  }
+
+  loadGuestAllergenCard();
 
   /* ------------------------------------------------------------------ */
   /* Stagger-in animations                                              */
