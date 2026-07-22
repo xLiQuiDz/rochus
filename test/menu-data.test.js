@@ -19,14 +19,16 @@ test('catalog has unique names and sane prices', () => {
   }
 });
 
-test('Water is orderable and free (water-game reward)', () => {
-  const water = getMenuItem('Water');
-  assert.ok(water, 'Water must exist in the catalog');
-  assert.equal(water.price, 0);
+test('Chaudfontaine is paid catalog water (no free Water item)', () => {
+  assert.equal(getMenuItem('Water'), null, 'gratis Water is removed');
+  const plat = getMenuItem('Chaudfontaine Plat');
+  const bruis = getMenuItem('Chaudfontaine Bruis');
+  assert.ok(plat && bruis);
+  assert.equal(plat.price, 3);
+  assert.equal(bruis.price, 3);
 
-  const priced = validateAndPrice([{ name: 'Water', qty: 2 }]);
-  assert.equal(priced.total_cents, 0);
-  assert.equal(priced.items[0].unit_price_cents, 0);
+  const priced = validateAndPrice([{ name: 'Chaudfontaine Plat', qty: 2 }]);
+  assert.equal(priced.total_cents, toCents(3) * 2);
 });
 
 test('validateAndPrice prices lines against the catalog', () => {
@@ -127,7 +129,7 @@ test('getPrintMenu collapses wines into glas/fles rows', () => {
   assert.equal(champagne.bottle, 50);
 });
 
-test('getPrintMenu omits digital-only water and collapses tea/chips variants', () => {
+test('getPrintMenu collapses tea/chips variants and includes Chaudfontaine', () => {
   const menu = getPrintMenu();
   const ids = menu.sections.map((s) => s.id);
   assert.deepEqual(
@@ -136,7 +138,9 @@ test('getPrintMenu omits digital-only water and collapses tea/chips variants', (
   );
 
   const fris = menu.sections.find((s) => s.id === 'fris');
-  assert.ok(!fris.items.find((i) => i.name === 'Water'), 'water stays off paper (digital game only)');
+  assert.ok(fris.items.find((i) => i.name === 'Chaudfontaine Plat'));
+  assert.ok(fris.items.find((i) => i.name === 'Chaudfontaine Bruis'));
+  assert.ok(!fris.items.find((i) => i.name === 'Water'), 'no free Water on paper');
 
   const warme = menu.sections.find((s) => s.id === 'warme');
   const thee = warme.items.find((i) => i.name === 'Thee');

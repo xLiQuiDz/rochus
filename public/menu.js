@@ -104,6 +104,8 @@
     'Friet 105 Burger': { toast: 'Friet + burger diplomacy', className: 'gag-bounce', sticker: 'feed me' },
     Champagne: { toast: 'Champagne problems, but make it cash', className: 'gag-tilt', sticker: 'bougie' },
     Water: { toast: 'Eindelijk water. Hydratatie legend 💧', className: 'gag-bounce', sticker: 'hydrate' },
+    'Chaudfontaine Plat': { toast: 'Plat water. Verdiend. 💧', className: 'gag-bounce', sticker: 'hydrate' },
+    'Chaudfontaine Bruis': { toast: 'Bruis water. Verdiend. 💧', className: 'gag-bounce', sticker: 'hydrate' },
     'Meter bier': { toast: 'Eén. Volledige. Meter. 📏🍺', className: 'gag-bounce', sticker: 'formaat: episch' },
   };
 
@@ -269,6 +271,7 @@
   const DROP_SIZE = 76;
 
   const waterGame = {
+    pendingPrize: null,
     running: false,
     x: 0,
     y: 0,
@@ -664,6 +667,7 @@
     arenaEl.addEventListener('pointerup', onArenaPointerUp);
     arenaEl.addEventListener('pointercancel', onArenaPointerUp);
     quitBtn.addEventListener('click', () => {
+      waterGame.pendingPrize = null;
       closeWaterArena();
       showToast(pick(WATER_QUIT_LINES), false, 2800);
     });
@@ -671,6 +675,7 @@
       'keydown',
       (e) => {
         if (e.key === 'Escape' && !arenaEl.hidden) {
+          waterGame.pendingPrize = null;
           closeWaterArena();
           showToast(pick(WATER_QUIT_LINES), false, 2800);
           e.stopPropagation();
@@ -1964,17 +1969,31 @@
     renderOrder();
   }
 
-  /** Add water to the cart with full celebration — the game's prize. */
+  /** Add the chased Chaudfontaine to the cart — still paid, just earned. */
   function grantWater() {
-    const waterCard = document.getElementById('water-card');
-    const btn = waterCard && waterCard.querySelector('[data-add]');
-    if (!btn) return;
-    const gag = addItem(btn.dataset.name, 0, 'fris');
-    sparkToFab(btn);
-    if (!prefersReducedMotion && waterCard && gag.className) {
-      waterCard.classList.add(gag.className);
-      setTimeout(() => waterCard.classList.remove(gag.className), 700);
+    const prize = waterGame.pendingPrize;
+    waterGame.pendingPrize = null;
+    if (!prize || !prize.btn) return;
+    const price = Number(prize.price);
+    const gag = addItem(prize.name, Number.isFinite(price) ? price : 3, prize.category || 'fris');
+    sparkToFab(prize.btn);
+    if (!prefersReducedMotion && prize.card && gag.className) {
+      prize.card.classList.add(gag.className);
+      setTimeout(() => prize.card.classList.remove(gag.className), 700);
     }
+  }
+
+  function armWaterPrize(card) {
+    const btn = card && card.querySelector('[data-add]');
+    if (!btn) return null;
+    waterGame.pendingPrize = {
+      name: btn.dataset.name,
+      price: parseFloat(btn.dataset.price),
+      category: btn.dataset.category || 'fris',
+      btn,
+      card,
+    };
+    return waterGame.pendingPrize;
   }
 
   document.addEventListener('click', (e) => {
@@ -1982,7 +2001,8 @@
     if (waterCard) {
       e.preventDefault();
       e.stopPropagation();
-      // Keyboard / reduced-motion users get their water without the chase
+      if (!armWaterPrize(waterCard)) return;
+      // Keyboard / reduced-motion users skip the chase but still pay
       const viaKeyboard = e.detail === 0;
       if (viaKeyboard || prefersReducedMotion) {
         grantWater();
@@ -4318,6 +4338,8 @@
     'Aperol Spritz': 'Smaakt bewezen beter in golden hour. Bron: wij.',
     Corona: 'Mét limoentje. Zonder de rest.',
     Water: 'Heeft trust issues. Logisch, na vanavond.',
+    'Chaudfontaine Plat': 'Plat. Puur. En hardnekkig ontwijkend.',
+    'Chaudfontaine Bruis': 'Bruis met trust issues. Vang eerst, drink later.',
     Koffie: 'Koffie op een zomerbar? Iemand heeft morgen een meeting.',
     "Sharing Nacho's": '“Sharing” is juridisch niet bindend.',
     Champagne: 'Voor als de groepschat “GROOT NIEUWS” zegt.',

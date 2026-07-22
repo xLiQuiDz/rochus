@@ -20,8 +20,6 @@ const MENU_ITEMS = [
   { name: 'Chaudfontaine Plat', price: 3, category: 'fris' },
   { name: 'Chaudfontaine Bruis', price: 3, category: 'fris' },
   { name: 'Royal Bliss Tonic', price: 3, category: 'fris' },
-  // Prijs 0 is bewust: gratis, maar alleen bestelbaar wie het water-spel wint
-  { name: 'Water', price: 0, category: 'fris' },
   { name: 'Aperol Spritz', price: 8, category: 'cocktails' },
   { name: 'Gin Tonic Bulldog', price: 9, category: 'cocktails' },
   { name: 'Rum Captain Morgan', price: 9, category: 'cocktails' },
@@ -59,9 +57,6 @@ const MENU_ITEMS = [
   { name: "Sharing Nacho's", price: 15, category: 'fingerfood' },
   { name: 'Friet 105 Burger', price: 9, category: 'fingerfood' },
 ];
-
-/** Alleen via water-game op digitaal menu; niet op papieren menukaart. */
-const PRINT_EXCLUDE = new Set(['Water']);
 
 /** Variants collapsed to one print row: first key is the display item. */
 const PRINT_VARIANT_GROUPS = [
@@ -217,8 +212,6 @@ function getPrintMenu() {
   const emittedVariantGroups = new Set();
 
   for (const item of MENU_ITEMS) {
-    if (PRINT_EXCLUDE.has(item.name)) continue;
-
     if (item.category === 'wijnen') {
       const glassMatch = item.name.match(/^(.*) \(glas\)$/);
       const bottleMatch = item.name.match(/^(.*) \(fles\)$/);
@@ -341,7 +334,6 @@ function getAllergenCard() {
   const used = new Set();
 
   for (const item of MENU_ITEMS) {
-    if (PRINT_EXCLUDE.has(item.name)) continue;
     const allergens = getItemAllergens(item);
     if (!allergens || allergens.length === 0) continue;
 
