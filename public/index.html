@@ -792,6 +792,48 @@
     <div class="water-speech" id="water-speech" hidden></div>
   </div>
 
+  <!-- Meter bier — 100 cm cinema op een scherm van 7 cm -->
+  <div class="meter-show" id="meter-show" hidden aria-hidden="true">
+    <p class="meter-show__title" id="meter-title">DE METER KOMT ERAAN</p>
+    <p class="meter-show__counter"><span id="meter-cm">0</span><span class="meter-show__unit">cm</span></p>
+    <p class="meter-show__caption" id="meter-caption"></p>
+    <div class="meter-show__stage">
+      <div class="meter-show__plank" id="meter-plank"></div>
+    </div>
+    <div class="meter-show__stamp" id="meter-stamp" hidden>
+      <span class="meter-show__stamp-main">DAT IS ÉÉN METER</span>
+      <span class="meter-show__stamp-sub" id="meter-stamp-sub"></span>
+    </div>
+    <p class="meter-show__skip" id="meter-skip">tik om door te spoelen ⏩</p>
+  </div>
+
+  <!-- Rum — piraten-cinema met Jack Sparrow -->
+  <div class="rum-show" id="rum-show" hidden aria-hidden="true">
+    <div class="rum-show__letterbox rum-show__letterbox--top" aria-hidden="true"></div>
+    <div class="rum-show__letterbox rum-show__letterbox--bot" aria-hidden="true"></div>
+    <div class="rum-show__embers" id="rum-embers" aria-hidden="true"></div>
+    <p class="rum-show__title" id="rum-title">WHY IS THE RUM…</p>
+    <div class="rum-show__stage" id="rum-stage">
+      <img
+        class="rum-show__gif"
+        id="rum-gif"
+        src="assets/rum-pirate.gif"
+        alt=""
+        width="436"
+        height="200"
+        decoding="async"
+      />
+      <div class="rum-show__vignette" aria-hidden="true"></div>
+      <div class="rum-show__flash" id="rum-flash" aria-hidden="true"></div>
+    </div>
+    <p class="rum-show__caption" id="rum-caption"></p>
+    <div class="rum-show__stamp" id="rum-stamp" hidden>
+      <span class="rum-show__stamp-main">CHEERS</span>
+      <span class="rum-show__stamp-sub" id="rum-stamp-sub"></span>
+    </div>
+    <p class="rum-show__skip" id="rum-skip">tik om door te spoelen ⏩</p>
+  </div>
+
   <div class="pay-overlay" id="pay-overlay" hidden>
     <div class="pay-modal" role="dialog" aria-modal="true" aria-labelledby="pay-title">
       <button type="button" class="pay-modal__close" id="pay-close" aria-label="Sluit betaalscherm">×</button>

@@ -4148,6 +4148,538 @@ h1, h2, h3, h4 {
 }
 
 /* ============================================================
+   METER BIER — 100 cm cinema op een scherm van 7 cm.
+   De camera reist de hele plank af; op 100 cm zoomt hij uit
+   en zie je pas hoe absurd groot je bestelling écht is.
+   ============================================================ */
+.meter-show {
+  position: fixed;
+  inset: 0;
+  z-index: 645;
+  background:
+    radial-gradient(ellipse at 50% 118%, rgba(212, 175, 112, 0.22), transparent 60%),
+    radial-gradient(ellipse at 12% -8%, rgba(232, 180, 160, 0.1), transparent 55%),
+    #0a0806;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  transition: opacity 0.35s ease;
+}
+
+.meter-show[hidden] {
+  display: none !important;
+}
+
+.meter-show--out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.meter-show__title {
+  position: absolute;
+  top: max(11%, calc(env(safe-area-inset-top, 0px) + 8%));
+  left: 16px;
+  right: 16px;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.1rem, 5.4vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  color: rgba(240, 217, 168, 0.5);
+  pointer-events: none;
+}
+
+.meter-show__counter {
+  position: absolute;
+  top: 21%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(3.4rem, 21vw, 6rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--amber-400);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 40px rgba(212, 175, 112, 0.35);
+  pointer-events: none;
+}
+
+.meter-show__unit {
+  font-size: 0.32em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin-left: 0.18em;
+  color: var(--amber-600);
+}
+
+.meter-show__caption {
+  position: absolute;
+  top: calc(21% + clamp(3.8rem, 23vw, 6.6rem));
+  left: 24px;
+  right: 24px;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--text-secondary);
+  min-height: 1.5em;
+  pointer-events: none;
+}
+
+.meter-show__caption--pop {
+  animation: meterCaptionPop 0.45s var(--ease-out-expo);
+}
+
+@keyframes meterCaptionPop {
+  0% { transform: scale(0.7) rotate(-2deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* De plank wordt naar je tafel "gedragen": alles deint zachtjes mee */
+.meter-show__stage {
+  position: absolute;
+  inset: 0;
+  animation: meterCarry 0.62s ease-in-out infinite;
+}
+
+.meter-show--done .meter-show__stage {
+  animation: none;
+}
+
+@keyframes meterCarry {
+  0%, 100% { transform: translateY(0) rotate(0.15deg); }
+  50% { transform: translateY(-4px) rotate(-0.15deg); }
+}
+
+.meter-show__plank {
+  position: absolute;
+  left: 0;
+  top: 56%;
+  /* Dit ÍS de meter — véél breder dan je scherm, dat is de grap */
+  width: 340vw;
+  min-width: 1150px;
+  height: 36px;
+  transform-origin: left center;
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 47px),
+    linear-gradient(180deg, #a2713f, #7c5330 55%, #5a3a20);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  will-change: transform;
+}
+
+/* Meetlat op de voorkant: fijn streepje per cm, dik per 10 cm */
+.meter-show__plank::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  height: 12px;
+  background:
+    repeating-linear-gradient(90deg, rgba(247, 241, 232, 0.9) 0 2px, transparent 2px 10%),
+    repeating-linear-gradient(90deg, rgba(247, 241, 232, 0.35) 0 1px, transparent 1px 1%);
+  opacity: 0.8;
+}
+
+.meter-show__ruler-num {
+  position: absolute;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: rgba(240, 217, 168, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.meter-glass {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  width: 36px;
+  height: 54px;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+}
+
+.meter-show:not(.meter-show--done) .meter-glass {
+  animation: meterGlassJiggle 0.62s ease-in-out infinite;
+  animation-delay: var(--jig, 0s);
+}
+
+@keyframes meterGlassJiggle {
+  0%, 100% { transform: translateX(-50%) rotate(-1.6deg); }
+  50% { transform: translateX(-50%) rotate(1.6deg); }
+}
+
+/* Het glas: goud bier met licht taps toelopend silhouet */
+.meter-glass::before {
+  content: '';
+  position: absolute;
+  inset: 6px 4px 0;
+  clip-path: polygon(4% 0, 96% 0, 86% 100%, 14% 100%);
+  border-radius: 3px 3px 7px 7px;
+  background:
+    linear-gradient(105deg, rgba(255, 255, 255, 0.42) 6%, transparent 18%),
+    linear-gradient(180deg, #f4cf7d 0%, #e2a844 55%, #b97c2a 100%);
+  box-shadow: inset 0 -3px 6px rgba(90, 50, 10, 0.4);
+}
+
+/* De schuimkraag */
+.meter-glass::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 3px;
+  right: 3px;
+  height: 11px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fffdf7, #f0e4cd);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.meter-glass__face {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 15px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.meter-show__stamp {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  transform: translateX(-50%) rotate(-6deg);
+  pointer-events: none;
+}
+
+.meter-show__stamp[hidden] {
+  display: none;
+}
+
+.meter-show__stamp-main {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.1rem, 5.4vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  color: var(--amber-400);
+  border: 3px solid var(--amber-500);
+  border-radius: 10px;
+  padding: 10px 18px;
+  background: rgba(10, 9, 8, 0.65);
+  box-shadow: var(--shadow-glow-strong), inset 0 0 24px rgba(212, 175, 112, 0.12);
+  animation: meterStampSlam 0.5s var(--ease-out-expo);
+}
+
+@keyframes meterStampSlam {
+  0% { transform: scale(3) rotate(4deg); opacity: 0; }
+  60% { transform: scale(0.94) rotate(-1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.meter-show__stamp-sub {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  animation: meterSubIn 0.6s 0.25s var(--ease-out-expo) backwards;
+}
+
+@keyframes meterSubIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.meter-show__skip {
+  position: absolute;
+  bottom: max(18px, env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meter-show {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   RUM — piraten-cinema. Letterbox, Ken Burns op Jack, cheers.
+   ============================================================ */
+.rum-show {
+  position: fixed;
+  inset: 0;
+  z-index: 650;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(45, 90, 61, 0.35), transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgba(201, 162, 39, 0.18), transparent 50%),
+    radial-gradient(ellipse at 15% 10%, rgba(139, 90, 43, 0.2), transparent 45%),
+    #050403;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  transition: opacity 0.35s ease;
+}
+
+.rum-show[hidden] {
+  display: none !important;
+}
+
+.rum-show--out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rum-show__letterbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: max(7.5vh, 42px);
+  background: #000;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.rum-show__letterbox--top {
+  top: 0;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+}
+
+.rum-show__letterbox--bot {
+  bottom: 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.65);
+}
+
+.rum-show__embers {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.rum-show__ember {
+  position: absolute;
+  bottom: -8px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f0d9a8, #c9a227 60%, transparent);
+  opacity: 0;
+  animation: rumEmberRise linear infinite;
+}
+
+@keyframes rumEmberRise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.6);
+    opacity: 0;
+  }
+  12% { opacity: 0.85; }
+  100% {
+    transform: translate3d(var(--drift, 0), -110vh, 0) scale(0.2);
+    opacity: 0;
+  }
+}
+
+.rum-show__title {
+  position: absolute;
+  top: max(calc(7.5vh + 10px), calc(env(safe-area-inset-top, 0px) + 52px));
+  left: 16px;
+  right: 16px;
+  z-index: 5;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.05rem, 5.2vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  color: rgba(240, 217, 168, 0.55);
+  text-shadow: 0 0 28px rgba(201, 162, 39, 0.25);
+  pointer-events: none;
+  animation: rumTitleIn 0.7s var(--ease-out-expo) both;
+}
+
+@keyframes rumTitleIn {
+  from { transform: translateY(-12px); opacity: 0; letter-spacing: 0.4em; }
+  to { transform: translateY(0); opacity: 1; letter-spacing: 0.22em; }
+}
+
+.rum-show__stage {
+  position: absolute;
+  inset: 14% 0 18%;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.rum-show__gif {
+  width: min(96vw, 720px);
+  height: auto;
+  max-height: 58vh;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(240, 217, 168, 0.18),
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 80px rgba(201, 162, 39, 0.15);
+  transform-origin: 50% 45%;
+  will-change: transform;
+  filter: contrast(1.06) saturate(1.08);
+}
+
+.rum-show--done .rum-show__gif {
+  box-shadow:
+    0 0 0 2px rgba(240, 217, 168, 0.45),
+    0 28px 70px rgba(0, 0, 0, 0.75),
+    0 0 100px rgba(201, 162, 39, 0.35);
+}
+
+.rum-show__vignette {
+  position: absolute;
+  inset: -8%;
+  background:
+    radial-gradient(ellipse at 50% 45%, transparent 35%, rgba(0, 0, 0, 0.55) 78%, rgba(0, 0, 0, 0.85) 100%);
+  pointer-events: none;
+}
+
+.rum-show__flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(240, 217, 168, 0.55), transparent 55%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rum-show__flash--go {
+  animation: rumFlash 0.55s ease-out;
+}
+
+@keyframes rumFlash {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+.rum-show__caption {
+  position: absolute;
+  bottom: max(calc(7.5vh + 36px), calc(env(safe-area-inset-bottom, 0px) + 56px));
+  left: 24px;
+  right: 24px;
+  z-index: 5;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  font-style: italic;
+  color: rgba(247, 241, 232, 0.88);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+  min-height: 1.5em;
+  pointer-events: none;
+}
+
+.rum-show__caption--pop {
+  animation: rumCaptionPop 0.45s var(--ease-out-expo);
+}
+
+@keyframes rumCaptionPop {
+  0% { transform: scale(0.75) translateY(8px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.rum-show__stamp {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  transform: translateX(-50%) rotate(-5deg);
+  pointer-events: none;
+}
+
+.rum-show__stamp[hidden] {
+  display: none;
+}
+
+.rum-show__stamp-main {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.4rem, 8vw, 3rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  color: #f0d9a8;
+  border: 3px solid #c9a227;
+  border-radius: 10px;
+  padding: 12px 22px;
+  background: rgba(5, 4, 3, 0.72);
+  box-shadow:
+    0 0 40px rgba(201, 162, 39, 0.35),
+    inset 0 0 28px rgba(201, 162, 39, 0.12);
+  animation: rumStampSlam 0.55s var(--ease-out-expo);
+}
+
+@keyframes rumStampSlam {
+  0% { transform: scale(3.2) rotate(8deg); opacity: 0; }
+  55% { transform: scale(0.92) rotate(-2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.rum-show__stamp-sub {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(240, 217, 168, 0.75);
+  animation: rumSubIn 0.6s 0.2s var(--ease-out-expo) backwards;
+}
+
+@keyframes rumSubIn {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.rum-show__skip {
+  position: absolute;
+  bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  z-index: 5;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(247, 241, 232, 0.4);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rum-show {
+    display: none !important;
+  }
+}
+
+/* ============================================================
    Toegankelijkheid — zichtbare focus voor toetsenbordgebruikers.
    :focus-visible laat muis/touch met rust.
    ============================================================ */

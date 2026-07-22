@@ -92,7 +92,7 @@
     'Limoncello Spritz': { toast: 'Citroen chaos activated', className: 'gag-wobble', sticker: 'zesty' },
     Corona: { toast: 'Waar is het limoentje?!', className: 'gag-tilt', sticker: 'beach mode' },
     Tequila: { toast: 'Geen spijt. Alleen lore.', className: 'gag-shake', sticker: 'oops' },
-    Rum: { toast: 'Pirate energy 🏴‍☠️', className: 'gag-shake' },
+    Rum: { toast: 'Pirate energy 🏴‍☠️', className: 'gag-shake', sticker: 'why is the rum' },
     'Limoncello Bongiorno': { toast: 'Bongiornooooo', className: 'gag-wobble', sticker: 'ciao' },
     Duvel: { toast: 'Duvel in detail', className: 'gag-tilt', sticker: 'Belgian menace' },
     "Tripel Karmeliet van 't vat": {
@@ -104,6 +104,7 @@
     'Friet 105 Burger': { toast: 'Friet + burger diplomacy', className: 'gag-bounce', sticker: 'feed me' },
     Champagne: { toast: 'Champagne problems, but make it cash', className: 'gag-tilt', sticker: 'bougie' },
     Water: { toast: 'Eindelijk water. Hydratatie legend 💧', className: 'gag-bounce', sticker: 'hydrate' },
+    'Meter bier': { toast: 'Eén. Volledige. Meter. 📏🍺', className: 'gag-bounce', sticker: 'formaat: episch' },
   };
 
   function pickItemGag(name, category) {
@@ -672,6 +673,516 @@
         if (e.key === 'Escape' && !arenaEl.hidden) {
           closeWaterArena();
           showToast(pick(WATER_QUIT_LINES), false, 2800);
+          e.stopPropagation();
+        }
+      },
+      true
+    );
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* METER BIER — 100 cm cinema op een scherm van 7 cm                  */
+  /* ------------------------------------------------------------------ */
+  const meterShowEl = document.getElementById('meter-show');
+  const meterPlankEl = document.getElementById('meter-plank');
+  const meterCmEl = document.getElementById('meter-cm');
+  const meterCaptionEl = document.getElementById('meter-caption');
+  const meterTitleEl = document.getElementById('meter-title');
+  const meterStampEl = document.getElementById('meter-stamp');
+  const meterStampSubEl = document.getElementById('meter-stamp-sub');
+  const meterSkipEl = document.getElementById('meter-skip');
+
+  const METER_GLASSES = 11;
+  const METER_GLASS_FACES = { 0: '😎', 5: '😅', 10: '🥳' };
+
+  const METER_TITLES_REPEAT = [
+    'ALWEER EEN METER?!',
+    'DE METER: HET VERVOLG',
+    'JULLIE ZIJN NIET OKÉ 😳',
+    'NÓG 100 CM. RESPECT.',
+  ];
+  /* Onderschriften per centimeterstand — moet oplopend op `at` staan */
+  const METER_CAPTIONS = [
+    { at: 2, text: 'daar gaan we — 100 cm bier onderweg' },
+    { at: 22, text: 'ja, dit is écht een volle meter' },
+    { at: 48, text: 'HALFWEG. even ademen. 😮‍💨' },
+    { at: 72, text: 'je scherm is 7 cm. dit is 100. hou vol.' },
+    { at: 93, text: 'bijna… BIJNA…' },
+  ];
+  const METER_CAPTIONS_REPEAT = [
+    { at: 2, text: 'alweer?! oké. daar gaan we weer.' },
+    { at: 30, text: 'je weet hoe lang dit duurt hè' },
+    { at: 50, text: 'HALFWEG. alweer. legende.' },
+    { at: 80, text: 'de bar sleept de glazen al aan' },
+  ];
+  const METER_STAMP_SUBS = [
+    '±11 glazen · sterkte aan de drager 🫡',
+    '100 cm geluk · 0 cm spijt',
+    'deel eerlijk. of niet. wij kijken niet. 👀',
+    'tip: drink van buiten naar binnen, anders kantelt ’m',
+  ];
+  const METER_DONE_TOASTS = [
+    'Meter bier in ’t mandje. Groots. 📏',
+    '100 cm geluk toegevoegd 🍺',
+    'De bar zet zich al schrap 💪',
+    'Meter besteld. Vrienden verplicht.',
+  ];
+
+  const meterShow = {
+    running: false,
+    phase: 'idle',
+    plays: 0,
+    start: 0,
+    raf: 0,
+    capIdx: 0,
+    lastTick: -1,
+    closeTimer: 0,
+  };
+
+  /* De reis: rustig op gang, kruipend "rustpunt" rond 50 cm, dan uitrijden */
+  const METER_SEGMENTS = [
+    { until: 1900, from: 0, to: 0.47, ease: meterEase },
+    { until: 2500, from: 0.47, to: 0.52, ease: (t) => t },
+    { until: 4400, from: 0.52, to: 1, ease: meterEase },
+  ];
+
+  function meterEase(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
+  function meterProgress(elapsed) {
+    let prev = 0;
+    for (const seg of METER_SEGMENTS) {
+      if (elapsed < seg.until) {
+        const t = (elapsed - prev) / (seg.until - prev);
+        return seg.from + (seg.to - seg.from) * seg.ease(t);
+      }
+      prev = seg.until;
+    }
+    return 1;
+  }
+
+  function buildMeterPlank() {
+    if (!meterPlankEl || meterPlankEl.dataset.built) return;
+    meterPlankEl.dataset.built = '1';
+    const frag = document.createDocumentFragment();
+    for (let cm = 0; cm <= 100; cm += 10) {
+      const num = document.createElement('span');
+      num.className = 'meter-show__ruler-num';
+      num.textContent = cm;
+      num.style.left = `${cm}%`;
+      frag.appendChild(num);
+    }
+    for (let i = 0; i < METER_GLASSES; i++) {
+      const glass = document.createElement('div');
+      glass.className = 'meter-glass';
+      glass.style.left = `${4.5 + (i * 91) / (METER_GLASSES - 1)}%`;
+      glass.style.setProperty('--jig', `${(i % 4) * 0.16}s`);
+      if (METER_GLASS_FACES[i]) {
+        const face = document.createElement('span');
+        face.className = 'meter-glass__face';
+        face.textContent = METER_GLASS_FACES[i];
+        glass.appendChild(face);
+      }
+      frag.appendChild(glass);
+    }
+    meterPlankEl.appendChild(frag);
+  }
+
+  function setMeterCaption(text) {
+    meterCaptionEl.textContent = text;
+    meterCaptionEl.classList.remove('meter-show__caption--pop');
+    void meterCaptionEl.offsetWidth;
+    meterCaptionEl.classList.add('meter-show__caption--pop');
+  }
+
+  function meterFrame(now) {
+    const g = meterShow;
+    if (!g.running || g.phase !== 'pan') return;
+    const p = meterProgress(now - g.start);
+    const cm = Math.min(100, Math.round(p * 100));
+    meterCmEl.textContent = cm;
+
+    const travel = Math.max(0, meterPlankEl.offsetWidth - window.innerWidth + 36);
+    meterPlankEl.style.transform = `translate3d(${18 - p * travel}px, 0, 0)`;
+
+    // Tik-tik-tik: elk gepasseerde 10 cm voel je in je hand
+    const tick = Math.floor(cm / 10);
+    if (tick !== g.lastTick) {
+      g.lastTick = tick;
+      if (cm > 0 && cm < 100 && navigator.vibrate) navigator.vibrate(6);
+    }
+
+    const caps = g.plays > 1 ? METER_CAPTIONS_REPEAT : METER_CAPTIONS;
+    while (g.capIdx < caps.length && cm >= caps[g.capIdx].at) {
+      setMeterCaption(caps[g.capIdx].text);
+      g.capIdx += 1;
+    }
+
+    if (p >= 1) {
+      meterFinale();
+      return;
+    }
+    g.raf = requestAnimationFrame(meterFrame);
+  }
+
+  /* De punchline: camera zoomt uit, héél de meter past ineens op je scherm */
+  function meterFinale() {
+    const g = meterShow;
+    if (g.phase === 'finale') return;
+    g.phase = 'finale';
+    cancelAnimationFrame(g.raf);
+    meterCmEl.textContent = '100';
+    meterCaptionEl.textContent = '';
+    meterSkipEl.textContent = 'tik om te sluiten';
+
+    const pad = 18;
+    const scale = Math.min(1, (window.innerWidth - pad * 2) / meterPlankEl.offsetWidth);
+    meterPlankEl.style.transition = 'transform 0.65s var(--ease-out-expo)';
+    meterPlankEl.style.transform = `translate3d(${pad}px, 0, 0) scale(${scale})`;
+    meterShowEl.classList.add('meter-show--done');
+
+    setTimeout(() => {
+      if (!g.running) return;
+      meterStampEl.hidden = false;
+      if (navigator.vibrate) navigator.vibrate([30, 60, 30, 60, 80]);
+      // zIndex boven de overlay (645) — standaard zit confetti op 100
+      fireConfetti({
+        particleCount: 90,
+        spread: 85,
+        startVelocity: 42,
+        origin: { y: 0.62 },
+        zIndex: 655,
+        colors: ROCHUS_CONFETTI_COLORS,
+      });
+      fireConfetti({
+        particleCount: 40,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.72 },
+        zIndex: 655,
+        colors: ROCHUS_CONFETTI_COLORS,
+      });
+      fireConfetti({
+        particleCount: 40,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.72 },
+        zIndex: 655,
+        colors: ROCHUS_CONFETTI_COLORS,
+      });
+    }, 420);
+
+    clearTimeout(g.closeTimer);
+    g.closeTimer = setTimeout(closeMeterShow, 2800);
+  }
+
+  function playMeterShow() {
+    if (!meterShowEl || prefersReducedMotion || meterShow.running) return;
+    const g = meterShow;
+    buildMeterPlank();
+    g.running = true;
+    g.phase = 'pan';
+    g.plays += 1;
+    g.capIdx = 0;
+    g.lastTick = -1;
+    clearTimeout(g.closeTimer);
+
+    // De gewone add-toast zou over de cinema hangen — die komt na afloop
+    clearTimeout(showToast._t);
+    toastEl.classList.remove('show');
+    toastEl.hidden = true;
+
+    meterShowEl.classList.remove('meter-show--done', 'meter-show--out');
+    meterStampEl.hidden = true;
+    meterStampSubEl.textContent = pick(METER_STAMP_SUBS);
+    meterTitleEl.textContent = g.plays > 1 ? pick(METER_TITLES_REPEAT) : 'DE METER KOMT ERAAN';
+    meterCaptionEl.textContent = '';
+    meterCaptionEl.classList.remove('meter-show__caption--pop');
+    meterSkipEl.textContent = 'tik om door te spoelen ⏩';
+    meterCmEl.textContent = '0';
+    meterPlankEl.style.transition = 'none';
+    meterPlankEl.style.transform = 'translate3d(18px, 0, 0)';
+    meterShowEl.hidden = false;
+    document.body.style.overflow = 'hidden';
+
+    g.start = performance.now();
+    g.raf = requestAnimationFrame(meterFrame);
+  }
+
+  function closeMeterShow() {
+    const g = meterShow;
+    if (!g.running) return;
+    g.running = false;
+    g.phase = 'idle';
+    cancelAnimationFrame(g.raf);
+    clearTimeout(g.closeTimer);
+    meterShowEl.classList.add('meter-show--out');
+    setTimeout(() => {
+      meterShowEl.hidden = true;
+      meterShowEl.classList.remove('meter-show--out', 'meter-show--done');
+    }, 380);
+    if (!drawer.classList.contains('open')) document.body.style.overflow = '';
+    showToast(pick(METER_DONE_TOASTS), false, 3000);
+  }
+
+  if (meterShowEl) {
+    // Eén tik: doorspoelen naar de finale; nog een tik: sluiten
+    meterShowEl.addEventListener('click', () => {
+      if (!meterShow.running) return;
+      if (meterShow.phase === 'pan') meterFinale();
+      else closeMeterShow();
+    });
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && meterShow.running) {
+          closeMeterShow();
+          e.stopPropagation();
+        }
+      },
+      true
+    );
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* RUM — piraten-cinema met Jack Sparrow                              */
+  /* ------------------------------------------------------------------ */
+  const rumShowEl = document.getElementById('rum-show');
+  const rumGifEl = document.getElementById('rum-gif');
+  const rumCaptionEl = document.getElementById('rum-caption');
+  const rumTitleEl = document.getElementById('rum-title');
+  const rumStampEl = document.getElementById('rum-stamp');
+  const rumStampSubEl = document.getElementById('rum-stamp-sub');
+  const rumSkipEl = document.getElementById('rum-skip');
+  const rumEmbersEl = document.getElementById('rum-embers');
+  const rumFlashEl = document.getElementById('rum-flash');
+
+  const RUM_TITLES = [
+    'WHY IS THE RUM…',
+    'PIRATENMODUS',
+    'CAPTAIN ON DECK',
+    'DE RUM KOMT ERAAN',
+  ];
+  const RUM_TITLES_REPEAT = [
+    'ALWEER RUM?!',
+    'SAVVY?',
+    'NOG ÉÉN VOOR DE KAPITEIN',
+    'JULLIE ZIJN PIRATEN 🏴‍☠️',
+  ];
+  const RUM_CAPTIONS = [
+    { at: 0.08, text: 'jungle. fles. intenties.' },
+    { at: 0.28, text: 'Jack heft ’m. jij ook.' },
+    { at: 0.52, text: 'waar is de rum? HIER. 🏴‍☠️' },
+    { at: 0.78, text: 'CHEERS — maar make it epic' },
+  ];
+  const RUM_CAPTIONS_REPEAT = [
+    { at: 0.1, text: 'alweer? respectloos piratenwerk' },
+    { at: 0.4, text: 'Captain Morgan knikt goedkeurend' },
+    { at: 0.7, text: 'de bar zet de rum al klaar' },
+  ];
+  const RUM_STAMP_SUBS = [
+    'savvy? · zero regrets 🏴‍☠️',
+    'why is the rum gone? niet meer.',
+    'piratenenergie unlocked',
+    'drink alsof je een schip bestuurt',
+  ];
+  const RUM_DONE_TOASTS = [
+    'Rum in ’t mandje. Savvy. 🏴‍☠️',
+    'Pirate energy toegevoegd 🍾',
+    'Cheers — Jack zou trots zijn',
+    'De kapitein is tevreden 🫡',
+  ];
+  const RUM_CONFETTI = ['#c9a227', '#e8c547', '#8b5a2b', '#f0d9a8', '#2d5a3d', '#f7f1e8'];
+
+  const rumShow = {
+    running: false,
+    phase: 'idle',
+    plays: 0,
+    start: 0,
+    raf: 0,
+    capIdx: 0,
+    closeTimer: 0,
+  };
+
+  function isRumItem(name) {
+    return name === 'Rum' || name === 'Rum Captain Morgan';
+  }
+
+  function rumEase(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
+  /** ~4.2s opbouw → finale */
+  function rumProgress(elapsed) {
+    return Math.min(1, rumEase(elapsed / 4200));
+  }
+
+  function setRumCaption(text) {
+    rumCaptionEl.textContent = text;
+    rumCaptionEl.classList.remove('rum-show__caption--pop');
+    void rumCaptionEl.offsetWidth;
+    rumCaptionEl.classList.add('rum-show__caption--pop');
+  }
+
+  function buildRumEmbers() {
+    if (!rumEmbersEl || rumEmbersEl.dataset.built) return;
+    rumEmbersEl.dataset.built = '1';
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < 14; i++) {
+      const spark = document.createElement('span');
+      spark.className = 'rum-show__ember';
+      spark.style.left = `${6 + Math.random() * 88}%`;
+      spark.style.animationDelay = `${(Math.random() * 2.8).toFixed(2)}s`;
+      spark.style.animationDuration = `${(2.4 + Math.random() * 2.2).toFixed(2)}s`;
+      spark.style.setProperty('--drift', `${(Math.random() * 40 - 20).toFixed(0)}px`);
+      frag.appendChild(spark);
+    }
+    rumEmbersEl.appendChild(frag);
+  }
+
+  function rumFrame(now) {
+    const g = rumShow;
+    if (!g.running || g.phase !== 'pan') return;
+    const p = rumProgress(now - g.start);
+
+    // Ken Burns: zoom van 0.72 → 1.18 + lichte pan, met heartbeat-shake tegen het eind
+    const zoom = 0.72 + p * 0.46;
+    const panX = Math.sin(p * Math.PI * 1.4) * 3.5;
+    const panY = Math.cos(p * Math.PI * 0.9) * 2.2;
+    const shake = p > 0.82 ? Math.sin((now - g.start) * 0.045) * (p - 0.82) * 8 : 0;
+    rumGifEl.style.transform = `translate3d(${panX + shake}%, ${panY}%, 0) scale(${zoom})`;
+
+    const caps = g.plays > 1 ? RUM_CAPTIONS_REPEAT : RUM_CAPTIONS;
+    while (g.capIdx < caps.length && p >= caps[g.capIdx].at) {
+      setRumCaption(caps[g.capIdx].text);
+      g.capIdx += 1;
+      if (navigator.vibrate) navigator.vibrate(8);
+    }
+
+    if (p >= 1) {
+      rumFinale();
+      return;
+    }
+    g.raf = requestAnimationFrame(rumFrame);
+  }
+
+  function rumFinale() {
+    const g = rumShow;
+    if (g.phase === 'finale') return;
+    g.phase = 'finale';
+    cancelAnimationFrame(g.raf);
+    rumCaptionEl.textContent = '';
+    rumSkipEl.textContent = 'tik om te sluiten';
+    rumShowEl.classList.add('rum-show--done');
+    rumGifEl.style.transition = 'transform 0.55s var(--ease-out-expo)';
+    rumGifEl.style.transform = 'translate3d(0, 0, 0) scale(1.05)';
+
+    if (rumFlashEl) {
+      rumFlashEl.classList.remove('rum-show__flash--go');
+      void rumFlashEl.offsetWidth;
+      rumFlashEl.classList.add('rum-show__flash--go');
+    }
+
+    setTimeout(() => {
+      if (!g.running) return;
+      rumStampEl.hidden = false;
+      if (navigator.vibrate) navigator.vibrate([28, 50, 28, 50, 90]);
+      fireConfetti({
+        particleCount: 110,
+        spread: 100,
+        startVelocity: 48,
+        origin: { y: 0.55 },
+        zIndex: 665,
+        colors: RUM_CONFETTI,
+      });
+      fireConfetti({
+        particleCount: 45,
+        angle: 55,
+        spread: 60,
+        origin: { x: 0, y: 0.7 },
+        zIndex: 665,
+        colors: RUM_CONFETTI,
+      });
+      fireConfetti({
+        particleCount: 45,
+        angle: 125,
+        spread: 60,
+        origin: { x: 1, y: 0.7 },
+        zIndex: 665,
+        colors: RUM_CONFETTI,
+      });
+    }, 280);
+
+    clearTimeout(g.closeTimer);
+    g.closeTimer = setTimeout(closeRumShow, 3000);
+  }
+
+  function playRumShow() {
+    if (!rumShowEl || prefersReducedMotion || rumShow.running) return;
+    // Meter-cinema wint als die al draait
+    if (meterShow.running) return;
+    const g = rumShow;
+    buildRumEmbers();
+    g.running = true;
+    g.phase = 'pan';
+    g.plays += 1;
+    g.capIdx = 0;
+    clearTimeout(g.closeTimer);
+
+    clearTimeout(showToast._t);
+    toastEl.classList.remove('show');
+    toastEl.hidden = true;
+
+    rumShowEl.classList.remove('rum-show--done', 'rum-show--out');
+    rumStampEl.hidden = true;
+    rumStampSubEl.textContent = pick(RUM_STAMP_SUBS);
+    rumTitleEl.textContent = g.plays > 1 ? pick(RUM_TITLES_REPEAT) : pick(RUM_TITLES);
+    rumCaptionEl.textContent = '';
+    rumCaptionEl.classList.remove('rum-show__caption--pop');
+    rumSkipEl.textContent = 'tik om door te spoelen ⏩';
+    rumGifEl.style.transition = 'none';
+    rumGifEl.style.transform = 'translate3d(0, 0, 0) scale(0.72)';
+    // Herstart de gif-loop door cache-bust op src
+    const src = rumGifEl.getAttribute('src').split('?')[0];
+    rumGifEl.src = `${src}?t=${Date.now()}`;
+    rumShowEl.hidden = false;
+    rumShowEl.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    g.start = performance.now();
+    g.raf = requestAnimationFrame(rumFrame);
+  }
+
+  function closeRumShow() {
+    const g = rumShow;
+    if (!g.running) return;
+    g.running = false;
+    g.phase = 'idle';
+    cancelAnimationFrame(g.raf);
+    clearTimeout(g.closeTimer);
+    rumShowEl.classList.add('rum-show--out');
+    setTimeout(() => {
+      rumShowEl.hidden = true;
+      rumShowEl.setAttribute('aria-hidden', 'true');
+      rumShowEl.classList.remove('rum-show--out', 'rum-show--done');
+      if (rumFlashEl) rumFlashEl.classList.remove('rum-show__flash--go');
+    }, 380);
+    if (!drawer.classList.contains('open')) document.body.style.overflow = '';
+    showToast(pick(RUM_DONE_TOASTS), false, 3000);
+  }
+
+  if (rumShowEl) {
+    rumShowEl.addEventListener('click', () => {
+      if (!rumShow.running) return;
+      if (rumShow.phase === 'pan') rumFinale();
+      else closeRumShow();
+    });
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && rumShow.running) {
+          closeRumShow();
           e.stopPropagation();
         }
       },
@@ -1517,8 +2028,12 @@
       const price = parseFloat(addBtn.dataset.price);
       const category = addBtn.dataset.category || 'other';
       if (!name || !Number.isFinite(price)) return;
+      const qtyBefore = cartTotalQty();
       const gag = addItem(name, price, category);
       sparkToFab(addBtn);
+      // Alleen bij een échte toevoeging (niet bij uitverkocht/max) mag de cinema starten
+      if (name === 'Meter bier' && cartTotalQty() > qtyBefore) playMeterShow();
+      if (isRumItem(name) && cartTotalQty() > qtyBefore) playRumShow();
       if (!prefersReducedMotion) {
         addBtn.classList.remove('btn-twirl');
         void addBtn.offsetWidth;
@@ -3785,6 +4300,7 @@
     'Friet 105 Burger': 'Genoemd naar nummer 105. De burger woont daar nu.',
     'Hugo Spritz': 'Hugo is de enige man die iedereen hier vertrouwt.',
     Bitterballen: 'Binnenkant: lava. Wacht. Echt. Wacht.',
+    'Meter bier': 'Officieel meetinstrument: 100 cm geluk, ±11 glazen. Je gsm-scherm is er 7.',
   };
   const GENERIC_LORE = [
     '33% van dit drankje is persoonlijkheid.',
