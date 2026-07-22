@@ -188,7 +188,7 @@ test('getAllergenCard lists fingerfood with expected allergens', () => {
   assert.deepEqual(bitterballen.allergens, ['gluten', 'ei', 'melk', 'selderij']);
 
   const burger = food.items.find((i) => i.name === 'Friet 105 Burger');
-  assert.deepEqual(burger.allergens, ['gluten', 'ei', 'melk', 'sesam']);
+  assert.deepEqual(burger.allergens, ['gluten', 'ei', 'mosterd', 'vis', 'soja', 'selderij']);
 
   const chipsKip = food.items.find((i) => i.name === 'Zak Chips (gestoofde kip)');
   assert.deepEqual(chipsKip.allergens, ['melk', 'selderij']);
@@ -197,6 +197,8 @@ test('getAllergenCard lists fingerfood with expected allergens', () => {
   const legendKeys = card.legend.map((l) => l.key);
   assert.ok(legendKeys.includes('gluten'));
   assert.ok(legendKeys.includes('sulfiet'));
-  assert.ok(legendKeys.includes('sesam'));
+  assert.ok(legendKeys.includes('vis'));
+  assert.ok(legendKeys.includes('mosterd'));
+  assert.ok(!legendKeys.includes('sesam'), 'sesam unused after burger label');
   assert.ok(!legendKeys.includes('pinda'), 'unused allergens stay out of legend');
 });

@@ -312,7 +312,7 @@ const ITEM_ALLERGENS = {
   'Kippen Nuggets (6 stuks)': ['gluten', 'ei', 'soja'],
   'Kipfingers (6 stuks)': ['gluten', 'ei'],
   "Sharing Nacho's": ['melk'],
-  'Friet 105 Burger': ['gluten', 'ei', 'melk', 'sesam'],
+  'Friet 105 Burger': ['gluten', 'ei', 'mosterd', 'vis', 'soja', 'selderij'],
 };
 
 /**
