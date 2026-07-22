@@ -18,6 +18,21 @@
   padding: 0;
 }
 
+/* Zichtbare focus voor toetsenbordgebruikers; muis/touch blijft clean */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* QR die niet laadde: duidelijk maken vóór er geprint wordt */
+.qr-sticker__error {
+  padding: 16px 10px;
+  color: #b91c1c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 body {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   background:

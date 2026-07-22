@@ -138,7 +138,18 @@
     node.addEventListener('mouseenter', (e) => showTip(e, html));
     node.addEventListener('mousemove', (e) => showTip(e, html));
     node.addEventListener('mouseleave', hideTip);
+    // Touch/pen (iPad achter de bar): tik toont de tooltip
+    node.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse') {
+        e.stopPropagation();
+        showTip(e, html);
+      }
+    });
   }
+  // Tik naast een grafiek verbergt de tooltip weer
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse') hideTip();
+  });
 
   function emptyChart(container, message) {
     container.innerHTML = `<p class="chart__empty">${escapeHtml(message)}</p>`;
@@ -230,13 +241,16 @@
       { label: 'Cash', color: SERIES_1, cents: t.cash_cents, orders: t.cash_orders },
       { label: 'Bancontact', color: SERIES_2, cents: t.payconiq_cents, orders: t.payconiq_orders },
     ];
+    // Tweede aandeel = restant, zodat de som altijd exact 100% toont
+    parts[0].pct = Math.round((parts[0].cents / total) * 100);
+    parts[1].pct = 100 - parts[0].pct;
 
     legend.innerHTML = parts
       .map(
         (p) => `<span class="legend__item">
           <span class="legend__swatch" style="background:${p.color}"></span>
           <span class="legend__label">${p.label}</span>
-          <span class="legend__value">${euro(p.cents)} · ${Math.round((p.cents / total) * 100)}%</span>
+          <span class="legend__value">${euro(p.cents)} · ${p.pct}%</span>
         </span>`
       )
       .join('');
@@ -270,7 +284,7 @@
       svg.appendChild(el('path', { d, fill: p.color }));
 
       // Direct label alleen als het met marge past
-      const pct = `${Math.round(share * 100)}%`;
+      const pct = `${p.pct}%`;
       if (w > 56) {
         svg.appendChild(
           text(pct, x + w / 2, barH / 2 + 4, { anchor: 'middle', size: 12, weight: 800, fill: SURFACE })
@@ -469,6 +483,34 @@
   exportBtn.addEventListener('click', exportCsv);
 
   /* ---------------- Laden ---------------- */
+
+  /* Inline foutmelding i.p.v. terugvallen op het loginscherm — een
+     netwerkblip mag een ingelogde gebruiker niet "uitloggen". */
+  let loadErrorEl = null;
+  function showLoadError() {
+    if (!loadErrorEl) {
+      loadErrorEl = document.createElement('div');
+      loadErrorEl.className = 'load-error';
+      loadErrorEl.setAttribute('role', 'alert');
+      const msg = document.createElement('span');
+      msg.textContent = 'Kon de cijfers niet laden — de vorige stand blijft staan.';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'load-error__retry';
+      btn.textContent = 'Opnieuw proberen';
+      btn.addEventListener('click', () => {
+        hideLoadError();
+        loadAll().catch(showLoadError);
+      });
+      loadErrorEl.append(msg, btn);
+      pageView.prepend(loadErrorEl);
+    }
+    loadErrorEl.hidden = false;
+  }
+  function hideLoadError() {
+    if (loadErrorEl) loadErrorEl.hidden = true;
+  }
+
   async function loadAll() {
     const params = new URLSearchParams({ range });
     if (filterStatus.value) params.set('status', filterStatus.value);
@@ -487,6 +529,7 @@
     const data = await tRes.json();
     transactions = data.rows || [];
 
+    hideLoadError();
     renderCharts();
     renderTable();
     tableNote.textContent = `${data.total} transactie${data.total === 1 ? '' : 's'} · ${euro(
@@ -496,14 +539,14 @@
 
   function scheduleReload() {
     clearTimeout(reloadTimer);
-    reloadTimer = setTimeout(() => loadAll().catch(() => {}), 220);
+    reloadTimer = setTimeout(() => loadAll().catch(showLoadError), 220);
   }
 
   rangeBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       range = btn.dataset.range;
       rangeBtns.forEach((b) => b.classList.toggle('segmented__btn--on', b === btn));
-      loadAll().catch(() => {});
+      loadAll().catch(showLoadError);
     });
   });
 
@@ -525,7 +568,13 @@
   async function showPage() {
     loginView.hidden = true;
     pageView.hidden = false;
-    await loadAll();
+    // Data-fout ≠ auth-fout: blijf op de pagina en toon een retry-banner
+    // (een 401 stuurt loadAll zelf al naar showLogin)
+    try {
+      await loadAll();
+    } catch {
+      showLoadError();
+    }
   }
 
   loginForm.addEventListener('submit', async (e) => {

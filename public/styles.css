@@ -1212,8 +1212,9 @@ h1, h2, h3, h4 {
 }
 
 .order-item__qty-btn {
-  width: 26px;
-  height: 26px;
+  position: relative;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 1px solid var(--border-glass);
   background: rgba(255, 255, 255, 0.05);
@@ -1225,6 +1226,14 @@ h1, h2, h3, h4 {
   cursor: pointer;
   transition: all var(--transition-fast);
   line-height: 1;
+}
+
+/* Onzichtbaar groter tikvlak (±44px) zonder de knop visueel op te blazen */
+.order-item__qty-btn::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
 }
 
 .order-item__qty-btn:hover {
@@ -4136,4 +4145,13 @@ h1, h2, h3, h4 {
   .pick__iris { transition: none; }
   .pick__omen--in { animation: none; opacity: 1; }
   .pick__ring--suspect { animation: none; }
+}
+
+/* ============================================================
+   Toegankelijkheid — zichtbare focus voor toetsenbordgebruikers.
+   :focus-visible laat muis/touch met rust.
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--amber-500);
+  outline-offset: 2px;
 }

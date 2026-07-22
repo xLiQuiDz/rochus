@@ -15,7 +15,7 @@
   --gold: #d4af70;             /* chrome, niet voor datamarks */
   --gold-lite: #f0d9a8;
   --text: #f7f1e8;
-  --muted: #9a8f80;
+  --muted: #a89b8b;            /* net licht genoeg voor de kleinste labels */
 
   /* Datamarks */
   --series-1: #c98500;         /* amber — cash / hoofdreeks */
@@ -27,6 +27,9 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Zichtbare focus voor toetsenbordgebruikers; muis/touch blijft clean */
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 body {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -108,7 +111,7 @@ button, a, select, input { font-family: inherit; }
   background: var(--raise); border: 1px solid var(--line); border-radius: 12px;
 }
 .segmented__btn {
-  min-height: 38px; padding: 0 14px; border: none; border-radius: 9px;
+  min-height: 44px; padding: 0 14px; border: none; border-radius: 9px;
   background: transparent; color: var(--muted);
   font-size: 0.82rem; font-weight: 700; cursor: pointer;
   transition: color 0.2s var(--ease), background 0.2s var(--ease);
@@ -199,6 +202,21 @@ button, a, select, input { font-family: inherit; }
 .paybreak__row:first-child { border-top: none; padding-top: 0; }
 .paybreak__label { font-weight: 700; }
 .paybreak__meta { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ---------------- Laadfout ---------------- */
+.load-error {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 14px 20px 0; padding: 12px 16px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 12px; color: var(--text); font-size: 0.9rem;
+}
+.load-error__retry {
+  min-height: 40px; padding: 6px 14px; border: 1px solid var(--line-strong);
+  border-radius: 999px; background: var(--raise); color: var(--gold-lite);
+  font-weight: 700; font-size: 0.82rem; cursor: pointer;
+}
+.load-error__retry:hover { border-color: var(--gold); }
 
 /* ---------------- Tabel ---------------- */
 .card--table { padding-bottom: 8px; }

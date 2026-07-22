@@ -277,6 +277,19 @@
     el.classList.toggle('tik--late', mins >= AGE_LATE_MIN);
   }
 
+  /* Bij een mislukte eerste load is "Geen nieuwe bestellingen" misleidend:
+     toon in de lege lanes expliciet dat het bord niet geladen kreeg. */
+  const emptyNewDefault = emptyNew.textContent;
+  const emptyPrepDefault = emptyPrep.textContent;
+  let emptyShowsError = false;
+
+  function showBoardLoadError() {
+    if (orders.size > 0) return; // er staat al echte data — de status-pill volstaat
+    emptyShowsError = true;
+    emptyNew.textContent = 'Kon bestellingen niet laden — we blijven proberen…';
+    emptyPrep.textContent = 'Verbinding hapert';
+  }
+
   /** Diff-render one lane: keep existing cards, only touch what changed. */
   function renderLane(container, emptyEl, list) {
     const wanted = new Map(list.map((o) => [String(o.id), o]));
@@ -316,6 +329,12 @@
   }
 
   function renderBoard() {
+    // Data stroomt weer — herstel de normale lege-lane teksten
+    if (emptyShowsError) {
+      emptyShowsError = false;
+      emptyNew.textContent = emptyNewDefault;
+      emptyPrep.textContent = emptyPrepDefault;
+    }
     const oldest = (a, b) => String(a.created_at).localeCompare(String(b.created_at));
     const open = getOpenOrders();
     const news = open.filter((o) => o.status === 'new').sort(oldest);
@@ -647,6 +666,7 @@
     } catch {
       // Eén hikje mag het bord niet doodleggen — stream + polling halen het in
       setLiveStatus('warn', 'Verbinding hapert…');
+      showBoardLoadError();
     }
     if (!loginView.hidden) return; // sessie bleek toch verlopen (401 → login)
     connectStream();

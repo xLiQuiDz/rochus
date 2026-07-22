@@ -914,6 +914,9 @@
 
   function showToast(message, isError = false, ms = 2200) {
     toastEl.hidden = false;
+    // Fouten mogen de screenreader onderbreken; gewone meldingen niet
+    toastEl.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+    toastEl.setAttribute('role', isError ? 'alert' : 'status');
     toastEl.textContent = message;
     toastEl.classList.toggle('toast--error', isError);
     toastEl.classList.add('show');
@@ -991,7 +994,7 @@
     payButtons.forEach((btn) => {
       const on = btn.dataset.pay === payMethod;
       btn.classList.toggle('pay-option--active', on);
-      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.setAttribute('aria-checked', on ? 'true' : 'false');
     });
     if (payHint) payHint.textContent = PAY_HINTS[payMethod];
     try {
@@ -1020,6 +1023,11 @@
      tweede bestelling (of tweede betaling) aanmaakt. Reset bij elke
      mandje-wijziging en na een geslaagde bestelling. */
   let pendingRequestId = null;
+
+  /* Snapshot van het mandje bij een Bancontact-poging: mislukt of verloopt
+     de betaling, dan zetten we het mandje terug i.p.v. de gast alles
+     opnieuw te laten aantikken. */
+  let lastPayconiqCart = null;
 
   function makeRequestId() {
     return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -1122,6 +1130,7 @@
   function handlePaySuccess(orderId) {
     stopPayPoll();
     clearPendingPayment();
+    lastPayconiqCart = null;
     setPayUiStatus('Betaald ✓ — de bar heeft je order', 'ok');
     if (payHintEl) {
       payHintEl.textContent = 'Bedankt! We brengen alles naar je tafel.';
@@ -1135,9 +1144,17 @@
   function handlePayFailure(status) {
     stopPayPoll();
     clearPendingPayment();
+    // Zet het mandje terug zoals het was, zodat "probeer opnieuw" niet
+    // betekent: alles opnieuw aantikken
+    if (lastPayconiqCart && order.size === 0) {
+      for (const item of lastPayconiqCart.items) order.set(item.name, item);
+      if (noteInput && !noteInput.value) noteInput.value = lastPayconiqCart.note || '';
+      renderOrder();
+    }
+    lastPayconiqCart = null;
     setPayUiStatus(status === 'expired' ? 'Betaling verlopen' : 'Betaling mislukt', 'err');
     if (payHintEl) {
-      payHintEl.textContent = 'Probeer opnieuw via het mandje, of kies cash.';
+      payHintEl.textContent = 'Je mandje staat nog klaar — probeer opnieuw, of kies cash.';
     }
     // Overlay al dicht? Meld het dan via een toast
     if (payOverlay && payOverlay.hidden) {
@@ -1192,29 +1209,48 @@
     if (!document.hidden && payPollOrderId && payPollTick) payPollTick();
   });
 
+  /* Betaallinks komen uit de API óf uit localStorage — laat nooit een
+     javascript:/data:-URL in de href belanden. App-schemes (payconiq://…)
+     blijven wel werken. */
+  function safePayLink(url) {
+    const s = String(url || '').trim();
+    if (!s || /^(javascript|data|vbscript):/i.test(s)) return '';
+    return s;
+  }
+
   function openPayOverlay({ orderId, totalCents, payment }) {
     if (!payOverlay) return;
     payAmountEl.textContent = formatEuro(totalCents / 100);
-    const link = payment?.deeplink || payment?.checkoutUrl || '#';
+    const deeplink = safePayLink(payment?.deeplink);
+    const link = deeplink || safePayLink(payment?.checkoutUrl) || '#';
     if (payLinkEl) {
       payLinkEl.href = link;
       payLinkEl.classList.toggle('is-disabled', link === '#');
     }
+    let qrShown = false;
     if (payQrEl) {
       if (payment?.qrUrl) {
         payQrEl.src = payment.qrUrl;
-        payQrEl.hidden = false;
-      } else if (payment?.deeplink) {
-        payQrEl.src = `/api/qr/payconiq?u=${encodeURIComponent(payment.deeplink)}`;
-        payQrEl.hidden = false;
-      } else {
-        payQrEl.hidden = true;
+        qrShown = true;
+      } else if (deeplink) {
+        payQrEl.src = `/api/qr/payconiq?u=${encodeURIComponent(deeplink)}`;
+        qrShown = true;
       }
+      payQrEl.hidden = !qrShown;
     }
-    setPayUiStatus('Wachten op betaling…', 'pending');
-    if (payHintEl) {
-      payHintEl.textContent =
-        'Scan of open de app. Zodra Bancontact bevestigt, gaat het naar de bar.';
+    if (link === '#' && !qrShown) {
+      // Geen link én geen QR: laat de gast niet eindeloos wachten
+      setPayUiStatus('Betaallink ontbreekt', 'err');
+      if (payHintEl) {
+        payHintEl.textContent =
+          'Er ging iets mis bij het starten van de betaling. Sluit dit venster en probeer opnieuw.';
+      }
+    } else {
+      setPayUiStatus('Wachten op betaling…', 'pending');
+      if (payHintEl) {
+        payHintEl.textContent =
+          'Scan of open de app. Zodra Bancontact bevestigt, gaat het naar de bar.';
+      }
     }
     hidePayResumeChip();
     document.body.style.overflow = 'hidden';
@@ -1244,6 +1280,17 @@
       showPayResumeChip();
       showToast('Betaling loopt door — tik onderaan om terug te keren', false, 3200);
     }
+  }
+
+  if (payQrEl) {
+    // Kapotte QR (404/extern domein plat): verberg het broken-image-icoon
+    // en wijs naar de app-knop i.p.v. een schijnbaar vastgelopen scherm
+    payQrEl.addEventListener('error', () => {
+      payQrEl.hidden = true;
+      if (payHintEl) {
+        payHintEl.textContent = 'QR kon niet laden — open de betaling via de knop hierboven.';
+      }
+    });
   }
 
   if (payOverlay) {
@@ -1302,6 +1349,13 @@
           closeConfirm();
         }
         throw new Error(data.error || 'Bestelling mislukt');
+      }
+
+      if (payMethod === 'payconiq') {
+        lastPayconiqCart = {
+          items: [...order.values()].map((item) => ({ ...item })),
+          note: noteInput.value,
+        };
       }
 
       order.clear();

@@ -48,6 +48,37 @@ const app = express();
 app.disable('x-powered-by');
 // Railway/reverse proxy: nodig zodat req.ip het echte client-IP is
 app.set('trust proxy', 1);
+
+/* Security headers. img-src staat https: toe omdat de Bancontact betaal-QR
+   van een extern provider-domein kan komen; style-src 'unsafe-inline' omdat
+   de grafieken kleur-swatches via style-attributen zetten. */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https:",
+  "connect-src 'self'",
+  // canvas-confetti draait zijn animatie in een blob-worker
+  "worker-src 'self' blob:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join('; ');
+app.use((_req, res, next) => {
+  res.set({
+    'Content-Security-Policy': CSP,
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  });
+  if (process.env.NODE_ENV === 'production') {
+    res.set('Strict-Transport-Security', 'max-age=15552000');
+  }
+  next();
+});
 app.use(
   express.json({
     limit: '64kb',
@@ -109,9 +140,11 @@ function recordLoginFailure(ip) {
 }
 
 function pinMatches(pin) {
-  const given = Buffer.from(String(pin));
-  const expected = Buffer.from(STAFF_PIN);
-  return given.length === expected.length && crypto.timingSafeEqual(given, expected);
+  // Hash beide kanten: timingSafeEqual eist gelijke lengte, en een vroege
+  // length-check zou de PIN-lengte via timing verklappen
+  const given = crypto.createHash('sha256').update(String(pin)).digest();
+  const expected = crypto.createHash('sha256').update(STAFF_PIN).digest();
+  return crypto.timingSafeEqual(given, expected);
 }
 
 function sessionExpiryDate() {
@@ -162,7 +195,9 @@ app.get('/api/health', async (_req, res) => {
     await pool.query('SELECT 1');
     res.json({ ok: true, db: true });
   } catch (err) {
-    res.status(503).json({ ok: false, db: false, error: err.message });
+    // Geen err.message naar buiten: kan host/DB-details lekken
+    console.error('Health check failed', err);
+    res.status(503).json({ ok: false, db: false });
   }
 });
 

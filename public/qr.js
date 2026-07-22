@@ -74,6 +74,15 @@
           <p class="qr-sticker__cash">Cash bij levering</p>
         </div>
       `;
+      // Kapotte QR = onbruikbare sticker: maak dat zichtbaar vóór het printen
+      const img = card.querySelector('img');
+      img.addEventListener('error', () => {
+        img.hidden = true;
+        const warn = document.createElement('p');
+        warn.className = 'qr-sticker__error';
+        warn.textContent = '⚠ QR kon niet laden — herlaad de pagina vóór het printen';
+        img.parentElement.appendChild(warn);
+      });
       qrGrid.appendChild(card);
     }
   }

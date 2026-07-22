@@ -108,7 +108,7 @@ contrast.
 | `GET /api/qr/:table` | — | PNG QR-sticker voor tafel N |
 | `GET /api/qr/payconiq.png` | — | PNG QR — `?u=` dynamische betaallink, anders legacy `PAYCONIQ_URL` |
 
-Login is rate-limited (max 10 foute PIN-pogingen per kwartier per IP).
+Login is rate-limited (max 20 foute PIN-pogingen per kwartier per IP).
 
 ## Bancontact Pro setup
 

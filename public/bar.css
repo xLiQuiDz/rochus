@@ -13,7 +13,7 @@
   --gold: #d4af70;
   --gold-lite: #f0d9a8;
   --text: #f7f1e8;
-  --muted: #9a8f80;
+  --muted: #a89b8b; /* net licht genoeg voor de kleinste labels */
 
   --new: #d4af70;
   --prep: #6aa9f5;
@@ -31,6 +31,12 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Zichtbare focus voor toetsenbordgebruikers; muis/touch blijft clean */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 
 html,
@@ -947,7 +953,7 @@ a {
 }
 
 .segmented__btn {
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 18px;
   border: none;
   border-radius: 10px;
