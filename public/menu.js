@@ -4459,7 +4459,7 @@
     Champagne: 'Voor als de groepschat “GROOT NIEUWS” zegt.',
     Kaasballetjes: 'Volgorde: kaasballetje, slokje, levensverhaal.',
     'Portie gemengd': 'Gemengd door Beestig Goe. Ottenburg weet het.',
-    'Friet 105 Burger': 'Genoemd naar nummer 105. De burger woont daar nu.',
+    'Friet 105 Burger': 'Echte Friet 105. Wolfshaegen 105, Neerijse.',
     'Hugo Spritz': 'Hugo is de enige man die iedereen hier vertrouwt.',
     Bitterballen: 'Binnenkant: lava. Wacht. Echt. Wacht.',
     'Meter bier': 'Officieel meetinstrument: 100 cm geluk, ±11 glazen. Je gsm-scherm is er 7.',

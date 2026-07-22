@@ -183,6 +183,7 @@ const PRINT_CATEGORY_LABELS = {
 const PRINT_NOTES = {
   Corona: '4+2 op Corona Bucket',
   'Portie gemengd': 'Slagerij Beestig Goe',
+  'Friet 105 Burger': 'Friet 105 · Neerijse',
 };
 
 const PRINT_SIGNATURES = new Set(["Tripel Karmeliet van 't vat"]);
