@@ -959,24 +959,33 @@
   const rumGifEl = document.getElementById('rum-gif');
   const rumTitleEl = document.getElementById('rum-title');
   const rumSlamEl = document.getElementById('rum-slam');
+  const rumCaptionEl = document.getElementById('rum-caption');
   const rumSeaEl = document.getElementById('rum-sea');
   const rumWavefrontEl = document.getElementById('rum-wavefront');
   const rumBubblesEl = document.getElementById('rum-bubbles');
   const rumSkipEl = document.getElementById('rum-skip');
 
-  /* [opzet, dreun] — de dreun knalt midden op het scherm bij de paniek */
+  /* [opzet, dreun] — Sparrow-speak; dreun knalt bij de paniek */
   const RUM_TITLE_PAIRS = [['WHY IS THE RUM…', '…GONE?!']];
   const RUM_TITLE_PAIRS_REPEAT = [
-    ['ALWEER LEEG…', 'SERIEUS?!'],
-    ['DE FLES IS…', 'WÉÉR LEEG?!'],
-    ['OKÉ WACHT…', 'WAAR IS DE RUM?!'],
-    ['SAVVY…', 'DE RUM IS OP?!'],
+    ['BUT WHY IS THE RUM…', '…GONE?!'],
+    ['HIDE THE RUM…', 'TOO LATE?!'],
+    ['I CLEARLY…', 'REQUIRE MORE RUM?!'],
+    ['SAVVY…', 'WHERE’S THE RUM?!'],
+    ['THIS IS THE DAY…', 'THE RUM VANISHED?!'],
+  ];
+  const RUM_FINALE_LINES = [
+    'SAVVY?',
+    'DRINK UP!',
+    'THE RUM!',
+    'ME HEARTIES',
   ];
   const RUM_DONE_TOASTS = [
-    'Rum in ’t mandje. Savvy. 🏴‍☠️',
-    'Pirate energy toegevoegd 🍾',
-    'Cheers — Jack zou trots zijn',
-    'De kapitein is tevreden 🫡',
+    'Hide the rum. Too late. 🏴‍☠️',
+    'Savvy? Rum’s in the bag.',
+    'Not all treasure is silver and gold… some of it is rum',
+    'Drink up, me hearties 🍾',
+    'The problem isn’t the rum. The problem is not enough rum.',
   ];
 
   const RUM_FILL = 0.62; /* de rum stopt op 62% van het scherm */
@@ -1012,6 +1021,26 @@
 
   function rumEaseOut(t) {
     return 1 - Math.pow(1 - t, 3);
+  }
+
+  /** Letter-for-letter Sparrow finale line (CSS --i staggers each glyph). */
+  function setRumCaption(line) {
+    if (!rumCaptionEl) return;
+    let i = 0;
+    rumCaptionEl.innerHTML = String(line)
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((word) => {
+        const letters = [...word]
+          .map((ch) => {
+            const html = `<span style="--i: ${i}">${escapeHtml(ch)}</span>`;
+            i += 1;
+            return html;
+          })
+          .join('');
+        return `<span class="rum-show__cword">${letters}</span>`;
+      })
+      .join('');
   }
 
   function buildRumBubbles() {
@@ -1081,9 +1110,10 @@
     if (g.phase === 'finale') return;
     g.phase = 'finale';
     rumClearTimers();
+    setRumCaption(pick(RUM_FINALE_LINES));
     /* Bij doorspoelen vanuit bedrijf 1/2: geiser + blast alsnog mee */
     rumShowEl.classList.add('rum-show--erupt', 'rum-show--done');
-    rumSkipEl.textContent = 'tik om te sluiten';
+    rumSkipEl.textContent = 'tap to close, savvy';
     if (rumGifEl) {
       /* Herstart de gif-loop op de reveal: Jack proost precies op tijd */
       const src = rumGifEl.getAttribute('src').split('?')[0];
@@ -1127,7 +1157,8 @@
     const pair = g.plays > 1 ? pick(RUM_TITLE_PAIRS_REPEAT) : pick(RUM_TITLE_PAIRS);
     rumTitleEl.textContent = pair[0];
     rumSlamEl.textContent = pair[1];
-    rumSkipEl.textContent = 'tik om door te spoelen ⏩';
+    if (rumCaptionEl) rumCaptionEl.innerHTML = '';
+    rumSkipEl.textContent = 'tap to skip, savvy ⏩';
     rumSeaEl.style.transform = 'translate3d(0, 0, 0)';
     rumWavefrontEl.style.transform = 'translate3d(0, 0, 0)';
     /* hidden weghalen herstart alle CSS-animaties van bedrijf 1 */
