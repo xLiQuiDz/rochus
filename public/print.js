@@ -17,9 +17,12 @@
   const allergenDisclaimer = document.getElementById('allergen-disclaimer');
   const toolbarMeta = document.querySelector('.print-toolbar__meta');
 
-  /* Pagina 1 van de A4-kaart (en linkerkolom van de klemkaart) vs. pagina 2 (rechterkolom) */
-  const FIRST_IDS = new Set(['bieren', 'flessen', 'alcoholvrij', 'fris', 'cocktails']);
-  const SECOND_IDS = new Set(['wijnen', 'shots', 'warme', 'fingerfood']);
+  /* A4: cocktails op pagina 2 — past niet meer onder fris op pagina 1. */
+  const A4_FIRST_IDS = new Set(['bieren', 'flessen', 'alcoholvrij', 'fris']);
+  const A4_SECOND_IDS = new Set(['cocktails', 'wijnen', 'shots', 'warme', 'fingerfood']);
+  /* Klemkaart: cocktails links houden (rechterkolom is al vol met snacks). */
+  const CLIP_FIRST_IDS = new Set(['bieren', 'flessen', 'alcoholvrij', 'fris', 'cocktails']);
+  const CLIP_SECOND_IDS = new Set(['wijnen', 'shots', 'warme', 'fingerfood']);
 
   /** Compacte SVG-pictogrammen (currentColor) voor print. */
   const ALLERGEN_ICONS = {
@@ -123,11 +126,11 @@
     </section>`;
   }
 
-  function splitSections(data) {
+  function splitSections(data, firstIds, secondIds) {
     const sections = Array.isArray(data.sections) ? data.sections : [];
-    const first = sections.filter((s) => FIRST_IDS.has(s.id));
-    const second = sections.filter((s) => SECOND_IDS.has(s.id));
-    const leftovers = sections.filter((s) => !FIRST_IDS.has(s.id) && !SECOND_IDS.has(s.id));
+    const first = sections.filter((s) => firstIds.has(s.id));
+    const second = sections.filter((s) => secondIds.has(s.id));
+    const leftovers = sections.filter((s) => !firstIds.has(s.id) && !secondIds.has(s.id));
     second.push(...leftovers);
     return { first, second };
   }
@@ -136,14 +139,14 @@
     brandEls.forEach((el) => (el.textContent = data.brand || 'ROCHUS'));
     subtitleEls.forEach((el) => (el.textContent = data.subtitle || 'Summer pop-up bar'));
 
-    const { first, second } = splitSections(data);
+    const { first, second } = splitSections(data, A4_FIRST_IDS, A4_SECOND_IDS);
     page1Sections.innerHTML = first.map(renderSection).join('');
     page2Sections.innerHTML = second.map(renderSection).join('');
   }
 
   /** Smalle kaart voor het houten klembord — 2 identieke per vel, liggend */
   function clipCardHtml(data) {
-    const { first: left, second: right } = splitSections(data);
+    const { first: left, second: right } = splitSections(data, CLIP_FIRST_IDS, CLIP_SECOND_IDS);
     return `<article class="sheet sheet--clip">
       <header class="sheet__header">
         <p class="sheet__brand">${escapeHtml(data.brand || 'ROCHUS')}</p>

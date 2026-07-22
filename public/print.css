@@ -267,8 +267,28 @@ body {
   flex-shrink: 0;
 }
 
-.sheet__header--compact {
-  margin-bottom: 5mm;
+.sheet--page1 .sheet__sections {
+  justify-content: space-between;
+}
+
+/* Pagina 2 heeft meer secties (incl. cocktails) — compact van bovenaf stapelen */
+.sheet--page2 .sheet__sections {
+  justify-content: flex-start;
+  gap: 3.2mm;
+}
+
+.sheet--page2 .sheet__row {
+  font-size: 0.8rem;
+  padding: 0.65mm 0;
+}
+
+.sheet--page2 .sheet__section-title {
+  font-size: 0.64rem;
+  margin-bottom: 1.8mm;
+}
+
+.sheet--page2 .sheet__header--compact {
+  margin-bottom: 3.5mm;
 }
 
 .sheet--page2 .sheet__brand {
