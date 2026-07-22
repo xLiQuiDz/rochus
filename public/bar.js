@@ -149,30 +149,50 @@
     return audioCtx;
   }
 
-  function tone(freq, startAt, duration, peak = 0.16) {
+  /** Scherpere toon dan een pure sine — snijdt door barlawaai. */
+  function tone(freq, startAt, duration, peak = 0.35, type = 'square') {
     const ctx = ensureAudio();
     if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = 'sine';
+    const filter = ctx.createBiquadFilter();
+    osc.type = type;
     osc.frequency.setValueAtTime(freq, startAt);
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(freq, startAt);
+    filter.Q.setValueAtTime(type === 'square' ? 1.2 : 4, startAt);
     gain.gain.setValueAtTime(0.0001, startAt);
-    gain.gain.exponentialRampToValueAtTime(peak, startAt + 0.02);
+    gain.gain.exponentialRampToValueAtTime(peak, startAt + 0.012);
     gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-    osc.connect(gain);
+    osc.connect(filter);
+    filter.connect(gain);
     gain.connect(ctx.destination);
     osc.start(startAt);
-    osc.stop(startAt + duration + 0.02);
+    osc.stop(startAt + duration + 0.03);
   }
 
+  function buzzTablet() {
+    try {
+      if (navigator.vibrate) navigator.vibrate([80, 40, 80, 40, 120]);
+    } catch {
+      /* geen haptic */
+    }
+  }
+
+  /** Luide keukenbel: 3× dig-dong, moeilijk te missen. */
   function playChime() {
     if (!soundToggle.checked) return;
     try {
       const ctx = ensureAudio();
       if (!ctx) return;
       const t = ctx.currentTime;
-      tone(880, t, 0.28);
-      tone(1320, t + 0.12, 0.28);
+      for (let i = 0; i < 3; i += 1) {
+        const at = t + i * 0.38;
+        tone(988, at, 0.16, 0.42, 'square');
+        tone(1480, at + 0.09, 0.22, 0.38, 'square');
+        tone(1976, at + 0.09, 0.18, 0.18, 'triangle');
+      }
+      buzzTablet();
     } catch {
       /* ignore */
     }
@@ -184,9 +204,9 @@
       const ctx = ensureAudio();
       if (!ctx) return;
       const t = ctx.currentTime;
-      tone(740, t, 0.22, 0.18);
-      tone(990, t + 0.2, 0.22, 0.18);
-      tone(740, t + 0.45, 0.28, 0.2);
+      tone(880, t, 0.14, 0.32, 'square');
+      tone(1175, t + 0.16, 0.18, 0.3, 'square');
+      tone(880, t + 0.4, 0.2, 0.34, 'square');
     } catch {
       /* ignore */
     }
@@ -856,6 +876,7 @@
   soundToggle.addEventListener('change', () => {
     if (soundToggle.checked) {
       ensureAudio();
+      playChime();
       syncOpenReminder();
     } else {
       stopOpenReminder();
@@ -863,10 +884,13 @@
   });
 
   /* ---------------- Wake lock ---------------- */
+  /* Browser-API (naast iPad/PC auto-lock): houdt dit tabblad wakker. Default aan. */
   let wakeLock = null;
-  let wakeWanted = false;
+  let wakeWanted = true;
   try {
-    wakeWanted = localStorage.getItem('rochus-bar-wake') === '1';
+    const stored = localStorage.getItem('rochus-bar-wake');
+    if (stored === '0') wakeWanted = false;
+    else if (stored === '1') wakeWanted = true;
   } catch {
     /* private mode */
   }
