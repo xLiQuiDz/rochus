@@ -4422,18 +4422,16 @@ h1, h2, h3, h4 {
 }
 
 /* ============================================================
-   RUM — eindscherm: gif + CHEERS, geen extra animatie.
+   RUM — de rumvloed: een fles kantelt bovenin en giet het scherm
+   vol; de rum stijgt tot ~62%, de gif dobbert er als vlot op mee.
+   Finale: gouden flits + CHEERS dat uit de rum omhoog komt.
+   Laagvolgorde: stream(2) < zee(3) < vlot(4) < golffront(5)
+   < fles(6) < titel(7) < flits(8) < skip(9).
    ============================================================ */
 .rum-show {
   position: fixed;
   inset: 0;
   z-index: 650;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  padding: max(24px, env(safe-area-inset-top, 0px)) 20px max(28px, env(safe-area-inset-bottom, 0px));
   background: #050403;
   overflow: hidden;
   touch-action: none;
@@ -4442,6 +4440,14 @@ h1, h2, h3, h4 {
   -webkit-user-select: none;
   cursor: pointer;
   transition: opacity 0.28s ease;
+}
+
+.rum-show::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 90% 55% at 50% 26%, rgba(212, 140, 50, 0.12), transparent 65%);
+  pointer-events: none;
 }
 
 .rum-show[hidden] {
@@ -4453,23 +4459,368 @@ h1, h2, h3, h4 {
   pointer-events: none;
 }
 
-.rum-show__gif {
-  width: min(94vw, 640px);
-  height: auto;
-  max-height: 62vh;
-  object-fit: contain;
+/* --- titel --- */
+.rum-show__title {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top, 0px));
+  left: 16px;
+  right: 16px;
+  z-index: 7;
+  margin: 0;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1rem, 4.8vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
+  color: var(--amber-400);
+  text-shadow: 0 2px 18px rgba(212, 140, 50, 0.35);
+  animation: rum-title-in 0.8s var(--ease-out-expo) both;
   pointer-events: none;
 }
 
-.rum-show__cheers {
-  margin: 0;
-  font-family: 'Cinzel', serif;
-  font-size: clamp(1.6rem, 9vw, 3.2rem);
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  text-indent: 0.2em;
-  color: #f0d9a8;
+@keyframes rum-title-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rum-show--done .rum-show__title {
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* --- de fles, kantelt om de flessenmond (transform-origin 50% 0) --- */
+.rum-show__bottle {
+  position: absolute;
+  left: 66%;
+  top: 100px;
+  width: clamp(46px, 13vw, 62px);
+  z-index: 6;
+  transform-origin: 50% 0;
+  transform: translateX(-50%) rotate(-118deg);
+  animation: rum-bottle-in 0.95s cubic-bezier(0.34, 1.3, 0.44, 1) both;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
   pointer-events: none;
+}
+
+.rum-show__bottle-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform-origin: 50% 0;
+  animation: rum-glug 0.6s ease-in-out 0.95s infinite alternate;
+}
+
+@keyframes rum-bottle-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-46px) rotate(-30deg);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) rotate(-118deg);
+  }
+}
+
+@keyframes rum-glug {
+  from {
+    transform: rotate(-1.6deg);
+  }
+  to {
+    transform: rotate(2.4deg);
+  }
+}
+
+/* glug-glug-pauze halverwege: de fles klokt zichtbaar harder */
+.rum-show--glug .rum-show__bottle-svg {
+  animation-duration: 0.2s;
+}
+
+.rum-show--done .rum-show__bottle {
+  animation: none;
+  transform: translateX(-50%) translateY(-12px) rotate(-6deg);
+  opacity: 0;
+  transition: transform 0.8s var(--ease-out-expo), opacity 0.5s ease 0.25s;
+}
+
+.rum-show--done .rum-show__bottle-svg {
+  animation: none;
+}
+
+/* --- de straal: hoogte per frame vanuit JS, tot aan het rumoppervlak --- */
+.rum-show__stream {
+  position: absolute;
+  left: 66%;
+  top: 102px;
+  width: 6px;
+  height: 0;
+  margin-left: -3px;
+  z-index: 2;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(242, 184, 84, 0), #f2b854 12%, #d98d2b 60%, #c1761f);
+  box-shadow: 0 0 14px rgba(242, 184, 84, 0.45);
+  opacity: 0;
+  transform-origin: 50% 0;
+  animation: rum-stream-wobble 0.3s ease-in-out infinite alternate;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.rum-show__stream::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 30px;
+  height: 14px;
+  margin-left: -15px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 220, 150, 0.85), rgba(242, 184, 84, 0) 70%);
+  filter: blur(1px);
+}
+
+@keyframes rum-stream-wobble {
+  from {
+    transform: scaleX(0.8);
+  }
+  to {
+    transform: scaleX(1.2);
+  }
+}
+
+.rum-show--pouring .rum-show__stream {
+  opacity: 1;
+}
+
+.rum-show--glug .rum-show__stream {
+  animation-duration: 0.16s;
+}
+
+.rum-show--done .rum-show__stream {
+  opacity: 0;
+}
+
+/* --- het vlot: de gif dobbert op het oppervlak (transform via JS) --- */
+.rum-show__raft {
+  position: absolute;
+  left: 47%;
+  top: 100%;
+  width: min(86vw, 440px, 62vh);
+  z-index: 4;
+  transform: translate3d(-50%, 0, 0);
+  will-change: transform;
+  filter: drop-shadow(0 24px 32px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+
+.rum-show__gif {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(240, 217, 168, 0.28);
+  box-shadow: 0 0 40px rgba(212, 140, 50, 0.25);
+}
+
+/* --- de zee van rum: schuift als één geheel omhoog (transform via JS) --- */
+.rum-show__sea {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 100%;
+  height: 160vh;
+  z-index: 3;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.rum-show__wave {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.rum-show__wave--back {
+  top: -34px;
+  height: 44px;
+}
+
+.rum-show__wave--back svg {
+  display: block;
+  width: 200%;
+  height: 100%;
+  animation: rum-wave-rev 7.5s linear infinite;
+}
+
+.rum-show__body {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #b06a1e 0%, #8a4d13 14%, #5f3410 46%, #3a1f0a 100%);
+}
+
+/* golffront als los element bóven het vlot: de kam klotst over de gifrand */
+.rum-show__wavefront {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 100%;
+  height: 40px;
+  margin-top: -30px;
+  z-index: 5;
+  overflow: hidden;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.rum-show__wavefront svg {
+  display: block;
+  width: 200%;
+  height: 100%;
+  animation: rum-wave 4.4s linear infinite;
+}
+
+@keyframes rum-wave {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes rum-wave-rev {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* --- bellen in de rum --- */
+.rum-show__bubbles {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rum-show__bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 238, 200, 0.9), rgba(255, 216, 150, 0.25) 55%, transparent 75%);
+  animation: rum-bubble 3.4s linear infinite;
+}
+
+@keyframes rum-bubble {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.7);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.5;
+  }
+  92% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate3d(var(--drift, 0px), -68vh, 0) scale(1.15);
+    opacity: 0;
+  }
+}
+
+/* --- CHEERS: komt letter voor letter uit de rum omhoog --- */
+.rum-show__cheers {
+  position: absolute;
+  top: clamp(88px, 15vh, 140px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2.2rem, 12vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-indent: 0.12em;
+  pointer-events: none;
+}
+
+.rum-show__cheers span {
+  display: inline-block;
+  opacity: 0;
+  background: linear-gradient(105deg, #f7e2ae 25%, #fff6d8 50%, #e9c377 75%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 3px 12px rgba(58, 31, 10, 0.55));
+}
+
+.rum-show--done .rum-show__cheers span {
+  animation:
+    rum-letter-up 0.7s var(--ease-out-expo) calc(0.15s + var(--i) * 0.07s) both,
+    rum-shimmer 3s linear calc(0.9s + var(--i) * 0.07s) infinite;
+}
+
+@keyframes rum-letter-up {
+  from {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rum-shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+/* --- gouden flits bij de finale --- */
+.rum-show__flash {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: radial-gradient(circle at 50% 38%, rgba(255, 240, 200, 0.95), rgba(255, 200, 110, 0.3) 45%, transparent 72%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rum-show--done .rum-show__flash {
+  animation: rum-flash 0.7s ease-out 0.1s both;
+}
+
+@keyframes rum-flash {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 .rum-show__skip {
@@ -4477,12 +4828,15 @@ h1, h2, h3, h4 {
   bottom: max(14px, env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
+  z-index: 9;
   margin: 0;
   text-align: center;
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(247, 241, 232, 0.4);
+  color: rgba(255, 244, 225, 0.55);
+  text-shadow: 0 1px 6px rgba(60, 30, 8, 0.55);
+  animation: rum-title-in 0.6s ease 0.8s both;
   pointer-events: none;
 }
 

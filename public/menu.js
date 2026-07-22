@@ -946,11 +946,25 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* RUM — eindscherm: gif + CHEERS (geen cinema-animatie)              */
+  /* RUM — de rumvloed: fles kantelt, rum stijgt, Jack dobbert mee      */
   /* ------------------------------------------------------------------ */
   const rumShowEl = document.getElementById('rum-show');
   const rumGifEl = document.getElementById('rum-gif');
+  const rumTitleEl = document.getElementById('rum-title');
+  const rumSeaEl = document.getElementById('rum-sea');
+  const rumWavefrontEl = document.getElementById('rum-wavefront');
+  const rumRaftEl = document.getElementById('rum-raft');
+  const rumStreamEl = document.getElementById('rum-stream');
+  const rumBubblesEl = document.getElementById('rum-bubbles');
+  const rumSkipEl = document.getElementById('rum-skip');
 
+  const RUM_TITLES = ['WHY IS THE RUM…', 'DAAR IS DE RUM', 'PIRATENMODUS', 'CAPTAIN ON DECK'];
+  const RUM_TITLES_REPEAT = [
+    'ALWEER RUM?!',
+    'SAVVY?',
+    'NOG ÉÉN VOOR DE KAPITEIN',
+    'JULLIE ZIJN PIRATEN 🏴‍☠️',
+  ];
   const RUM_DONE_TOASTS = [
     'Rum in ’t mandje. Savvy. 🏴‍☠️',
     'Pirate energy toegevoegd 🍾',
@@ -958,8 +972,19 @@
     'De kapitein is tevreden 🫡',
   ];
 
+  const RUM_STREAM_TOP = 102; /* moet gelijk lopen met `top` van .rum-show__stream */
+  const RUM_FILL = 0.62; /* de rum stopt op 62% van het scherm */
+
   const rumShow = {
     running: false,
+    phase: 'idle',
+    plays: 0,
+    start: 0,
+    last: 0,
+    raf: 0,
+    p: 0,
+    lift: 0,
+    tick: -1,
     closeTimer: 0,
   };
 
@@ -967,19 +992,127 @@
     return name === 'Rum' || name === 'Rum Captain Morgan';
   }
 
+  function rumEase(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
+  /* De schenkcurve: op gang komen, glug-glug-rustpunt, dan vol doorgieten */
+  const RUM_SEGMENTS = [
+    { until: 700, from: 0, to: 0.07, ease: (t) => t },
+    { until: 2200, from: 0.07, to: 0.55, ease: rumEase },
+    { until: 2650, from: 0.55, to: 0.59, ease: (t) => t },
+    { until: 4200, from: 0.59, to: 1, ease: rumEase },
+  ];
+
+  function rumTarget(elapsed) {
+    let prev = 0;
+    for (const seg of RUM_SEGMENTS) {
+      if (elapsed < seg.until) {
+        const t = (elapsed - prev) / (seg.until - prev);
+        return seg.from + (seg.to - seg.from) * seg.ease(t);
+      }
+      prev = seg.until;
+    }
+    return 1;
+  }
+
+  function buildRumBubbles() {
+    if (!rumBubblesEl || rumBubblesEl.dataset.built) return;
+    rumBubblesEl.dataset.built = '1';
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < 14; i++) {
+      const b = document.createElement('span');
+      b.className = 'rum-show__bubble';
+      const size = (7 + Math.random() * 8).toFixed(1);
+      b.style.width = `${size}px`;
+      b.style.height = `${size}px`;
+      b.style.left = `${4 + Math.random() * 92}%`;
+      b.style.top = `${18 + Math.random() * 72}vh`;
+      b.style.setProperty('--drift', `${(Math.random() * 48 - 24).toFixed(0)}px`);
+      b.style.animationDuration = `${(2.6 + Math.random() * 2).toFixed(2)}s`;
+      b.style.animationDelay = `${(Math.random() * 3.4).toFixed(2)}s`;
+      frag.appendChild(b);
+    }
+    rumBubblesEl.appendChild(frag);
+  }
+
+  function rumFrame(now) {
+    const g = rumShow;
+    if (!g.running) return;
+    const elapsed = now - g.start;
+    const dt = g.last ? Math.min(48, now - g.last) : 16;
+    g.last = now;
+
+    /* Zachte achtervolging van het doelniveau — maakt ook doorspoelen vloeiend */
+    const target = g.phase === 'finale' ? 1 : rumTarget(elapsed);
+    g.p += (target - g.p) * Math.min(1, dt * 0.0085);
+
+    const H = window.innerHeight;
+    const seaY = -g.p * H * RUM_FILL + Math.sin(elapsed * 0.0021) * 3;
+    const bobY = Math.sin(elapsed * 0.0024) * 5;
+    const bobRot = Math.sin(elapsed * 0.0016) * 2.2;
+
+    rumSeaEl.style.transform = `translate3d(0, ${seaY}px, 0)`;
+    rumWavefrontEl.style.transform = `translate3d(0, ${seaY}px, 0)`;
+    /* gifrand 8px onder de kamlijn: het golffront klotst er overheen */
+    rumRaftEl.style.transform = `translate3d(-50%, ${seaY + 8 - g.lift + bobY}px, 0) rotate(${bobRot}deg)`;
+
+    if (g.phase === 'pan') {
+      rumShowEl.classList.toggle('rum-show--pouring', elapsed > 480);
+      rumShowEl.classList.toggle('rum-show--glug', elapsed > 2200 && elapsed < 2650);
+      rumStreamEl.style.height = `${Math.max(0, H + seaY - 8 - RUM_STREAM_TOP)}px`;
+
+      const quart = Math.floor(g.p * 4);
+      if (quart !== g.tick) {
+        g.tick = quart;
+        if (quart > 0 && quart < 4 && navigator.vibrate) navigator.vibrate(6);
+      }
+
+      if (target >= 1 && g.p > 0.985) rumFinale();
+    }
+    g.raf = requestAnimationFrame(rumFrame);
+  }
+
+  /* De rAF blijft in de finale doorlopen zodat het vlot rustig blijft dobberen */
+  function rumFinale() {
+    const g = rumShow;
+    if (g.phase === 'finale') return;
+    g.phase = 'finale';
+    rumShowEl.classList.remove('rum-show--glug');
+    rumShowEl.classList.add('rum-show--done');
+    rumSkipEl.textContent = 'tik om te sluiten';
+    setTimeout(() => {
+      if (g.running && navigator.vibrate) navigator.vibrate([28, 55, 28, 55, 105]);
+    }, 350);
+    clearTimeout(g.closeTimer);
+    g.closeTimer = setTimeout(closeRumShow, 3400);
+  }
+
   function playRumShow() {
     if (!rumShowEl || prefersReducedMotion || rumShow.running) return;
     if (meterShow.running) return;
     const g = rumShow;
+    buildRumBubbles();
     g.running = true;
+    g.phase = 'pan';
+    g.plays += 1;
+    g.p = 0;
+    g.tick = -1;
+    g.last = 0;
     clearTimeout(g.closeTimer);
 
     clearTimeout(showToast._t);
     toastEl.classList.remove('show');
     toastEl.hidden = true;
 
-    rumShowEl.classList.remove('rum-show--out');
+    rumShowEl.classList.remove('rum-show--out', 'rum-show--done', 'rum-show--pouring', 'rum-show--glug');
+    rumTitleEl.textContent = g.plays > 1 ? pick(RUM_TITLES_REPEAT) : pick(RUM_TITLES);
+    rumSkipEl.textContent = 'tik om door te spoelen ⏩';
+    rumStreamEl.style.height = '0px';
+    rumSeaEl.style.transform = 'translate3d(0, 0, 0)';
+    rumWavefrontEl.style.transform = 'translate3d(0, 0, 0)';
     if (rumGifEl) {
+      /* Herstart de gif-loop via cache-bust op src */
       const src = rumGifEl.getAttribute('src').split('?')[0];
       rumGifEl.src = `${src}?t=${Date.now()}`;
     }
@@ -987,27 +1120,36 @@
     rumShowEl.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
 
-    g.closeTimer = setTimeout(closeRumShow, 2800);
+    g.lift = rumRaftEl.offsetHeight || 180;
+    rumRaftEl.style.transform = `translate3d(-50%, ${8 - g.lift}px, 0)`;
+
+    g.start = performance.now();
+    g.raf = requestAnimationFrame(rumFrame);
   }
 
   function closeRumShow() {
     const g = rumShow;
     if (!g.running) return;
     g.running = false;
+    g.phase = 'idle';
+    cancelAnimationFrame(g.raf);
     clearTimeout(g.closeTimer);
     rumShowEl.classList.add('rum-show--out');
     setTimeout(() => {
       rumShowEl.hidden = true;
       rumShowEl.setAttribute('aria-hidden', 'true');
-      rumShowEl.classList.remove('rum-show--out');
-    }, 280);
+      rumShowEl.classList.remove('rum-show--out', 'rum-show--done', 'rum-show--pouring', 'rum-show--glug');
+    }, 300);
     if (!drawer.classList.contains('open')) document.body.style.overflow = '';
     showToast(pick(RUM_DONE_TOASTS), false, 3000);
   }
 
   if (rumShowEl) {
+    /* Eén tik: doorspoelen naar de finale; nog een tik: sluiten */
     rumShowEl.addEventListener('click', () => {
-      if (rumShow.running) closeRumShow();
+      if (!rumShow.running) return;
+      if (rumShow.phase === 'pan') rumFinale();
+      else closeRumShow();
     });
     document.addEventListener(
       'keydown',
@@ -1116,6 +1258,7 @@
     }
     outOfStock = next;
     syncAvailabilityUI();
+    syncDiceWithStock();
     if (removed > 0) {
       pendingRequestId = null;
       renderOrder();
@@ -3542,11 +3685,12 @@
   function buildDrinkPool() {
     // Alleen alcohol: vatbier, cocktails, wijn per glas, shots.
     // Geen fris, warme, flessen, alcoholvrij, 0,0 of eten.
+    // Nooit uitverkocht — outOfStock is de bron van waarheid.
     const ALCOHOL_CATS = new Set(['bieren', 'cocktails', 'wijnen', 'shots']);
     const btns = [...document.querySelectorAll('[data-add]')].filter((btn) => {
       const name = btn.dataset.name || '';
       const cat = btn.dataset.category || '';
-      if (!name || btn.disabled || outOfStock.has(name)) return false;
+      if (!name || outOfStock.has(name)) return false;
       if (!ALCOHOL_CATS.has(cat)) return false;
       if (/\(fles\)$/.test(name)) return false;
       if (/0[,.]0/.test(name)) return false;
@@ -3570,12 +3714,32 @@
       }));
   }
 
+  function diceFacesAreInStock() {
+    return diceFaces.length >= 6 && diceFaces.every((item) => item.name && !outOfStock.has(item.name));
+  }
+
   /** Elk nieuw spel: zes andere drankjes op de zijden */
   function dealNewFaces() {
     const pool = shuffle(buildDrinkPool());
     if (pool.length < 6) return null;
     diceFaces = pool.slice(0, 6);
     return diceFaces;
+  }
+
+  /** Als voorraad wijzigt terwijl de steen open is: opnieuw schudden of sluiten */
+  function syncDiceWithStock() {
+    if (!diceOverlay || diceOverlay.hidden || diceRolling) return;
+    if (diceFacesAreInStock()) return;
+    if (!dealNewFaces()) {
+      showToast('Te weinig drankjes voor een dobbelsteen 🎲', true, 2600);
+      closeDice();
+      return;
+    }
+    paintCube();
+    if (!diceResult.hidden || diceWinner) {
+      resetDiceRound({ newAssortment: false });
+      showToast('Dat drankje is net uitverkocht — nieuwe steen', true, 2800);
+    }
   }
 
   function paintCube() {
@@ -3887,7 +4051,17 @@
   }
 
   async function rollDice() {
-    if (diceRolling || diceFaces.length < 6) return;
+    if (diceRolling) return;
+    // Voorraad kan intussen gewijzigd zijn — nooit uitverkocht meenemen
+    if (!diceFacesAreInStock()) {
+      if (!dealNewFaces()) {
+        showToast('Te weinig drankjes voor een dobbelsteen 🎲', true, 2600);
+        closeDice();
+        return;
+      }
+      paintCube();
+    }
+    if (diceFaces.length < 6) return;
     diceRolling = true;
     diceWinner = null;
     cancelAnimationFrame(diceIdleRaf);
@@ -3916,6 +4090,19 @@
     }
 
     const item = diceFaces[faceIdx];
+    if (outOfStock.has(item.name)) {
+      diceRolling = false;
+      diceGame.classList.remove('dice-game--rolling');
+      if (!dealNewFaces()) {
+        showToast('Te weinig drankjes voor een dobbelsteen 🎲', true, 2600);
+        closeDice();
+        return;
+      }
+      paintCube();
+      resetDiceRound({ newAssortment: false });
+      showToast('Dat drankje is net uitverkocht — rol opnieuw', true, 2800);
+      return;
+    }
     diceWinner = item;
     diceGame.classList.remove('dice-game--rolling');
     diceGame.classList.add('dice-game--landed');
@@ -3958,6 +4145,8 @@
   }
 
   async function openDice() {
+    // Verse voorraad ophalen zodat uitverkochte drankjes niet op de steen komen
+    await refreshAvailability({ notifyCart: false });
     if (!dealNewFaces()) {
       showToast('Te weinig drankjes voor een dobbelsteen 🎲', true, 2600);
       return;
@@ -4011,6 +4200,11 @@
       if (e.target.closest('#dice-take')) {
         if (!diceWinner) return;
         const item = diceWinner;
+        if (outOfStock.has(item.name)) {
+          showToast('Uitverkocht — rol opnieuw', true, 2600);
+          resetDiceRound({ newAssortment: true });
+          return;
+        }
         closeDice();
         closeDrawer();
         addItem(item.name, item.price, item.category);
