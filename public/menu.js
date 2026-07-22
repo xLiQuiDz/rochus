@@ -4458,6 +4458,7 @@
     "Sharing Nacho's": '“Sharing” is juridisch niet bindend.',
     Champagne: 'Voor als de groepschat “GROOT NIEUWS” zegt.',
     Kaasballetjes: 'Volgorde: kaasballetje, slokje, levensverhaal.',
+    'Portie gemengd': 'Gemengd door Beestig Goe. Ottenburg weet het.',
     'Friet 105 Burger': 'Genoemd naar nummer 105. De burger woont daar nu.',
     'Hugo Spritz': 'Hugo is de enige man die iedereen hier vertrouwt.',
     Bitterballen: 'Binnenkant: lava. Wacht. Echt. Wacht.',

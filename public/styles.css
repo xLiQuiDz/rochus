@@ -783,6 +783,18 @@ h1, h2, h3, h4 {
   letter-spacing: 0.01em;
 }
 
+.menu-card__partner {
+  color: var(--amber-400);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  font-style: italic;
+}
+
+.menu-card__partner:hover {
+  color: var(--amber-300, #e6c88a);
+}
+
 .menu-card__prices {
   position: relative;
   z-index: 2;

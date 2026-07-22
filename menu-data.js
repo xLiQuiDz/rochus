@@ -55,6 +55,7 @@ const MENU_ITEMS = [
   { name: 'Kippen Nuggets (6 stuks)', price: 7, category: 'fingerfood' },
   { name: 'Kipfingers (6 stuks)', price: 7, category: 'fingerfood' },
   { name: "Sharing Nacho's", price: 15, category: 'fingerfood' },
+  { name: 'Portie gemengd', price: 15, category: 'fingerfood' },
   { name: 'Friet 105 Burger', price: 9, category: 'fingerfood' },
 ];
 
@@ -181,6 +182,7 @@ const PRINT_CATEGORY_LABELS = {
 
 const PRINT_NOTES = {
   Corona: '4+2 op Corona Bucket',
+  'Portie gemengd': 'Slagerij Beestig Goe',
 };
 
 const PRINT_SIGNATURES = new Set(["Tripel Karmeliet van 't vat"]);
@@ -305,6 +307,7 @@ const ITEM_ALLERGENS = {
   'Kippen Nuggets (6 stuks)': ['gluten', 'ei', 'soja'],
   'Kipfingers (6 stuks)': ['gluten', 'ei'],
   "Sharing Nacho's": ['melk'],
+  'Portie gemengd': ['gluten', 'ei', 'melk', 'selderij'],
   'Friet 105 Burger': ['gluten', 'ei', 'mosterd', 'vis', 'soja', 'selderij'],
 };
 
