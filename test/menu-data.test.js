@@ -89,7 +89,7 @@ test('alcohol-free beers live in their own section', () => {
   assert.ok(av, 'alcoholvrij section exists');
   assert.deepEqual(
     av.items.map((i) => i.name),
-    ['Stella 0,0', 'Sportzot', 'Tripel Karmeliet 0,0']
+    ['Stella 0,0', 'Sportzot', 'Tripel Karmeliet 0,0', 'Corona 0,0']
   );
 
   const flessen = menu.sections.find((s) => s.id === 'flessen');
@@ -110,10 +110,20 @@ test('getPrintMenu collapses wines into glas/fles rows', () => {
   assert.equal(rose.glass, 5);
   assert.equal(rose.bottle, 25);
 
+  const cava = wines.items.find((i) => i.name === 'Cava');
+  assert.ok(cava, 'cava present');
+  assert.equal(cava.glass, 5);
+  assert.equal(cava.bottle, 28);
+
+  const prosecco = wines.items.find((i) => i.name.startsWith('Prosecco'));
+  assert.ok(prosecco, 'prosecco present');
+  assert.equal(prosecco.glass, null);
+  assert.equal(prosecco.bottle, 25);
+
   const champagne = wines.items.find((i) => i.name.startsWith('Champagne'));
   assert.ok(champagne, 'champagne present');
   assert.equal(champagne.glass, null);
-  assert.equal(champagne.bottle, 55);
+  assert.equal(champagne.bottle, 50);
 });
 
 test('getPrintMenu omits digital-only water and collapses tea/chips variants', () => {
