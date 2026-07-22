@@ -228,7 +228,8 @@ body {
   position: relative;
   background: var(--paper);
   color: var(--ink);
-  padding: 15mm 16mm 11mm;
+  /* Padding > kader-inset, zodat tekst nooit over de gouden lijnen loopt */
+  padding: 16mm 17mm 14mm;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
   width: 210mm;
   max-width: 100%;
@@ -241,13 +242,14 @@ body {
   -webkit-print-color-adjust: exact;
 }
 
-/* Dubbel gouden kader */
+/* Dubbel gouden kader — boven de content zodat overlappende tekst eronder verdwijnt */
 .sheet::before {
   content: '';
   position: absolute;
   inset: 5mm;
   border: 1.5px solid var(--gold);
   pointer-events: none;
+  z-index: 2;
 }
 
 .sheet::after {
@@ -256,11 +258,13 @@ body {
   inset: 6.6mm;
   border: 0.6px solid rgba(184, 146, 74, 0.5);
   pointer-events: none;
+  z-index: 2;
 }
 
 .sheet__header {
   text-align: center;
   margin-bottom: 6mm;
+  flex-shrink: 0;
 }
 
 .sheet__header--compact {
@@ -336,6 +340,7 @@ body {
 .sheet__sections {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -344,6 +349,7 @@ body {
 
 .sheet__turn {
   margin-top: 3.5mm;
+  flex-shrink: 0;
   text-align: center;
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-style: italic;
@@ -360,6 +366,9 @@ body {
 
 /* Klemkaart: secties in twee kolommen */
 .sheet__columns {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 5mm 9mm;
@@ -368,6 +377,8 @@ body {
 
 .sheet__col {
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
   gap: 5.5mm;
   align-content: start;
@@ -493,6 +504,7 @@ body {
 .sheet__footer {
   margin-top: 6mm;
   padding-top: 3mm;
+  flex-shrink: 0;
   border-top: 1px solid var(--line);
   text-align: center;
   color: var(--ink-soft);
@@ -572,7 +584,7 @@ body {
     width: auto;
     height: 279mm;
     margin: 0;
-    padding: 13mm 13mm 10mm;
+    padding: 14mm 14mm 12mm;
     border-radius: 0;
     box-shadow: none;
     background: #fff;
@@ -584,11 +596,11 @@ body {
   }
 
   .sheet::before {
-    inset: 3mm;
+    inset: 3.5mm;
   }
 
   .sheet::after {
-    inset: 4.4mm;
+    inset: 5mm;
   }
 
   a {
@@ -644,8 +656,8 @@ body {
   width: 140mm;
   height: 190mm;
   min-height: 0;
-  /* Extra ruimte bovenaan: daar zit de kroon-klem over het papier */
-  padding: 15mm 8mm 7mm;
+  /* Extra ruimte bovenaan: kroon-klem; onder/zij ≥ kader zodat tekst binnen blijft */
+  padding: 14mm 9mm 9mm;
   margin: 0;
   /* Kniplijn — exact op de kaartrand */
   border: 1px dashed rgba(26, 18, 8, 0.35);
@@ -662,51 +674,51 @@ body {
 }
 
 .sheet--clip .sheet__header {
-  margin-bottom: 3.5mm;
+  margin-bottom: 2.5mm;
 }
 
 .sheet--clip .sheet__brand {
-  font-size: 1.35rem;
+  font-size: 1.28rem;
   letter-spacing: 0.3em;
   text-indent: 0.3em;
 }
 
 .sheet--clip .sheet__subtitle {
-  font-size: 0.85rem;
-  margin-top: 0.5mm;
+  font-size: 0.8rem;
+  margin-top: 0.4mm;
 }
 
 .sheet--clip .sheet__rule {
   width: 34mm;
-  margin-top: 1.5mm;
+  margin-top: 1.2mm;
   font-size: 0.5rem;
 }
 
 .sheet--clip .sheet__columns {
-  gap: 3mm 5mm;
+  gap: 2mm 4mm;
 }
 
 .sheet--clip .sheet__col {
-  gap: 3mm;
+  gap: 2.2mm;
 }
 
 .sheet--clip .sheet__section-title {
-  font-size: 0.56rem;
-  letter-spacing: 0.14em;
-  gap: 2mm;
-  margin-bottom: 1.6mm;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  gap: 1.5mm;
+  margin-bottom: 1.2mm;
 }
 
 .sheet--clip .sheet__row {
-  font-size: 0.62rem;
-  padding: 0.55mm 0;
-  gap: 1.5mm;
-  line-height: 1.25;
+  font-size: 0.58rem;
+  padding: 0.35mm 0;
+  gap: 1.2mm;
+  line-height: 1.2;
 }
 
 .sheet--clip .sheet__row--wine {
   grid-template-columns: minmax(0, max-content) minmax(3mm, 1fr) 9mm 9mm;
-  gap: 2px 5px;
+  gap: 2px 4px;
 }
 
 .sheet--clip .sheet__leader {
@@ -715,28 +727,28 @@ body {
 }
 
 .sheet--clip .sheet__sig {
-  font-size: 0.46rem;
-  margin-left: 4px;
+  font-size: 0.42rem;
+  margin-left: 3px;
 }
 
 .sheet--clip .sheet__note {
-  font-size: 0.52rem;
-  margin-left: 4px;
+  font-size: 0.48rem;
+  margin-left: 3px;
 }
 
 .sheet--clip .sheet__wine-head {
   grid-template-columns: minmax(0, 1fr) 9mm 9mm;
-  gap: 2px 5px;
-  font-size: 0.46rem;
+  gap: 2px 4px;
+  font-size: 0.42rem;
 }
 
 .sheet--clip .sheet__footer {
-  margin-top: 3mm;
-  padding-top: 2mm;
+  margin-top: 2mm;
+  padding-top: 1.5mm;
 }
 
 .sheet--clip .sheet__footer-row {
-  font-size: 0.56rem;
+  font-size: 0.52rem;
   gap: 2mm;
 }
 
@@ -759,13 +771,18 @@ body {
 }
 
 /* ---- Allergieënkaart ---- */
+.sheet--allergens {
+  padding: 15mm 18mm 13mm;
+}
+
 .allergen-legend {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 2.5mm 4mm;
-  margin: 0 0 5mm;
-  padding: 3mm 2mm;
+  gap: 2mm 3.5mm;
+  margin: 0 0 3.5mm;
+  padding: 2.5mm 1mm;
+  flex-shrink: 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
@@ -773,8 +790,8 @@ body {
 .allergen-legend__item {
   display: inline-flex;
   align-items: center;
-  gap: 1.5mm;
-  font-size: 0.68rem;
+  gap: 1.2mm;
+  font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--ink-soft);
@@ -784,17 +801,17 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 5.2mm;
-  height: 5.2mm;
-  border: 1.2px solid var(--ink);
+  width: 4.6mm;
+  height: 4.6mm;
+  border: 1.1px solid var(--ink);
   border-radius: 50%;
   color: var(--ink);
   flex-shrink: 0;
 }
 
 .allergen-badge svg {
-  width: 3.2mm;
-  height: 3.2mm;
+  width: 2.8mm;
+  height: 2.8mm;
   display: block;
 }
 
@@ -802,16 +819,18 @@ body {
   display: inline-flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 1.2mm;
+  gap: 1mm;
   flex-shrink: 0;
+  max-width: 45%;
 }
 
 .sheet__row--allergen {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 3mm;
-  padding: 1.1mm 0;
+  gap: 2.5mm;
+  padding: 0.55mm 0;
+  overflow: hidden;
 }
 
 .sheet__row--allergen .sheet__name {
@@ -820,29 +839,38 @@ body {
 }
 
 .sheet__row--allergen .sheet__name-text {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
 }
 
 .sheet--allergens .sheet__sections {
-  gap: 5mm;
+  gap: 3mm;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  justify-content: flex-start;
 }
 
 .sheet--allergens .sheet__section-title {
-  margin-bottom: 2mm;
+  margin-bottom: 1.4mm;
+  font-size: 0.64rem;
+}
+
+.sheet--allergens .sheet__list {
+  min-width: 0;
 }
 
 .sheet__footer--allergen {
-  margin-top: auto;
+  margin-top: 3mm;
+  flex-shrink: 0;
   text-align: center;
 }
 
 .sheet__footer--allergen .sheet__footer-note {
   font-style: normal;
-  font-size: 0.62rem;
-  line-height: 1.4;
+  font-size: 0.58rem;
+  line-height: 1.35;
   color: var(--ink-soft);
-  max-width: 140mm;
+  max-width: 150mm;
   margin: 0 auto;
 }
 
@@ -874,9 +902,14 @@ body {
 @media print {
   .pages--allergens .sheet--allergens {
     height: 279mm;
+    padding: 13mm 15mm 11mm;
   }
 
   .pages--allergens[hidden] {
     display: none !important;
+  }
+
+  .sheet.sheet--clip {
+    padding: 13mm 8.5mm 8.5mm;
   }
 }
