@@ -4546,13 +4546,18 @@ h1, h2, h3, h4 {
 }
 
 /* ============================================================
-   RUM — de rumvloed: een fles kantelt bovenin en giet het scherm
-   vol; de rum stijgt tot ~62%, de gif dobbert er als vlot op mee.
-   Finale: gouden flits + CHEERS dat uit de rum omhoog komt.
-   Laagvolgorde: stream(2) < zee(3) < vlot(4) < golffront(5)
-   < fles(6) < titel(7) < flits(8) < skip(9).
+   RUM — de rumshow in drie bedrijven:
+   1) de laatste druppel — fles kantelt boven een glas, er valt
+      precies één zielige druppel ("plik");
+   2) paniek — "…GONE?!" slaat in, de fles wordt wild geschud,
+      zelfs de vlieg verlaat de fles;
+   3) de rumgeiser — de vloer barst open, rum vult het scherm en
+      Captain Jack rijst met godenstralen uit de rum op.
+   Laagvolgorde: geiser(2) < zee(3) < reveal(4) < golffront(5)
+   < stage(6) < titel/slam(7) < flits(8) < skip(9).
    ============================================================ */
 .rum-show {
+  --rum-bh: clamp(150px, 30vh, 230px); /* hoogte van de fles, deelt de val-afstand van de druppel */
   position: fixed;
   inset: 0;
   z-index: 650;
@@ -4614,137 +4619,630 @@ h1, h2, h3, h4 {
   }
 }
 
+.rum-show--panic .rum-show__title {
+  animation: none;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
 .rum-show--done .rum-show__title {
   animation: none;
   opacity: 0;
   transition: opacity 0.4s ease;
 }
 
-/* --- de fles, kantelt om de flessenmond (transform-origin 50% 0) --- */
-.rum-show__bottle {
+/* --- "…GONE?!" — slaat als een dreun midden op het scherm in --- */
+.rum-show__slam {
   position: absolute;
-  left: 66%;
-  top: 100px;
-  width: clamp(46px, 13vw, 62px);
-  z-index: 6;
-  transform-origin: 50% 0;
-  transform: translateX(-50%) rotate(-118deg);
-  animation: rum-bottle-in 0.95s cubic-bezier(0.34, 1.3, 0.44, 1) both;
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
+  top: 30vh;
+  left: 12px;
+  right: 12px;
+  z-index: 7;
+  margin: 0;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2rem, 12vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-indent: 0.08em;
+  background: linear-gradient(180deg, #fff2cf 20%, #f2b854 60%, #c1761f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 4px 22px rgba(212, 140, 50, 0.5));
+  opacity: 0;
   pointer-events: none;
+}
+
+.rum-show--panic .rum-show__slam {
+  animation:
+    rum-slam-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both,
+    rum-slam-judder 0.34s linear 0.4s 3;
+}
+
+.rum-show--erupt .rum-show__slam,
+.rum-show--done .rum-show__slam {
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+@keyframes rum-slam-in {
+  0% {
+    opacity: 0;
+    transform: scale(3);
+    filter: blur(10px) drop-shadow(0 4px 22px rgba(212, 140, 50, 0.5));
+  }
+  55% {
+    opacity: 1;
+    filter: blur(0) drop-shadow(0 4px 22px rgba(212, 140, 50, 0.5));
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0) drop-shadow(0 4px 22px rgba(212, 140, 50, 0.5));
+  }
+}
+
+@keyframes rum-slam-judder {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-3px, 2px) rotate(-0.6deg);
+  }
+  50% {
+    transform: translate(3px, -2px) rotate(0.5deg);
+  }
+  75% {
+    transform: translate(-2px, -1px);
+  }
+}
+
+/* --- het toneel van bedrijf 1 & 2: spot, fles, druppel, glas --- */
+.rum-show__stage {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.rum-show--panic .rum-show__stage {
+  animation: rum-quake 0.4s linear 2;
+}
+
+/* de geiser lanceert het hele toneel het beeld uit */
+.rum-show--erupt .rum-show__stage {
+  animation: rum-stage-blast 0.75s cubic-bezier(0.5, 0, 0.9, 0.4) both;
+}
+
+@keyframes rum-quake {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-5px, 3px);
+  }
+  40% {
+    transform: translate(5px, -3px);
+  }
+  60% {
+    transform: translate(-4px, -2px);
+  }
+  80% {
+    transform: translate(4px, 2px);
+  }
+}
+
+@keyframes rum-stage-blast {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-125vh) rotate(-15deg);
+    opacity: 1;
+  }
+}
+
+.rum-show__spot {
+  position: absolute;
+  left: 50%;
+  top: 4vh;
+  width: min(90vw, 560px);
+  height: 76vh;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse 46% 50% at 50% 42%, rgba(240, 200, 120, 0.14), transparent 70%);
+  animation: rum-spot-in 0.9s ease both;
+}
+
+@keyframes rum-spot-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* de shaker draagt het paniek-geschud, de fles daarbinnen de val + kanteling */
+.rum-show__shaker {
+  position: absolute;
+  left: 50%;
+  top: 8vh;
+  height: var(--rum-bh);
+  transform: translateX(-50%);
+}
+
+.rum-show--panic .rum-show__shaker {
+  animation: rum-shake-hard 0.13s linear infinite;
+}
+
+@keyframes rum-shake-hard {
+  0%, 100% {
+    transform: translateX(-50%) rotate(-6deg) translateY(-3px);
+  }
+  50% {
+    transform: translateX(-50%) rotate(7deg) translateY(3px);
+  }
+}
+
+/* de fles valt binnen en flipt ondersteboven — bijna leeg, dat weet ze zelf nog niet */
+.rum-show__bottle {
+  height: 100%;
+  transform-origin: 50% 50%;
+  animation: rum-bottle-flip-in 0.9s cubic-bezier(0.34, 1.3, 0.44, 1) both;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
 }
 
 .rum-show__bottle-svg {
   display: block;
-  width: 100%;
-  height: auto;
-  transform-origin: 50% 0;
-  animation: rum-glug 0.6s ease-in-out 0.95s infinite alternate;
+  height: 100%;
+  width: auto;
 }
 
-@keyframes rum-bottle-in {
+@keyframes rum-bottle-flip-in {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-46px) rotate(-30deg);
+    transform: translateY(-60vh) rotate(-10deg);
   }
-  45% {
+  40% {
     opacity: 1;
   }
   100% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) rotate(-118deg);
+    transform: translateY(0) rotate(172deg);
   }
 }
 
-@keyframes rum-glug {
-  from {
-    transform: rotate(-1.6deg);
-  }
-  to {
-    transform: rotate(2.4deg);
-  }
-}
-
-/* glug-glug-pauze halverwege: de fles klokt zichtbaar harder */
-.rum-show--glug .rum-show__bottle-svg {
-  animation-duration: 0.2s;
-}
-
-.rum-show--done .rum-show__bottle {
-  animation: none;
-  transform: translateX(-50%) translateY(-12px) rotate(-6deg);
-  opacity: 0;
-  transition: transform 0.8s var(--ease-out-expo), opacity 0.5s ease 0.25s;
-}
-
-.rum-show--done .rum-show__bottle-svg {
-  animation: none;
-}
-
-/* --- de straal: hoogte per frame vanuit JS, tot aan het rumoppervlak --- */
-.rum-show__stream {
+/* --- de laatste druppel: zwelt aan, twijfelt, en valt. plik. --- */
+.rum-show__drop {
   position: absolute;
-  left: 66%;
-  top: 102px;
-  width: 6px;
-  height: 0;
-  margin-left: -3px;
-  z-index: 2;
-  border-radius: 3px;
-  background: linear-gradient(180deg, rgba(242, 184, 84, 0), #f2b854 12%, #d98d2b 60%, #c1761f);
-  box-shadow: 0 0 14px rgba(242, 184, 84, 0.45);
-  opacity: 0;
-  transform-origin: 50% 0;
-  animation: rum-stream-wobble 0.3s ease-in-out infinite alternate;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.rum-show__stream::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
   left: 50%;
-  width: 30px;
-  height: 14px;
-  margin-left: -15px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(255, 220, 150, 0.85), rgba(242, 184, 84, 0) 70%);
-  filter: blur(1px);
+  top: calc(8vh + var(--rum-bh) - 8px);
+  margin-left: 14px; /* de flessenmond hangt door de 8°-tilt nét rechts van het midden */
+  width: 11px;
+  height: 15px;
+  --rum-fall: calc(52vh - var(--rum-bh) + 2px);
+  border-radius: 50% 50% 50% 50% / 38% 38% 62% 62%;
+  background: radial-gradient(circle at 38% 30%, #ffdf9e, #d98d2b 60%, #b06a1e);
+  box-shadow: 0 0 10px rgba(242, 184, 84, 0.5);
+  opacity: 0;
+  animation: rum-last-drop 1.15s ease-in 0.95s both;
 }
 
-@keyframes rum-stream-wobble {
+@keyframes rum-last-drop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.2);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, 2px) scale(0.75);
+  }
+  38% {
+    transform: translate(-50%, 3px) scale(1);
+  }
+  52% {
+    transform: translate(-50%, 4px) scale(1.08, 0.92);
+  }
+  60% {
+    transform: translate(-50%, 4px) scale(0.94, 1.12);
+  }
+  94% {
+    opacity: 1;
+    transform: translate(-50%, var(--rum-fall)) scale(0.9, 1.18);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, var(--rum-fall)) scale(1.4, 0.4);
+  }
+}
+
+.rum-show__plik {
+  position: absolute;
+  left: 50%;
+  top: calc(60vh - 20px);
+  margin-left: 30px;
+  font-style: italic;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  color: rgba(255, 236, 190, 0.85);
+  text-shadow: 0 1px 8px rgba(60, 30, 8, 0.6);
+  opacity: 0;
+  animation: rum-plik 0.9s ease-out 2.05s both;
+}
+
+@keyframes rum-plik {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(1);
+  }
+}
+
+/* --- het lege glas, wacht vol goede hoop --- */
+.rum-show__glass {
+  position: absolute;
+  left: 50%;
+  top: 60vh;
+  height: clamp(80px, 13vh, 118px);
+  transform: translateX(-50%);
+  /* fade-in bij opkomst + mini-schok precies wanneer de druppel landt */
+  animation:
+    rum-spot-in 0.5s ease 0.45s both,
+    rum-glass-shiver 0.35s ease 2s 1;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+}
+
+.rum-show__glass svg {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+@keyframes rum-glass-shiver {
+  0%, 100% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+  30% {
+    transform: translateX(-50%) rotate(-2deg);
+  }
+  65% {
+    transform: translateX(-50%) rotate(1.6deg);
+  }
+}
+
+.rum-show__puddle {
+  opacity: 0;
+  animation: rum-puddle-in 0.5s ease 2.1s both;
+}
+
+@keyframes rum-puddle-in {
   from {
-    transform: scaleX(0.8);
+    opacity: 0;
   }
   to {
-    transform: scaleX(1.2);
+    opacity: 0.9;
   }
 }
 
-.rum-show--pouring .rum-show__stream {
-  opacity: 1;
+.rum-show__ripple {
+  opacity: 0;
+  transform-origin: 35px 70px;
+  animation: rum-ripple 0.7s ease-out 2s both;
 }
 
-.rum-show--glug .rum-show__stream {
-  animation-duration: 0.16s;
+@keyframes rum-ripple {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
 }
 
-.rum-show--done .rum-show__stream {
+/* --- de vlieg: zelfs die geeft de fles op tijdens het schudden --- */
+.rum-show__fly {
+  position: absolute;
+  left: 50%;
+  top: calc(8vh + var(--rum-bh) - 6px);
+  margin-left: 12px; /* ontsnapt uit de flessenmond, die rechts van het midden hangt */
+  font-size: 22px;
   opacity: 0;
 }
 
-/* --- het vlot: de gif dobbert op het oppervlak (transform via JS) --- */
-.rum-show__raft {
+.rum-show--panic .rum-show__fly {
+  animation: rum-fly-away 1.7s ease-in 0.55s both;
+}
+
+@keyframes rum-fly-away {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, 10px) rotate(-14deg);
+  }
+  30% {
+    transform: translate(calc(-50% + 34px), -6vh) rotate(16deg);
+  }
+  50% {
+    transform: translate(calc(-50% - 20px), -13vh) rotate(-20deg);
+  }
+  70% {
+    transform: translate(calc(-50% + 60px), -22vh) rotate(14deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + 34vw), -42vh) rotate(30deg);
+  }
+}
+
+/* --- paniektekens rond de fles --- */
+.rum-show__marks {
   position: absolute;
-  left: 47%;
-  top: 100%;
-  width: min(86vw, 440px, 62vh);
-  z-index: 4;
-  transform: translate3d(-50%, 0, 0);
-  will-change: transform;
-  filter: drop-shadow(0 24px 32px rgba(0, 0, 0, 0.45));
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  color: var(--amber-400);
+  text-shadow: 0 2px 14px rgba(212, 140, 50, 0.5);
+  opacity: 0;
+}
+
+.rum-show__marks--1 {
+  left: calc(50% - clamp(70px, 20vw, 120px));
+  top: 14vh;
+  font-size: clamp(1.6rem, 7vw, 2.4rem);
+}
+
+.rum-show__marks--2 {
+  left: calc(50% + clamp(46px, 13vw, 84px));
+  top: 24vh;
+  font-size: clamp(1.2rem, 5.4vw, 1.8rem);
+}
+
+.rum-show--panic .rum-show__marks--1 {
+  animation: rum-mark-pop 1s ease 0.2s both;
+}
+
+.rum-show--panic .rum-show__marks--2 {
+  animation: rum-mark-pop 1s ease 0.85s both;
+}
+
+@keyframes rum-mark-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-14deg);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.2) rotate(6deg);
+  }
+  45% {
+    transform: scale(1) rotate(-2deg);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1) translateY(-10px);
+  }
+}
+
+/* --- de rumgeiser: barst vanuit de vloer los --- */
+.rum-show__geyser {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: clamp(72px, 18vw, 120px);
+  height: 106vh;
+  z-index: 2;
+  margin-left: calc(clamp(72px, 18vw, 120px) / -2);
+  border-radius: 40px 40px 0 0;
+  background: linear-gradient(
+    90deg,
+    rgba(193, 118, 31, 0) 0%,
+    rgba(217, 141, 43, 0.85) 18%,
+    #ffd98e 50%,
+    rgba(217, 141, 43, 0.85) 82%,
+    rgba(193, 118, 31, 0) 100%
+  );
+  box-shadow: 0 0 44px rgba(242, 184, 84, 0.5);
+  transform: scaleY(0);
+  transform-origin: 50% 100%;
+  opacity: 0;
   pointer-events: none;
+}
+
+.rum-show--erupt .rum-show__geyser {
+  opacity: 1;
+  animation:
+    rum-geyser-burst 0.42s cubic-bezier(0.16, 1, 0.3, 1) both,
+    rum-geyser-wobble 0.3s ease-in-out 0.42s infinite alternate;
+}
+
+.rum-show--done .rum-show__geyser {
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.5s ease 0.3s;
+}
+
+@keyframes rum-geyser-burst {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes rum-geyser-wobble {
+  from {
+    transform: scaleY(1) scaleX(0.92);
+  }
+  to {
+    transform: scaleY(1) scaleX(1.08);
+  }
+}
+
+/* opspattende druppels uit de geiser */
+.rum-show__spray {
+  position: absolute;
+  left: 50%;
+  bottom: 12vh;
+  width: 12px;
+  height: 16px;
+  border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+  background: radial-gradient(circle at 38% 30%, #ffdf9e, #d98d2b 65%);
+  opacity: 0;
+}
+
+.rum-show--erupt .rum-show__spray {
+  animation: rum-spray-arc 0.9s ease-out var(--sd, 0s) both;
+}
+
+@keyframes rum-spray-arc {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--sx) * 0.8), -58vh) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--sx)), -38vh) scale(0.8);
+  }
+}
+
+/* de kurk wordt torenhoog gelanceerd */
+.rum-show__cork {
+  position: absolute;
+  left: calc(50% - 9px);
+  bottom: 16vh;
+  width: 18px;
+  height: 26px;
+  border-radius: 5px 5px 7px 7px;
+  background: linear-gradient(180deg, #c99a5e, #8a5a2a);
+  border: 1px solid rgba(240, 217, 168, 0.5);
+  opacity: 0;
+}
+
+.rum-show--erupt .rum-show__cork {
+  animation: rum-cork-launch 1.15s cubic-bezier(0.2, 0.7, 0.4, 1) 0.12s both;
+}
+
+@keyframes rum-cork-launch {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(9vw, -110vh) rotate(940deg);
+  }
+}
+
+/* --- de reveal: Jack rijst uit de rum, met godenstralen --- */
+.rum-show__reveal {
+  position: absolute;
+  left: 50%;
+  bottom: calc(62vh - 16px); /* onderrand nét onder de rumspiegel: de golfkam klotst er overheen */
+  width: min(84vw, 430px, 58vh);
+  z-index: 4;
+  transform: translate(-50%, 0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rum-show--done .rum-show__reveal {
+  animation: rum-reveal-rise 1.05s var(--ease-out-expo) 0.35s both;
+}
+
+@keyframes rum-reveal-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(100% + 30vh)) scale(0.85);
+  }
+  30% {
+    opacity: 1;
+  }
+  84% {
+    transform: translate(-50%, -14px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.rum-show__rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 140vmin;
+  height: 140vmin;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(
+    rgba(242, 184, 84, 0.18) 0deg 9deg,
+    rgba(242, 184, 84, 0) 9deg 20deg
+  );
+  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9), transparent 62%);
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9), transparent 62%);
+  opacity: 0;
+}
+
+.rum-show--done .rum-show__rays {
+  opacity: 1;
+  transition: opacity 0.7s ease 0.9s;
+  animation: rum-rays-spin 16s linear infinite;
+}
+
+@keyframes rum-rays-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Jack dobbert zachtjes na op de rum */
+.rum-show__float {
+  position: relative;
+  filter: drop-shadow(0 24px 32px rgba(0, 0, 0, 0.45));
+}
+
+.rum-show--done .rum-show__float {
+  animation: rum-float-bob 3.2s ease-in-out 1.4s infinite;
+}
+
+@keyframes rum-float-bob {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(1.4deg);
+  }
 }
 
 .rum-show__gif {
@@ -4753,7 +5251,7 @@ h1, h2, h3, h4 {
   height: auto;
   border-radius: 16px;
   border: 1px solid rgba(240, 217, 168, 0.28);
-  box-shadow: 0 0 40px rgba(212, 140, 50, 0.25);
+  box-shadow: 0 0 44px rgba(212, 140, 50, 0.3);
 }
 
 /* --- de zee van rum: schuift als één geheel omhoog (transform via JS) --- */
@@ -4867,23 +5365,27 @@ h1, h2, h3, h4 {
   }
 }
 
-/* --- CHEERS: komt letter voor letter uit de rum omhoog --- */
-.rum-show__cheers {
+/* --- "DAAR IS DE RUM": komt letter voor letter uit de rum omhoog --- */
+.rum-show__caption {
   position: absolute;
-  top: clamp(88px, 15vh, 140px);
+  top: clamp(70px, 13vh, 120px);
   left: 0;
   right: 0;
   margin: 0;
   text-align: center;
   font-family: 'Cinzel', serif;
-  font-size: clamp(2.2rem, 12vw, 3.6rem);
+  font-size: clamp(1.4rem, 7vw, 2.5rem);
   font-weight: 800;
-  letter-spacing: 0.12em;
-  text-indent: 0.12em;
+  letter-spacing: 0.08em;
   pointer-events: none;
 }
 
-.rum-show__cheers span {
+.rum-show__cword {
+  display: inline-block;
+  margin: 0 0.16em;
+}
+
+.rum-show__caption .rum-show__cword span {
   display: inline-block;
   opacity: 0;
   background: linear-gradient(105deg, #f7e2ae 25%, #fff6d8 50%, #e9c377 75%);
@@ -4895,10 +5397,10 @@ h1, h2, h3, h4 {
   filter: drop-shadow(0 3px 12px rgba(58, 31, 10, 0.55));
 }
 
-.rum-show--done .rum-show__cheers span {
+.rum-show--done .rum-show__caption .rum-show__cword span {
   animation:
-    rum-letter-up 0.7s var(--ease-out-expo) calc(0.15s + var(--i) * 0.07s) both,
-    rum-shimmer 3s linear calc(0.9s + var(--i) * 0.07s) infinite;
+    rum-letter-up 0.7s var(--ease-out-expo) calc(0.9s + var(--i) * 0.06s) both,
+    rum-shimmer 3s linear calc(1.7s + var(--i) * 0.06s) infinite;
 }
 
 @keyframes rum-letter-up {

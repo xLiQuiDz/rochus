@@ -852,33 +852,53 @@
     <p class="meter-show__skip" id="meter-skip">tik om door te spoelen ⏩</p>
   </div>
 
-  <!-- Rum — de rumvloed: fles kantelt, de rum stijgt, Jack dobbert mee -->
+  <!-- Rum — de rumshow in drie bedrijven: de fles blijkt leeg (één zielige
+       druppel), paniek + geschud, dan barst de rumgeiser los en rijst
+       Captain Jack himself uit de rum op. -->
   <div class="rum-show" id="rum-show" hidden aria-hidden="true">
     <p class="rum-show__title" id="rum-title">WHY IS THE RUM…</p>
+    <p class="rum-show__slam" id="rum-slam" aria-hidden="true">…GONE?!</p>
 
-    <div class="rum-show__stream" id="rum-stream" aria-hidden="true"></div>
+    <div class="rum-show__stage" aria-hidden="true">
+      <div class="rum-show__spot"></div>
 
-    <div class="rum-show__bottle" aria-hidden="true">
-      <svg class="rum-show__bottle-svg" viewBox="0 0 90 230">
-        <path d="M36 4 h18 v8 h-3 v38 c0 14 16 18 16 38 v118 c0 12 -9 20 -21 20 h-2 c-12 0 -21 -8 -21 -20 V88 c0 -20 16 -24 16 -38 V12 h-3 Z" fill="#31190a" stroke="rgba(240, 217, 168, 0.4)" stroke-width="2" />
-        <path d="M27 96 c6 -5 30 -5 36 0 v110 c0 8 -7 14 -17 14 h-2 c-10 0 -17 -6 -17 -14 Z" fill="#a85c16" opacity="0.92" />
-        <path d="M30 98 v104" stroke="rgba(255, 236, 190, 0.3)" stroke-width="5" stroke-linecap="round" />
-        <rect x="24" y="118" width="42" height="52" rx="6" fill="#f0d9a8" />
-        <text x="45" y="141" text-anchor="middle" font-family="Cinzel, serif" font-weight="700" font-size="15" fill="#5f3410">RUM</text>
-        <text x="45" y="161" text-anchor="middle" font-size="13">☠️</text>
-      </svg>
+      <div class="rum-show__shaker">
+        <div class="rum-show__bottle">
+          <svg class="rum-show__bottle-svg" viewBox="0 0 90 230">
+            <path d="M36 4 h18 v8 h-3 v38 c0 14 16 18 16 38 v118 c0 12 -9 20 -21 20 h-2 c-12 0 -21 -8 -21 -20 V88 c0 -20 16 -24 16 -38 V12 h-3 Z" fill="#241206" stroke="rgba(240, 217, 168, 0.45)" stroke-width="2" />
+            <path d="M30 98 v104" stroke="rgba(255, 236, 190, 0.16)" stroke-width="5" stroke-linecap="round" />
+            <!-- label 180° gedraaid: leesbaar zodra de fles ondersteboven hangt -->
+            <g transform="rotate(180 45 144)">
+              <rect x="24" y="118" width="42" height="52" rx="6" fill="#f0d9a8" />
+              <text x="45" y="141" text-anchor="middle" font-family="Cinzel, serif" font-weight="700" font-size="15" fill="#5f3410">RUM</text>
+              <text x="45" y="161" text-anchor="middle" font-size="13">☠️</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <span class="rum-show__drop"></span>
+      <span class="rum-show__plik">plik</span>
+
+      <div class="rum-show__glass">
+        <svg viewBox="0 0 70 84">
+          <path d="M10 4 L16 72 c0.6 5 4.6 8 9.6 8 h18.8 c5 0 9 -3 9.6 -8 L60 4" fill="rgba(255, 244, 225, 0.05)" stroke="rgba(240, 217, 168, 0.55)" stroke-width="2.5" stroke-linecap="round" />
+          <ellipse class="rum-show__puddle" cx="35" cy="71" rx="8" ry="2.4" fill="#c1761f" />
+          <ellipse class="rum-show__ripple" cx="35" cy="70" rx="9" ry="3" fill="none" stroke="#f2b854" stroke-width="2" />
+        </svg>
+      </div>
+
+      <span class="rum-show__fly">🪰</span>
+      <span class="rum-show__marks rum-show__marks--1">?!</span>
+      <span class="rum-show__marks rum-show__marks--2">?!?</span>
     </div>
 
-    <div class="rum-show__raft" id="rum-raft">
-      <img
-        class="rum-show__gif"
-        id="rum-gif"
-        src="assets/rum-pirate.gif"
-        alt=""
-        width="436"
-        height="200"
-        decoding="async"
-      />
+    <div class="rum-show__geyser" aria-hidden="true">
+      <span class="rum-show__spray" style="--sx: -36vw; --sd: 0.05s"></span>
+      <span class="rum-show__spray" style="--sx: -15vw; --sd: 0.14s"></span>
+      <span class="rum-show__spray" style="--sx: 17vw; --sd: 0.1s"></span>
+      <span class="rum-show__spray" style="--sx: 38vw; --sd: 0.02s"></span>
+      <span class="rum-show__cork"></span>
     </div>
 
     <div class="rum-show__sea" id="rum-sea" aria-hidden="true">
@@ -890,8 +910,11 @@
       <div class="rum-show__body">
         <div class="rum-show__bubbles" id="rum-bubbles"></div>
       </div>
-      <p class="rum-show__cheers" aria-hidden="true">
-        <span style="--i: 0">C</span><span style="--i: 1">H</span><span style="--i: 2">E</span><span style="--i: 3">E</span><span style="--i: 4">R</span><span style="--i: 5">S</span>
+      <p class="rum-show__caption" aria-hidden="true">
+        <span class="rum-show__cword"><span style="--i: 0">D</span><span style="--i: 1">A</span><span style="--i: 2">A</span><span style="--i: 3">R</span></span>
+        <span class="rum-show__cword"><span style="--i: 4">I</span><span style="--i: 5">S</span></span>
+        <span class="rum-show__cword"><span style="--i: 6">D</span><span style="--i: 7">E</span></span>
+        <span class="rum-show__cword"><span style="--i: 8">R</span><span style="--i: 9">U</span><span style="--i: 10">M</span></span>
       </p>
     </div>
 
@@ -900,6 +923,21 @@
         <path d="M0 34 C100 14 200 14 300 34 S500 54 600 34 S800 14 900 34 S1100 54 1200 34 S1400 14 1500 34 S1700 54 1800 34 S2000 14 2100 34 S2300 54 2400 34 L2400 64 L0 64 Z" fill="#b06a1e" />
         <path d="M0 34 C100 14 200 14 300 34 S500 54 600 34 S800 14 900 34 S1100 54 1200 34 S1400 14 1500 34 S1700 54 1800 34 S2000 14 2100 34 S2300 54 2400 34" fill="none" stroke="#f3c06a" stroke-width="2.5" vector-effect="non-scaling-stroke" opacity="0.7" />
       </svg>
+    </div>
+
+    <div class="rum-show__reveal" aria-hidden="true">
+      <div class="rum-show__rays"></div>
+      <div class="rum-show__float">
+        <img
+          class="rum-show__gif"
+          id="rum-gif"
+          src="assets/rum-pirate.gif"
+          alt=""
+          width="436"
+          height="200"
+          decoding="async"
+        />
+      </div>
     </div>
 
     <div class="rum-show__flash" aria-hidden="true"></div>
