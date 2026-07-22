@@ -946,62 +946,20 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* RUM — piraten-cinema met Jack Sparrow                              */
+  /* RUM — eindscherm: gif + CHEERS (geen cinema-animatie)              */
   /* ------------------------------------------------------------------ */
   const rumShowEl = document.getElementById('rum-show');
   const rumGifEl = document.getElementById('rum-gif');
-  const rumCaptionEl = document.getElementById('rum-caption');
-  const rumTitleEl = document.getElementById('rum-title');
-  const rumStampEl = document.getElementById('rum-stamp');
-  const rumStampSubEl = document.getElementById('rum-stamp-sub');
-  const rumSkipEl = document.getElementById('rum-skip');
-  const rumEmbersEl = document.getElementById('rum-embers');
-  const rumFlashEl = document.getElementById('rum-flash');
 
-  const RUM_TITLES = [
-    'WHY IS THE RUM…',
-    'PIRATENMODUS',
-    'CAPTAIN ON DECK',
-    'DE RUM KOMT ERAAN',
-  ];
-  const RUM_TITLES_REPEAT = [
-    'ALWEER RUM?!',
-    'SAVVY?',
-    'NOG ÉÉN VOOR DE KAPITEIN',
-    'JULLIE ZIJN PIRATEN 🏴‍☠️',
-  ];
-  const RUM_CAPTIONS = [
-    { at: 0.08, text: 'jungle. fles. intenties.' },
-    { at: 0.28, text: 'Jack heft ’m. jij ook.' },
-    { at: 0.52, text: 'waar is de rum? HIER. 🏴‍☠️' },
-    { at: 0.78, text: 'CHEERS — maar make it epic' },
-  ];
-  const RUM_CAPTIONS_REPEAT = [
-    { at: 0.1, text: 'alweer? respectloos piratenwerk' },
-    { at: 0.4, text: 'Captain Morgan knikt goedkeurend' },
-    { at: 0.7, text: 'de bar zet de rum al klaar' },
-  ];
-  const RUM_STAMP_SUBS = [
-    'savvy? · zero regrets 🏴‍☠️',
-    'why is the rum gone? niet meer.',
-    'piratenenergie unlocked',
-    'drink alsof je een schip bestuurt',
-  ];
   const RUM_DONE_TOASTS = [
     'Rum in ’t mandje. Savvy. 🏴‍☠️',
     'Pirate energy toegevoegd 🍾',
     'Cheers — Jack zou trots zijn',
     'De kapitein is tevreden 🫡',
   ];
-  const RUM_CONFETTI = ['#c9a227', '#e8c547', '#8b5a2b', '#f0d9a8', '#2d5a3d', '#f7f1e8'];
 
   const rumShow = {
     running: false,
-    phase: 'idle',
-    plays: 0,
-    start: 0,
-    raf: 0,
-    capIdx: 0,
     closeTimer: 0,
   };
 
@@ -1009,174 +967,47 @@
     return name === 'Rum' || name === 'Rum Captain Morgan';
   }
 
-  function rumEase(t) {
-    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-  }
-
-  /** ~4.2s opbouw → finale */
-  function rumProgress(elapsed) {
-    return Math.min(1, rumEase(elapsed / 4200));
-  }
-
-  function setRumCaption(text) {
-    rumCaptionEl.textContent = text;
-    rumCaptionEl.classList.remove('rum-show__caption--pop');
-    void rumCaptionEl.offsetWidth;
-    rumCaptionEl.classList.add('rum-show__caption--pop');
-  }
-
-  function buildRumEmbers() {
-    if (!rumEmbersEl || rumEmbersEl.dataset.built) return;
-    rumEmbersEl.dataset.built = '1';
-    const frag = document.createDocumentFragment();
-    for (let i = 0; i < 14; i++) {
-      const spark = document.createElement('span');
-      spark.className = 'rum-show__ember';
-      spark.style.left = `${6 + Math.random() * 88}%`;
-      spark.style.animationDelay = `${(Math.random() * 2.8).toFixed(2)}s`;
-      spark.style.animationDuration = `${(2.4 + Math.random() * 2.2).toFixed(2)}s`;
-      spark.style.setProperty('--drift', `${(Math.random() * 40 - 20).toFixed(0)}px`);
-      frag.appendChild(spark);
-    }
-    rumEmbersEl.appendChild(frag);
-  }
-
-  function rumFrame(now) {
-    const g = rumShow;
-    if (!g.running || g.phase !== 'pan') return;
-    const p = rumProgress(now - g.start);
-
-    // Ken Burns: zoom van 0.72 → 1.18 + lichte pan, met heartbeat-shake tegen het eind
-    const zoom = 0.72 + p * 0.46;
-    const panX = Math.sin(p * Math.PI * 1.4) * 3.5;
-    const panY = Math.cos(p * Math.PI * 0.9) * 2.2;
-    const shake = p > 0.82 ? Math.sin((now - g.start) * 0.045) * (p - 0.82) * 8 : 0;
-    rumGifEl.style.transform = `translate3d(${panX + shake}%, ${panY}%, 0) scale(${zoom})`;
-
-    const caps = g.plays > 1 ? RUM_CAPTIONS_REPEAT : RUM_CAPTIONS;
-    while (g.capIdx < caps.length && p >= caps[g.capIdx].at) {
-      setRumCaption(caps[g.capIdx].text);
-      g.capIdx += 1;
-      if (navigator.vibrate) navigator.vibrate(8);
-    }
-
-    if (p >= 1) {
-      rumFinale();
-      return;
-    }
-    g.raf = requestAnimationFrame(rumFrame);
-  }
-
-  function rumFinale() {
-    const g = rumShow;
-    if (g.phase === 'finale') return;
-    g.phase = 'finale';
-    cancelAnimationFrame(g.raf);
-    rumCaptionEl.textContent = '';
-    rumSkipEl.textContent = 'tik om te sluiten';
-    rumShowEl.classList.add('rum-show--done');
-    rumGifEl.style.transition = 'transform 0.55s var(--ease-out-expo)';
-    rumGifEl.style.transform = 'translate3d(0, 0, 0) scale(1.05)';
-
-    if (rumFlashEl) {
-      rumFlashEl.classList.remove('rum-show__flash--go');
-      void rumFlashEl.offsetWidth;
-      rumFlashEl.classList.add('rum-show__flash--go');
-    }
-
-    setTimeout(() => {
-      if (!g.running) return;
-      rumStampEl.hidden = false;
-      if (navigator.vibrate) navigator.vibrate([28, 50, 28, 50, 90]);
-      fireConfetti({
-        particleCount: 110,
-        spread: 100,
-        startVelocity: 48,
-        origin: { y: 0.55 },
-        zIndex: 665,
-        colors: RUM_CONFETTI,
-      });
-      fireConfetti({
-        particleCount: 45,
-        angle: 55,
-        spread: 60,
-        origin: { x: 0, y: 0.7 },
-        zIndex: 665,
-        colors: RUM_CONFETTI,
-      });
-      fireConfetti({
-        particleCount: 45,
-        angle: 125,
-        spread: 60,
-        origin: { x: 1, y: 0.7 },
-        zIndex: 665,
-        colors: RUM_CONFETTI,
-      });
-    }, 280);
-
-    clearTimeout(g.closeTimer);
-    g.closeTimer = setTimeout(closeRumShow, 3000);
-  }
-
   function playRumShow() {
     if (!rumShowEl || prefersReducedMotion || rumShow.running) return;
-    // Meter-cinema wint als die al draait
     if (meterShow.running) return;
     const g = rumShow;
-    buildRumEmbers();
     g.running = true;
-    g.phase = 'pan';
-    g.plays += 1;
-    g.capIdx = 0;
     clearTimeout(g.closeTimer);
 
     clearTimeout(showToast._t);
     toastEl.classList.remove('show');
     toastEl.hidden = true;
 
-    rumShowEl.classList.remove('rum-show--done', 'rum-show--out');
-    rumStampEl.hidden = true;
-    rumStampSubEl.textContent = pick(RUM_STAMP_SUBS);
-    rumTitleEl.textContent = g.plays > 1 ? pick(RUM_TITLES_REPEAT) : pick(RUM_TITLES);
-    rumCaptionEl.textContent = '';
-    rumCaptionEl.classList.remove('rum-show__caption--pop');
-    rumSkipEl.textContent = 'tik om door te spoelen ⏩';
-    rumGifEl.style.transition = 'none';
-    rumGifEl.style.transform = 'translate3d(0, 0, 0) scale(0.72)';
-    // Herstart de gif-loop door cache-bust op src
-    const src = rumGifEl.getAttribute('src').split('?')[0];
-    rumGifEl.src = `${src}?t=${Date.now()}`;
+    rumShowEl.classList.remove('rum-show--out');
+    if (rumGifEl) {
+      const src = rumGifEl.getAttribute('src').split('?')[0];
+      rumGifEl.src = `${src}?t=${Date.now()}`;
+    }
     rumShowEl.hidden = false;
     rumShowEl.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
 
-    g.start = performance.now();
-    g.raf = requestAnimationFrame(rumFrame);
+    g.closeTimer = setTimeout(closeRumShow, 2800);
   }
 
   function closeRumShow() {
     const g = rumShow;
     if (!g.running) return;
     g.running = false;
-    g.phase = 'idle';
-    cancelAnimationFrame(g.raf);
     clearTimeout(g.closeTimer);
     rumShowEl.classList.add('rum-show--out');
     setTimeout(() => {
       rumShowEl.hidden = true;
       rumShowEl.setAttribute('aria-hidden', 'true');
-      rumShowEl.classList.remove('rum-show--out', 'rum-show--done');
-      if (rumFlashEl) rumFlashEl.classList.remove('rum-show__flash--go');
-    }, 380);
+      rumShowEl.classList.remove('rum-show--out');
+    }, 280);
     if (!drawer.classList.contains('open')) document.body.style.overflow = '';
     showToast(pick(RUM_DONE_TOASTS), false, 3000);
   }
 
   if (rumShowEl) {
     rumShowEl.addEventListener('click', () => {
-      if (!rumShow.running) return;
-      if (rumShow.phase === 'pan') rumFinale();
-      else closeRumShow();
+      if (rumShow.running) closeRumShow();
     });
     document.addEventListener(
       'keydown',
