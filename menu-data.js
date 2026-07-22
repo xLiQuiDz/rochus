@@ -277,12 +277,126 @@ function getPrintMenu() {
   };
 }
 
+/** EU-14 keys used on the allergen card (NL labels). */
+const ALLERGEN_LABELS = {
+  gluten: 'Gluten',
+  ei: 'Ei',
+  melk: 'Melk',
+  soja: 'Soja',
+  noten: 'Noten',
+  pinda: 'Pinda',
+  selderij: 'Selderij',
+  mosterd: 'Mosterd',
+  sesam: 'Sesam',
+  sulfiet: 'Sulfiet',
+  schaaldieren: 'Schaaldieren',
+  vis: 'Vis',
+  lupine: 'Lupine',
+  weekdieren: 'Weekdieren',
+};
+
+const ALLERGEN_ORDER = Object.keys(ALLERGEN_LABELS);
+
+const BEER_ALLERGEN_CATEGORIES = new Set(['bieren', 'flessen', 'alcoholvrij']);
+
+/** Explicit allergens for non-beer/wine items (indicatief). */
+const ITEM_ALLERGENS = {
+  'Aperol Spritz': ['sulfiet'],
+  'Hugo Spritz': ['sulfiet'],
+  'Limoncello Spritz': ['sulfiet'],
+  Sangria: ['sulfiet'],
+  'Zak Chips (gestoofde kip)': ['melk', 'selderij'],
+  'Kaasballetjes (6 stuks)': ['gluten', 'ei', 'melk'],
+  'Mozzarella Fingers (6 stuks)': ['gluten', 'ei', 'melk'],
+  'Bitterballen (6 stuks)': ['gluten', 'ei', 'melk', 'selderij'],
+  'Kippen Nuggets (6 stuks)': ['gluten', 'ei', 'soja'],
+  'Kipfingers (6 stuks)': ['gluten', 'ei'],
+  "Sharing Nacho's": ['melk'],
+  'Friet 105 Burger': ['gluten', 'ei', 'melk', 'sesam'],
+};
+
+/**
+ * @param {{ name: string, category: string }} item
+ * @returns {string[]|null} allergen keys, or null if omitted from allergen card
+ */
+function getItemAllergens(item) {
+  if (ITEM_ALLERGENS[item.name]) return ITEM_ALLERGENS[item.name];
+  if (BEER_ALLERGEN_CATEGORIES.has(item.category)) return ['gluten'];
+  if (item.category === 'wijnen') return ['sulfiet'];
+  return null;
+}
+
+const ALLERGEN_DISCLAIMER =
+  'Indicatief op basis van typische samenstelling. Vraag bij twijfel de bar / check verpakking.';
+
+/**
+ * Print-ready allergen card: drinks + fingerfood with EU allergen keys.
+ */
+function getAllergenCard() {
+  /** @type {Map<string, { name: string, allergens: string[] }>} */
+  const drinkRows = new Map();
+  /** @type {{ name: string, allergens: string[] }[]} */
+  const foodRows = [];
+  /** @type {Set<string>} */
+  const used = new Set();
+
+  for (const item of MENU_ITEMS) {
+    if (PRINT_EXCLUDE.has(item.name)) continue;
+    const allergens = getItemAllergens(item);
+    if (!allergens || allergens.length === 0) continue;
+
+    for (const key of allergens) used.add(key);
+
+    if (item.category === 'fingerfood') {
+      foodRows.push({ name: item.name, allergens: [...allergens] });
+      continue;
+    }
+
+    let displayName = item.name;
+    if (item.category === 'wijnen') {
+      const glassMatch = item.name.match(/^(.*) \(glas\)$/);
+      const bottleMatch = item.name.match(/^(.*) \(fles\)$/);
+      displayName = (glassMatch || bottleMatch)?.[1] || item.name;
+    }
+
+    if (drinkRows.has(displayName)) continue;
+    drinkRows.set(displayName, { name: displayName, allergens: [...allergens] });
+  }
+
+  const legend = ALLERGEN_ORDER.filter((key) => used.has(key)).map((key) => ({
+    key,
+    label: ALLERGEN_LABELS[key],
+  }));
+
+  return {
+    brand: 'ROCHUS',
+    subtitle: 'Summer pop-up bar',
+    title: 'Allergieën',
+    disclaimer: ALLERGEN_DISCLAIMER,
+    legend,
+    sections: [
+      {
+        id: 'dranken',
+        title: 'Dranken',
+        items: [...drinkRows.values()],
+      },
+      {
+        id: 'fingerfood',
+        title: 'Fingerfood & snacks',
+        items: foodRows,
+      },
+    ].filter((s) => s.items.length > 0),
+  };
+}
+
 module.exports = {
   MENU_ITEMS,
   getMenuItem,
   toCents,
   validateAndPrice,
   getPrintMenu,
+  getAllergenCard,
+  ALLERGEN_LABELS,
   MAX_LINE_QTY,
   MAX_ORDER_LINES,
   MAX_ORDER_QTY,

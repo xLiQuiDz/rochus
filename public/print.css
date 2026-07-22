@@ -757,3 +757,126 @@ body {
     box-shadow: none;
   }
 }
+
+/* ---- Allergieënkaart ---- */
+.allergen-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2.5mm 4mm;
+  margin: 0 0 5mm;
+  padding: 3mm 2mm;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.allergen-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5mm;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+
+.allergen-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 5.2mm;
+  height: 5.2mm;
+  border: 1.2px solid var(--ink);
+  border-radius: 50%;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.allergen-badge svg {
+  width: 3.2mm;
+  height: 3.2mm;
+  display: block;
+}
+
+.allergen-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 1.2mm;
+  flex-shrink: 0;
+}
+
+.sheet__row--allergen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3mm;
+  padding: 1.1mm 0;
+}
+
+.sheet__row--allergen .sheet__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.sheet__row--allergen .sheet__name-text {
+  font-size: 0.78rem;
+}
+
+.sheet--allergens .sheet__sections {
+  gap: 5mm;
+  flex: 1;
+}
+
+.sheet--allergens .sheet__section-title {
+  margin-bottom: 2mm;
+}
+
+.sheet__footer--allergen {
+  margin-top: auto;
+  text-align: center;
+}
+
+.sheet__footer--allergen .sheet__footer-note {
+  font-style: normal;
+  font-size: 0.62rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  max-width: 140mm;
+  margin: 0 auto;
+}
+
+.format-toggle {
+  flex-wrap: wrap;
+  border-radius: 14px;
+}
+
+.format-btn {
+  padding: 8px 12px;
+}
+
+@media screen and (max-width: 720px) {
+  .sheet--allergens {
+    height: auto;
+  }
+
+  .allergen-badge {
+    width: 22px;
+    height: 22px;
+  }
+
+  .allergen-badge svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+@media print {
+  .pages--allergens .sheet--allergens {
+    height: 279mm;
+  }
+
+  .pages--allergens[hidden] {
+    display: none !important;
+  }
+}

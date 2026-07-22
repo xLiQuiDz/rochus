@@ -7,6 +7,7 @@ const {
   toCents,
   validateAndPrice,
   getPrintMenu,
+  getAllergenCard,
 } = require('../menu-data');
 
 test('catalog has unique names and sane prices', () => {
@@ -148,4 +149,54 @@ test('getPrintMenu omits digital-only water and collapses tea/chips variants', (
   assert.ok(chips, 'chips collapsed on print');
   assert.match(chips.note || '', /gestoofde kip/i);
   assert.equal(bites.items.filter((i) => /Chips/i.test(i.name)).length, 1);
+});
+
+test('getAllergenCard marks beer gluten and wine sulfite', () => {
+  const card = getAllergenCard();
+  assert.equal(card.title, 'Allergieën');
+  assert.ok(card.disclaimer);
+
+  const drinks = card.sections.find((s) => s.id === 'dranken');
+  assert.ok(drinks, 'dranken section');
+
+  const stella = drinks.items.find((i) => i.name === "Stella Artois van 't vat");
+  assert.ok(stella);
+  assert.deepEqual(stella.allergens, ['gluten']);
+
+  const rose = drinks.items.find((i) => i.name === 'Care Solidarity Rosé 2025');
+  assert.ok(rose, 'wine collapsed to base name');
+  assert.deepEqual(rose.allergens, ['sulfiet']);
+  assert.equal(
+    drinks.items.filter((i) => i.name.startsWith('Care Solidarity')).length,
+    1,
+    'glas/fles not duplicated'
+  );
+
+  const aperol = drinks.items.find((i) => i.name === 'Aperol Spritz');
+  assert.deepEqual(aperol.allergens, ['sulfiet']);
+
+  assert.ok(!drinks.items.find((i) => i.name === 'Coca-Cola'), 'softs omitted');
+  assert.ok(!drinks.items.find((i) => i.name === 'Gin Tonic Bulldog'), 'spirits omitted');
+});
+
+test('getAllergenCard lists fingerfood with expected allergens', () => {
+  const card = getAllergenCard();
+  const food = card.sections.find((s) => s.id === 'fingerfood');
+  assert.ok(food);
+
+  const bitterballen = food.items.find((i) => i.name.startsWith('Bitterballen'));
+  assert.deepEqual(bitterballen.allergens, ['gluten', 'ei', 'melk', 'selderij']);
+
+  const burger = food.items.find((i) => i.name === 'Friet 105 Burger');
+  assert.deepEqual(burger.allergens, ['gluten', 'ei', 'melk', 'sesam']);
+
+  const chipsKip = food.items.find((i) => i.name === 'Zak Chips (gestoofde kip)');
+  assert.deepEqual(chipsKip.allergens, ['melk', 'selderij']);
+  assert.ok(!food.items.find((i) => i.name === 'Zak Chips (zout)'), 'plain chips omitted');
+
+  const legendKeys = card.legend.map((l) => l.key);
+  assert.ok(legendKeys.includes('gluten'));
+  assert.ok(legendKeys.includes('sulfiet'));
+  assert.ok(legendKeys.includes('sesam'));
+  assert.ok(!legendKeys.includes('pinda'), 'unused allergens stay out of legend');
 });

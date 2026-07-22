@@ -48,6 +48,7 @@
         <div class="format-toggle" role="group" aria-label="Kies formaat">
           <button type="button" class="format-btn" data-format="a4">A4 tafelkaart</button>
           <button type="button" class="format-btn" data-format="clip">Klemkaart ×2</button>
+          <button type="button" class="format-btn" data-format="allergens">Allergieënkaart</button>
         </div>
         <button type="button" class="print-btn" id="print-btn">Printen</button>
         <a class="print-btn print-btn--ghost" href="/bar">Bar</a>
@@ -61,6 +62,7 @@
         <li>Papier: A4 160–200g indien mogelijk · altijd 100% schaal (niet “aanpassen aan pagina”)</li>
         <li>A4 tafelkaart: 2 pagina’s, staand printen — recto-verso (of 2 vellen rug-aan-rug) in één A4-hoes</li>
         <li>Klemkaart: <em>liggend</em> printen → 2 kaarten per vel, knippen op de stippellijn, A5-hoes; bovenaan is ruimte vrijgehouden voor de kroon-klem</li>
+        <li>Allergieënkaart: 1 A4 staand — symbolen + legende; indicatief, check bij twijfel de verpakking</li>
       </ul>
     </aside>
 
@@ -96,6 +98,23 @@
     </main>
 
     <section class="duo" id="duo-sheet" aria-label="Printbare klemkaarten (2 per vel)" hidden></section>
+
+    <main class="pages pages--allergens" id="allergen-sheet" aria-label="Printbare allergieënkaart" hidden>
+      <section class="sheet sheet--allergens" aria-label="Allergieënkaart">
+        <header class="sheet__header">
+          <p class="sheet__ornament" aria-hidden="true">✦</p>
+          <p class="sheet__brand" data-allergen-brand>ROCHUS</p>
+          <p class="sheet__subtitle" data-allergen-subtitle>Summer pop-up bar</p>
+          <div class="sheet__rule" aria-hidden="true"><span></span>✦<span></span></div>
+          <p class="sheet__tagline" data-allergen-title>Allergieën</p>
+        </header>
+        <div class="allergen-legend" id="allergen-legend"></div>
+        <div class="sheet__sections" id="allergen-sections"></div>
+        <footer class="sheet__footer sheet__footer--allergen">
+          <p class="sheet__footer-note" id="allergen-disclaimer"></p>
+        </footer>
+      </section>
+    </main>
   </div>
 
   <script src="print.js" defer></script>

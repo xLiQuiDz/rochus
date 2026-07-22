@@ -24,7 +24,13 @@ const {
   listTransactions,
   getAnalytics,
 } = require('./db');
-const { MENU_ITEMS, getMenuItem, validateAndPrice, getPrintMenu } = require('./menu-data');
+const {
+  MENU_ITEMS,
+  getMenuItem,
+  validateAndPrice,
+  getPrintMenu,
+  getAllergenCard,
+} = require('./menu-data');
 const bancontact = require('./bancontact');
 const QRCode = require('qrcode');
 
@@ -267,6 +273,17 @@ app.get('/api/menu/print', requireStaff, (_req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Kon printmenu niet laden' });
+  }
+});
+
+/** Staff: print-ready allergen card */
+app.get('/api/menu/allergens', requireStaff, (_req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(getAllergenCard());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Kon allergieënkaart niet laden' });
   }
 });
 
