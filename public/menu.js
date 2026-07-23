@@ -2451,6 +2451,15 @@
       const match = filter === 'all' || section.dataset.category === filter;
       section.hidden = !match;
     });
+    const allergenFold = document.getElementById('allergen-fold');
+    if (allergenFold) {
+      if (filter === 'allergieen') {
+        allergenFold.open = true;
+        loadGuestAllergenCard();
+      } else if (filter === 'all') {
+        allergenFold.open = false;
+      }
+    }
     applySearch();
     // Avoid chip flicker when page height jumps after filtering
     lastChipScrollY = window.scrollY;
@@ -2577,6 +2586,7 @@
       if (section.hidden) return;
 
       if (section.dataset.category === 'allergieen') {
+        const fold = section.querySelector('#allergen-fold');
         const rows = section.querySelectorAll('[data-allergen-item]');
         let sectionHasMatch = false;
         rows.forEach((row) => {
@@ -2585,8 +2595,13 @@
           row.hidden = !match;
           if (match) sectionHasMatch = true;
         });
-        const header = section.querySelector('.menu-section__header');
-        if (header) header.hidden = Boolean(q && !sectionHasMatch);
+        /* Without loaded rows yet, keep the fold visible for "all"/empty search */
+        if (!rows.length && (!q || q.startsWith('allerg'))) sectionHasMatch = true;
+        if (fold) {
+          const summary = fold.querySelector('.allergen-fold__summary');
+          if (summary) summary.hidden = Boolean(q && !sectionHasMatch);
+          if (q && sectionHasMatch) fold.open = true;
+        }
         section.style.display = sectionHasMatch || !q ? '' : 'none';
         if (sectionHasMatch) anyVisible = true;
         return;
@@ -2716,20 +2731,31 @@
   }
 
   async function loadGuestAllergenCard() {
+    if (loadGuestAllergenCard.loaded || loadGuestAllergenCard.loading) return;
+    loadGuestAllergenCard.loading = true;
     const loadingEl = document.getElementById('allergen-card-loading');
+    if (loadingEl) loadingEl.hidden = false;
     try {
       const res = await fetch('/api/menu/allergens');
       if (!res.ok) throw new Error('load failed');
       renderGuestAllergenCard(await res.json());
+      loadGuestAllergenCard.loaded = true;
     } catch {
       if (loadingEl) {
         loadingEl.textContent = 'Allergieën even niet beschikbaar — vraag het aan de bar.';
         loadingEl.hidden = false;
       }
+    } finally {
+      loadGuestAllergenCard.loading = false;
     }
   }
 
-  loadGuestAllergenCard();
+  const allergenFoldEl = document.getElementById('allergen-fold');
+  if (allergenFoldEl) {
+    allergenFoldEl.addEventListener('toggle', () => {
+      if (allergenFoldEl.open) loadGuestAllergenCard();
+    });
+  }
 
   /* ------------------------------------------------------------------ */
   /* Stagger-in animations                                              */

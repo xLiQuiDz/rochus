@@ -3522,15 +3522,86 @@ h1, h2, h3, h4 {
 }
 
 /* ============================================================
-   ALLERGEN CARD (guest digital menu)
+   ALLERGEN CARD (guest digital menu) — collapsed by default
    ============================================================ */
-.allergen-card {
-  padding: 1.1rem 1rem 1.2rem;
+.allergen-fold {
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
   background:
     linear-gradient(160deg, rgba(212, 175, 112, 0.08), transparent 42%),
     rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.allergen-fold__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.allergen-fold__summary::-webkit-details-marker {
+  display: none;
+}
+
+.allergen-fold__summary::marker {
+  content: '';
+}
+
+.allergen-fold__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.allergen-fold__title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber-400);
+}
+
+.allergen-fold__hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.allergen-fold__chev {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 112, 0.35);
+  color: var(--amber-400);
+  font-size: 1.1rem;
+  line-height: 1;
+  transform: rotate(90deg);
+  transition: transform 0.2s ease;
+}
+
+.allergen-fold[open] .allergen-fold__chev {
+  transform: rotate(-90deg);
+}
+
+.allergen-fold[open] .allergen-fold__hint {
+  display: none;
+}
+
+.allergen-fold[open] .allergen-fold__summary {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.allergen-card {
+  padding: 1rem 1rem 1.15rem;
 }
 
 .allergen-card__loading {

@@ -693,18 +693,24 @@
     </section>
 
     <section class="menu-section menu-section--allergens" id="allergieen" data-category="allergieen">
-      <div class="menu-section__header stagger-in">
-        <span class="menu-section__mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/><path d="M9.5 12.5l2 2 3.5-4"/></svg>
-        </span>
-        <h2 class="menu-section__title">Allergieën</h2>
-      </div>
-      <div class="allergen-card stagger-in" id="allergen-card">
-        <p class="allergen-card__loading" id="allergen-card-loading">Allergieën laden…</p>
-        <div class="allergen-card__legend" id="allergen-card-legend" hidden></div>
-        <div class="allergen-card__body" id="allergen-card-body" hidden></div>
-        <p class="allergen-card__disclaimer" id="allergen-card-disclaimer" hidden></p>
-      </div>
+      <details class="allergen-fold stagger-in" id="allergen-fold">
+        <summary class="allergen-fold__summary">
+          <span class="menu-section__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/><path d="M9.5 12.5l2 2 3.5-4"/></svg>
+          </span>
+          <span class="allergen-fold__text">
+            <span class="allergen-fold__title">Allergieën</span>
+            <span class="allergen-fold__hint">Tik om te openen · indicatief</span>
+          </span>
+          <span class="allergen-fold__chev" aria-hidden="true">›</span>
+        </summary>
+        <div class="allergen-card" id="allergen-card">
+          <p class="allergen-card__loading" id="allergen-card-loading">Allergieën laden…</p>
+          <div class="allergen-card__legend" id="allergen-card-legend" hidden></div>
+          <div class="allergen-card__body" id="allergen-card-body" hidden></div>
+          <p class="allergen-card__disclaimer" id="allergen-card-disclaimer" hidden></p>
+        </div>
+      </details>
     </section>
 
     <div class="no-results" id="no-results" role="status">
