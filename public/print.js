@@ -118,9 +118,13 @@
     const wineHead = isWine
       ? `<div class="sheet__wine-head"><span></span><span>Glas</span><span>Fles</span></div>`
       : '';
+    const credit = section.credit
+      ? `<p class="sheet__section-credit">${escapeHtml(section.credit)}</p>`
+      : '';
 
     return `<section class="sheet__section">
       <h2 class="sheet__section-title">${escapeHtml(section.title)}</h2>
+      ${credit}
       ${wineHead}
       <ul class="sheet__list">${rows}</ul>
     </section>`;

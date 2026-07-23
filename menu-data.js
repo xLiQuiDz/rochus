@@ -186,6 +186,11 @@ const PRINT_NOTES = {
   'Friet 105 Burger': 'Friet 105 · Neerijse',
 };
 
+/** Subtle partner line under a print section title. */
+const PRINT_SECTION_CREDITS = {
+  wijnen: 'Chosen by Nuvoleo',
+};
+
 const PRINT_SIGNATURES = new Set(["Tripel Karmeliet van 't vat"]);
 
 const PRINT_VARIANT_BY_NAME = new Map();
@@ -205,6 +210,7 @@ function getPrintMenu() {
     sections.set(id, {
       id,
       title: PRINT_CATEGORY_LABELS[id] || id,
+      credit: PRINT_SECTION_CREDITS[id] || null,
       items: [],
     });
   }

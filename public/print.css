@@ -432,6 +432,16 @@ body {
   background: var(--line);
 }
 
+.sheet__section-credit {
+  margin: -1mm 0 2mm;
+  text-align: center;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
 .sheet__list {
   list-style: none;
 }
@@ -727,6 +737,11 @@ body {
   letter-spacing: 0.12em;
   gap: 1.5mm;
   margin-bottom: 1.2mm;
+}
+
+.sheet--clip .sheet__section-credit {
+  font-size: 0.46rem;
+  margin: -0.4mm 0 1.2mm;
 }
 
 .sheet--clip .sheet__row {
