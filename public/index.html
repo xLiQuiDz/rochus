@@ -703,26 +703,29 @@
       </div>
     </section>
 
-    <div class="no-results" id="no-results" role="status">
-      <span id="no-results-text">Niets gevonden. Mischien te niche of misschien al te dronken?</span>
-    </div>
-  </main>
+    <!-- Allergieën — submenu onder Fingerfood, boven de footer -->
+    <section class="menu-section menu-section--allergens" id="allergieen" data-category="allergieen">
+      <div class="menu-section__header stagger-in">
+        <span class="menu-section__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/><path d="M9.5 12.5l2 2 3.5-4"/></svg>
+        </span>
+        <div class="menu-section__heading">
+          <h2 class="menu-section__title">Submenu</h2>
+          <p class="menu-section__credit">Allergieën &amp; intoleranties</p>
+        </div>
+      </div>
 
-  <footer class="site-footer">
-    <p class="site-footer__name" id="footer-brand" title="geheim">ROCHUS</p>
-    <p class="site-footer__tagline" id="footer-tagline">Summer pop-up · sip slow · text your ex later</p>
-    <p>Digitaal menukaart · zero judgment zone</p>
-
-    <section class="menu-section menu-section--allergens site-footer__allergens" id="allergieen" data-category="allergieen">
       <details class="allergen-submenu stagger-in" id="allergen-fold">
         <summary class="allergen-submenu__summary">
-          <span class="allergen-submenu__eyebrow">Info</span>
-          <span class="menu-section__mark allergen-submenu__mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/><path d="M9.5 12.5l2 2 3.5-4"/></svg>
+          <span class="allergen-submenu__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22">
+              <path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9.5 12.5l2 2 3.5-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </span>
           <span class="allergen-submenu__text">
-            <span class="allergen-submenu__title">Allergieën</span>
-            <span class="allergen-submenu__hint">Submenu · tik om te openen</span>
+            <span class="allergen-submenu__title">Klik hier voor de allergenenkaart</span>
+            <span class="allergen-submenu__hint">Indicatief overzicht · tik om te openen</span>
           </span>
           <span class="allergen-submenu__chev" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="16" height="16">
@@ -739,6 +742,15 @@
       </details>
     </section>
 
+    <div class="no-results" id="no-results" role="status">
+      <span id="no-results-text">Niets gevonden. Mischien te niche of misschien al te dronken?</span>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p class="site-footer__name" id="footer-brand" title="geheim">ROCHUS</p>
+    <p class="site-footer__tagline" id="footer-tagline">Summer pop-up · sip slow · text your ex later</p>
+    <p>Digitaal menukaart · zero judgment zone</p>
     <button type="button" class="site-footer__whopays" id="footer-whopays">
       🫵 Wie betaalt vanavond? Speel het uit
     </button>

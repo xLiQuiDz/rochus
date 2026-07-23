@@ -2448,12 +2448,6 @@
     activeFilter = filter;
     setActiveBtn(filter);
     sections.forEach((section) => {
-      /* Allergieën zit in de footer — altijd zichtbaar, niet meefilteren */
-      if (section.dataset.category === 'allergieen') {
-        section.hidden = false;
-        section.style.display = '';
-        return;
-      }
       const match = filter === 'all' || section.dataset.category === filter;
       section.hidden = !match;
     });
@@ -2462,6 +2456,8 @@
       if (filter === 'allergieen') {
         allergenFold.open = true;
         loadGuestAllergenCard();
+      } else if (filter === 'all') {
+        allergenFold.open = false;
       }
     }
     applySearch();
@@ -2599,12 +2595,17 @@
           row.hidden = !match;
           if (match) sectionHasMatch = true;
         });
+        /* Without loaded rows yet, keep the fold visible for "all"/empty search */
         if (!rows.length && (!q || q.startsWith('allerg'))) sectionHasMatch = true;
-        /* Footer-allergieën blijven zichtbaar; bij zoeken op allergenen openklappen */
-        section.hidden = false;
-        section.style.display = '';
-        if (fold && q && sectionHasMatch) fold.open = true;
-        if (sectionHasMatch && q) anyVisible = true;
+        if (fold) {
+          const summary = fold.querySelector('.allergen-submenu__summary');
+          if (summary) summary.hidden = Boolean(q && !sectionHasMatch);
+          if (q && sectionHasMatch) fold.open = true;
+        }
+        const header = section.querySelector('.menu-section__header');
+        if (header) header.hidden = Boolean(q && !sectionHasMatch);
+        section.style.display = sectionHasMatch || !q ? '' : 'none';
+        if (sectionHasMatch) anyVisible = true;
         return;
       }
 
