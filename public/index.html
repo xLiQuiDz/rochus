@@ -703,27 +703,6 @@
       </div>
     </section>
 
-    <section class="menu-section menu-section--allergens" id="allergieen" data-category="allergieen">
-      <details class="allergen-fold stagger-in" id="allergen-fold">
-        <summary class="allergen-fold__summary">
-          <span class="menu-section__mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/><path d="M9.5 12.5l2 2 3.5-4"/></svg>
-          </span>
-          <span class="allergen-fold__text">
-            <span class="allergen-fold__title">Allergieën</span>
-            <span class="allergen-fold__hint">Tik om te openen · indicatief</span>
-          </span>
-          <span class="allergen-fold__chev" aria-hidden="true">›</span>
-        </summary>
-        <div class="allergen-card" id="allergen-card">
-          <p class="allergen-card__loading" id="allergen-card-loading">Allergieën laden…</p>
-          <div class="allergen-card__legend" id="allergen-card-legend" hidden></div>
-          <div class="allergen-card__body" id="allergen-card-body" hidden></div>
-          <p class="allergen-card__disclaimer" id="allergen-card-disclaimer" hidden></p>
-        </div>
-      </details>
-    </section>
-
     <div class="no-results" id="no-results" role="status">
       <span id="no-results-text">Niets gevonden. Mischien te niche of misschien al te dronken?</span>
     </div>
@@ -736,6 +715,31 @@
     <button type="button" class="site-footer__whopays" id="footer-whopays">
       🫵 Wie betaalt vanavond? Speel het uit
     </button>
+
+    <section class="menu-section menu-section--allergens site-footer__allergens" id="allergieen" data-category="allergieen">
+      <details class="allergen-fold stagger-in" id="allergen-fold">
+        <summary class="allergen-fold__summary">
+          <span class="menu-section__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/><path d="M9.5 12.5l2 2 3.5-4"/></svg>
+          </span>
+          <span class="allergen-fold__text">
+            <span class="allergen-fold__title">Allergieën</span>
+            <span class="allergen-fold__hint">Tik om te openen · indicatief</span>
+          </span>
+          <span class="allergen-fold__chev" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </summary>
+        <div class="allergen-card" id="allergen-card">
+          <p class="allergen-card__loading" id="allergen-card-loading">Allergieën laden…</p>
+          <div class="allergen-card__legend" id="allergen-card-legend" hidden></div>
+          <div class="allergen-card__body" id="allergen-card-body" hidden></div>
+          <p class="allergen-card__disclaimer" id="allergen-card-disclaimer" hidden></p>
+        </div>
+      </details>
+    </section>
   </footer>
 
   <div class="chaos-layer" id="chaos-layer" aria-hidden="true"></div>

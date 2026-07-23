@@ -1556,6 +1556,18 @@ h1, h2, h3, h4 {
   border-color: var(--amber-500);
 }
 
+.site-footer__allergens {
+  margin: 1.15rem auto 0;
+  max-width: 28rem;
+  text-align: left;
+  width: 100%;
+  padding: 0;
+}
+
+.site-footer__allergens.menu-section {
+  margin-bottom: 0;
+}
+
 /* ============================================================
    WIE BETAALT — vingers op het scherm
    ============================================================ */
@@ -3606,19 +3618,23 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
   width: 1.5rem;
   height: 1.5rem;
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
   border: 1px solid rgba(212, 175, 112, 0.35);
   color: var(--amber-400);
-  font-size: 1.1rem;
-  line-height: 1;
-  transform: rotate(90deg);
   transition: transform 0.2s ease;
 }
 
+.allergen-fold__chev svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
 .allergen-fold[open] .allergen-fold__chev {
-  transform: rotate(-90deg);
+  transform: rotate(180deg);
 }
 
 .allergen-fold[open] .allergen-fold__hint {
