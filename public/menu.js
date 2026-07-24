@@ -1744,6 +1744,21 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && payPollOrderId && payPollTick) payPollTick();
   });
+  // Terug via de back-knop (bfcache-herstel): Safari/Chrome vuren dan geen
+  // load en soms ook geen visibilitychange — pageshow dekt die route
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted && payPollOrderId && payPollTick) payPollTick();
+  });
+
+  /* iOS/Android geven een tik op een universal/app-link alleen betrouwbaar
+     door aan de bank-app als de navigatie in DEZELFDE tab gebeurt; in een
+     nieuw tabblad rendert iOS gewoon de webpagina en opent er geen app.
+     Op desktop juist wél _blank, zodat het menu open blijft en doorpolt.
+     (iPadOS meldt zich als "Macintosh", vandaar de maxTouchPoints-check.) */
+  const isMobileDevice =
+    /android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 1 && /macintosh/i.test(navigator.userAgent));
+  if (payLinkEl && isMobileDevice) payLinkEl.removeAttribute('target');
 
   /* Betaallinks komen uit de API óf uit localStorage — laat nooit een
      javascript:/data:-URL in de href belanden. App-schemes (payconiq://…)
@@ -1826,6 +1841,24 @@
       if (payHintEl) {
         payHintEl.textContent = 'QR kon niet laden — open de betaling via de knop hierboven.';
       }
+    });
+  }
+
+  if (payLinkEl) {
+    payLinkEl.addEventListener('click', (e) => {
+      if (payLinkEl.classList.contains('is-disabled')) {
+        e.preventDefault();
+        return;
+      }
+      if (!isMobileDevice) return;
+      // Opent er geen app (niet geïnstalleerd, of een in-app browser die de
+      // handoff inslikt), dan blijft deze pagina zichtbaar: wijs dan naar de QR
+      setTimeout(() => {
+        if (!document.hidden && payOverlay && !payOverlay.hidden && payHintEl) {
+          payHintEl.textContent =
+            'Geen app geopend? Scan de QR met je bank- of Payconiq-app, of open het menu in Safari/Chrome.';
+        }
+      }, 2500);
     });
   }
 
