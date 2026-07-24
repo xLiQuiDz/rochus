@@ -77,7 +77,8 @@ async function verifyCallbackSignature(signatureHeader, rawBody, opts = {}) {
     return entry ? String(entry[1]) : '';
   };
 
-  const iss = claim('iss');
+  // Live callbacks send "Payconiq" (capital P); docs sometimes say lowercase.
+  const iss = claim('iss').toLowerCase();
   if (iss && iss !== 'payconiq' && iss !== 'bancontact') {
     throw new Error(`Onverwachte JWS-issuer: ${iss}`);
   }

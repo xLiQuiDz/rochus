@@ -95,6 +95,16 @@ test('verifyCallbackSignature rejects an unknown critical header', async () => {
   );
 });
 
+test('verifyCallbackSignature accepts capitalized Payconiq issuer', async () => {
+  const { generateKeyPair } = await import('jose');
+  const { publicKey, privateKey } = await generateKeyPair('ES256');
+  const body = Buffer.from(JSON.stringify({ paymentId: 'pay-1', status: 'SUCCEEDED' }));
+  const header = { ...CALLBACK_CRIT_HEADER, 'https://payconiq.com/iss': 'Payconiq' };
+  const signature = await signDetached(body, privateKey, header);
+  const verified = await verifyCallbackSignature(signature, body, { getKey: publicKey });
+  assert.equal(verified['https://payconiq.com/iss'], 'Payconiq');
+});
+
 test('verifyCallbackSignature rejects an unexpected issuer', async () => {
   const { generateKeyPair } = await import('jose');
   const { publicKey, privateKey } = await generateKeyPair('ES256');
